@@ -13,10 +13,10 @@ export const runtime = "nodejs";
 
 const Body = z.union([
   z.object({
-    assetIds: z.array(z.string().uuid()).min(1).max(100),
+    assetIds: z.array(z.string().guid()).min(1).max(100),
     filenameBase: z.string().max(100).optional(),
   }),
-  z.object({ deliveryVersionId: z.string().uuid() }),
+  z.object({ deliveryVersionId: z.string().guid() }),
 ]);
 
 export async function POST(req: NextRequest) {

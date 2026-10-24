@@ -23,13 +23,13 @@ export const GrantPlatformAccessSchema = z.object({
 });
 
 export const ChangePlatformRoleSchema = z.object({
-  userId: z.string().uuid(),
+  userId: z.string().guid(),
   role: PlatformRoleSchema,
   reason: z.string().trim().min(3).max(500),
 });
 
 export const RevokePlatformAccessSchema = z.object({
-  userId: z.string().uuid(),
+  userId: z.string().guid(),
   reason: z.string().trim().min(3).max(500),
 });
 

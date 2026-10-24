@@ -1,6 +1,7 @@
 # StudioFlow Production-Readiness Tracker
 
 > **2026-10-23 platform landing redirect — deployed, SHA `f8fa15d12ad78922fe4d6aa621837db38c60cd37`** — Fixed the missing-tenant fallback from `/app/platform` (no index route) to `/app/platform/overview` in My Work and Workspaces. `pnpm verify` passed (606 unit files / 5,228 tests and production build); affected core pre-push checks and the focused authenticated Chromium platform overview tests passed. Manual CI run `39962463524` passed all deploy gates and published the images. Manual deployment run `39966255430` succeeded; production `/api/health` reports `f8fa15d`, DB and schema ready. No schema or persistence changes. Full browser matrix, visual review, and independent review remain open. Evidence: `docs/production-readiness/TEST_EVIDENCE.md`.
+> **2026-10-24 Workspace AI Assistant continuation — working tree is not release-ready** — Agency admins can manage reviewed, immutable assistant skill revisions at `/app/agency-settings/ai/skills`; a second admin must approve, rollback creates a new reviewable draft, and custom skills cannot grant tools or data permissions. The PostgreSQL 16 migration drill passed 5/5 with 103/103 migrations; the complete integration suite and Assistant integration (12/12) passed. `pnpm verify` passed formatting, lint, typecheck, 616 unit files / 5,294 tests, and the production build. The Assistant Chromium suite passed 7/7, the Arabic RTL visual matrix passed 1/1 across five viewports, and isolated retries of earlier browser failures passed. Full release E2E remains incomplete: the normal Next.js memory restart interrupted one attempt, and disabling that restart exposed an 8 GiB heap exhaustion at 44 passing cases. Full browser/visual coverage, exact-clean-SHA CI, independent verification, MiniMax account/model/privacy UAT, and production backup/rollback remain open. Do not merge or deploy until all required release gates pass. See `docs/production-readiness/TEST_EVIDENCE.md`.
 
 > **2026-10-23 dependency security gate remediation — in progress** — GitHub
 > CI for the Planning XLSX export SHA passed formatting, lint, typecheck, unit
@@ -1672,16 +1673,37 @@ This note supersedes the browser-evidence wording in M1.4, M1.5, and M1.9. Commi
 
 > **2026-08-24** — Implementation branch `feat/m3-ai-governance-and-support-access` lands M3 in 7 sub-tasks. The AI capability intersection is server-enforced (`resolveEnabledCapabilities`); the per-user daily AI budget is enforced inside the same transaction as the monthly reservation (`enforceAiBudget`); the support-access workflow replaces any implicit-impersonation model with a ticketed request → agency-admin approval → grant → tenant-view flow. Every state transition and every view through an active grant is audited in `support_access_audit` (append-only, trigger-enforced). A persistent banner surfaces the active session on every (app)/* page the platform admin lands on. Architecture: `docs/architecture/ai-governance-and-support-access.md`. Plan: `docs/m3-ai-governance-support/PLAN.md`.
 
-| ID   | Status      | Required implementation                                                                         | Acceptance                                                                                                                                                                                                        | Evidence                                                                                                                                                                                                                                                 |
-| ---- | ----------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| M3.1 | Tested      | Support access + AI daily budget schema; append-only audit; additive backfill.                  | Migration 0012 lands on an empty DB; new tables and triggers install cleanly; agency / workspace / user data unchanged.                                                                                           | `src/lib/db/migrations/0012_support_access_grants.sql`; Drizzle schema `src/lib/db/schema/support.ts`.                                                                                                                                                   |
-| M3.2 | Tested      | Ticketed support-access workflow service (create / decide / revoke / expire / gate).            | Authority split enforced (platform admin vs agency admin); UNIQUE on request_id blocks double approval; revocation immediately deactivates; expiry sweep flips status.                                            | `src/lib/support/access.ts`; `tests/unit/support-access.test.ts` (15 cases); `tests/integration/support-access.test.ts` (7 cases).                                                                                                                       |
-| M3.3 | Tested      | AI capability intersection and per-user daily budget enforcement.                               | Agency can never widen beyond plan ceiling; daily counter cap throws `LimitExceededError` (route 429); reconciliation refunds unused tokens.                                                                      | `src/lib/ai/governance.ts`; `tests/unit/ai-governance.test.ts` (9 cases); `tests/integration/ai-governance.test.ts` (4 cases).                                                                                                                           |
-| M3.4 | Tested      | Platform console security tab + agency-admin request review and decision route.                 | Platform-only security console; agency admins see and decide requests for their active agency; cross-agency decisions fail closed; no tenant self-edit.                                                           | `/app/platform/security/{page,actions}.tsx`; `/app/platform/agencies/[agencyId]/support-section.tsx`; `/app/agency-settings/plan/support/{page,actions}.tsx`; `src/lib/support/access.ts`.                                                               |
-| M3.5 | Tested      | Persistent support-session banner for active grants.                                            | Banner appears on every (app)/* page when the platform admin holds an active grant; revocation / expiry remove the banner on the next request; React 19 purity rule respected (`Date.now()` moved to the layout). | `src/components/app-shell/support-session-banner.tsx`; `src/app/(app)/layout.tsx` integration.                                                                                                                                                           |
-| M3.6 | Tested      | Unit + integration tests for the full M3 surface.                                               | 1,374 unit tests + 98 integration tests green; `pnpm verify` clean; no skipped required tests.                                                                                                                    | `pnpm test:unit` 1,374/1,374; `TEST_DATABASE_URL=… pnpm test:integration` 98/98; `pnpm verify` exits 0.                                                                                                                                                  |
-| M3.7 | Tested      | Architecture doc, M3 plan, and tracker update.                                                  | New `docs/architecture/ai-governance-and-support-access.md` describes the gate, audit, and intersection; M3 row visible in this tracker; no M1 / M2 regression.                                                   | `docs/m3-ai-governance-support/PLAN.md`; this section; full integration suite re-runs at 98/98.                                                                                                                                                          |
-| M3.8 | In Progress | Phase 1 read-only Workspace AI Assistant using agency AI configuration and existing governance. | Workspace role + active-agency isolation; bounded read-only plan/calendar/content-mix context; deterministic gap findings; validated evidence-backed response; no durable transcript or writes.                   | `docs/architecture/workspace-ai-assistant.md`; focused route/analysis tests; `pnpm verify` passed on working tree. EN/AR browser/a11y, isolated DB, MiniMax model/key UAT, privacy review, exact-clean-SHA evidence, and independent review remain open. |
+| ID   | Status      | Required implementation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Acceptance                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ---- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M3.1 | Tested      | Support access + AI daily budget schema; append-only audit; additive backfill.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Migration 0012 lands on an empty DB; new tables and triggers install cleanly; agency / workspace / user data unchanged.                                                                                                                                                                                                                                                                                                                                                                                                                                                         | `src/lib/db/migrations/0012_support_access_grants.sql`; Drizzle schema `src/lib/db/schema/support.ts`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| M3.2 | Tested      | Ticketed support-access workflow service (create / decide / revoke / expire / gate).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Authority split enforced (platform admin vs agency admin); UNIQUE on request_id blocks double approval; revocation immediately deactivates; expiry sweep flips status.                                                                                                                                                                                                                                                                                                                                                                                                          | `src/lib/support/access.ts`; `tests/unit/support-access.test.ts` (15 cases); `tests/integration/support-access.test.ts` (7 cases).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| M3.3 | Tested      | AI capability intersection and per-user daily budget enforcement.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Agency can never widen beyond plan ceiling; daily counter cap throws `LimitExceededError` (route 429); reconciliation refunds unused tokens.                                                                                                                                                                                                                                                                                                                                                                                                                                    | `src/lib/ai/governance.ts`; `tests/unit/ai-governance.test.ts` (9 cases); `tests/integration/ai-governance.test.ts` (4 cases).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| M3.4 | Tested      | Platform console security tab + agency-admin request review and decision route.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Platform-only security console; agency admins see and decide requests for their active agency; cross-agency decisions fail closed; no tenant self-edit.                                                                                                                                                                                                                                                                                                                                                                                                                         | `/app/platform/security/{page,actions}.tsx`; `/app/platform/agencies/[agencyId]/support-section.tsx`; `/app/agency-settings/plan/support/{page,actions}.tsx`; `src/lib/support/access.ts`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| M3.5 | Tested      | Persistent support-session banner for active grants.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Banner appears on every (app)/* page when the platform admin holds an active grant; revocation / expiry remove the banner on the next request; React 19 purity rule respected (`Date.now()` moved to the layout).                                                                                                                                                                                                                                                                                                                                                               | `src/components/app-shell/support-session-banner.tsx`; `src/app/(app)/layout.tsx` integration.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| M3.6 | Tested      | Unit + integration tests for the full M3 surface.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | 1,374 unit tests + 98 integration tests green; `pnpm verify` clean; no skipped required tests.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `pnpm test:unit` 1,374/1,374; `TEST_DATABASE_URL=… pnpm test:integration` 98/98; `pnpm verify` exits 0.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| M3.7 | Tested      | Architecture doc, M3 plan, and tracker update.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | New `docs/architecture/ai-governance-and-support-access.md` describes the gate, audit, and intersection; M3 row visible in this tracker; no M1 / M2 regression.                                                                                                                                                                                                                                                                                                                                                                                                                 | `docs/m3-ai-governance-support/PLAN.md`; this section; full integration suite re-runs at 98/98.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| M3.8 | In Progress | Workspace Assistant foundation: private session metadata with browser-memory-only transcripts, bilingual prompt library with typed text/month/content-reference parameters, 30 versioned first-party skills, evidence-backed monthly plan review, authorized plan/content references, bounded read-only tool loop (agency gate off by default), request-scoped MiniMax streaming, real activity events, scoped knowledge entries with immutable revisions, model capability registry, and expiring user-confirmed title/brief/planned-date previews for one selected draft. | Workspace/agency isolation; role and entitlement checks; bounded authorized plan, selected-item, brand, and knowledge context; structured responses with valid evidence references; prompt publication governance; parameter validation before provider/budget work; transcript text never read or written by assistant runtime; knowledge revision conflicts and scope enforcement; unsupported reasoning controls rejected before budget work; proposal ownership, exact before/after, expiry, atomic expected-revision apply, rejection, replay handling, and content audit. | `docs/architecture/workspace-ai-agent-platform.md`; focused assistant/provider/tool/skill/knowledge/proposal tests, assistant session privacy/apply integration cases, migration drill on PostgreSQL 16/17, and Chromium EN/AR/RTL E2E on the working tree. The full browser/device matrix, exact-clean-SHA record, external MiniMax account/retention UAT, review/disposal of any pre-existing transcript rows, production migration/rollback evidence, manual CI, and independent review remain open. Broader multi-item/calendar proposals, skill authoring/review, document ingestion/semantic retrieval, member model preferences, external model/account verification, and durable run replay/reconnect remain open. |
+
+> **2026-10-23 continuation** — The workspace assistant now has bilingual
+> request-level Ask, Plan, and Apply modes. Ask and Apply cannot create new
+> change proposals; Plan can prepare a before/after preview for an explicitly
+> selected draft. Applying still requires a separate per-change confirmation
+> while in Apply mode. Focused mode/evidence validation passed 19/19, the
+> assistant Chromium E2E passed 4/4, and `pnpm verify` passed at 5,261 unit
+> tests on the working tree. M3.8 remains In Progress; this does not satisfy
+> its remaining broad-plan, knowledge, typed-prompt, full browser, clean-SHA,
+> independent-review, or production rollout gates.
+
+> **2026-10-23 continuation** — Added a bounded read-only tool loop for
+> `MiniMax-M3.1-Flash`, gated off by default and controlled by an agency
+> setting. Expanded the first-party procedural skill registry to 30 versioned
+> definitions, with metadata-only discovery and full instructions loaded only
+> for selected skills. Focused orchestration/provider/tool/skill/route tests
+> passed 25/25 after the registry update. Latest `pnpm verify` passed format,
+> lint, typecheck, 615 unit files / 5,280 tests, and build. Assistant Chromium
+> E2E passed 4/4 on PostgreSQL 17.10 including EN/AR/RTL. PostgreSQL 16/17 migration and
+> integration evidence from this working tree remains valid; production UAT,
+> browser matrix, independent review, and rollout evidence remain open.
 
 **Sub-task sequence on `feat/m3-ai-governance-and-support-access`:** `05982c4` (M3.1) → `c9d0288` (M3.2) → `7424cb1` (M3.3) → `(M3.4 platform+security)` → `4701985` (M3.5) → `b4fc136` (M3.6). Architecture: `docs/architecture/ai-governance-and-support-access.md`. Plan: `docs/m3-ai-governance-support/PLAN.md`. **No M3 row is `Verified`** — the `Verified` transition is the independent reviewer's, per the status protocol at the top of this file.
 
@@ -4205,3 +4227,172 @@ format check, lint, typecheck, 606 unit test files / 5,226 tests, and the
 production build. This closes the local baseline gate for that exact SHA. It
 does not close the full five-browser release matrix, the visual matrix, or
 independent verification; AD-002 remains **In Progress**.
+
+### Workspace AI Assistant continuation — persisted operating mode (2026-10-23)
+
+The private assistant conversation now stores its Ask/Plan/Apply mode. The
+conversation list and resume endpoint return that mode; changing it uses the
+existing owner- and workspace-scoped update service. Older records default to
+Ask. Migration `0094_thick_lockheed.sql` is additive, and its allowed values
+are constrained in PostgreSQL. TypeScript and focused assistant route/analysis
+tests passed (19/19). All five migration drills passed on disposable Homebrew
+PostgreSQL 17.10; this does not satisfy the required PostgreSQL 16 evidence.
+The full integration suite, exact-clean-SHA `pnpm verify`, bilingual full
+browser/visual matrix, manual CI, independent review, MiniMax live UAT/privacy
+review, production backup/rollback evidence, and deployment remain open. M3.8
+is still **In Progress**, and this work must not be merged or deployed yet.
+
+### Workspace AI Assistant continuation — typed prompt parameters and broader checks (2026-10-23)
+
+Prompt definitions now support validated `text`, `month`, and
+`content_reference` parameters, immutable revision snapshots, placeholder
+checking, and bilingual form controls. Missing and unknown parameter values
+are rejected before AI budget reservation. On the dirty feature worktree,
+`pnpm verify` passed (612 unit files / 5,267 tests and production build), the
+complete integration suite passed, the focused assistant Chromium journey
+passed 4/4 including EN/AR/RTL, and all five migration drills passed on
+PostgreSQL 17.10. These are development results, not exact-clean-SHA release
+evidence. The complete 5-browser run remains incomplete after workspace-route
+timeouts at Next memory-threshold restarts. Visual regression found exact
+reference mismatches across existing screens and was stopped after confirming
+baseline drift. PostgreSQL 16 upgrade/rollback evidence, CI, independent
+review, model/account tool-call smoke, privacy/retention review, complete skill
+and knowledge management, dynamic tool orchestration, durable run
+reconnect/recovery, production backup, and deployment remain open. M3.8 is
+still **In Progress** and is not ready to merge or deploy.
+
+### Workspace AI Assistant continuation — bounded read-tool orchestration (2026-10-23)
+
+The current working tree adds a provider-neutral bounded tool loop and a server-only MiniMax tool-use adapter. Read-only tools expose the active month's summary, calendar distribution, content mix, bounded item list, explicitly selected content item, and authorized brand context. The model cannot choose a workspace or introduce tools. Agency tool calling remains disabled by default and is available only for configured `MiniMax-M3.1-Flash`; a live non-production key/model smoke is required before enablement.
+
+Working-tree checks on 2026-10-23: `pnpm verify` passed format, lint, typecheck, 615 unit files / 5,279 tests, and build; the full integration suite passed on both PostgreSQL 17.10 and PostgreSQL 16.15; assistant Chromium E2E passed 4/4 including EN/AR/RTL; and the five-scenario migration drill passed with 97/97 migrations on both database versions. The replay drill first found migration 0096 needed an idempotent column addition; the migration was corrected and all five scenarios then passed. The configured Firefox E2E run stalled after an immediate first-test failure and was stopped before diagnostics; WebKit, mobile, and visual evidence remain incomplete. These checks are not exact-clean-SHA release evidence. Manual CI, independent review, live MiniMax account/tool and data-processing verification, privacy/retention review, production backup/rollback, and deployment remain outstanding. M3.8 remains **In Progress** and must not be merged or deployed yet.
+
+### 2026-10-24 continuation — schedule proposal transaction and release checks
+
+The first schedule-proposal integration run exposed a lock cycle: media-folder
+reconciliation opened a second transaction before the proposal transaction
+committed. Reconciliation now runs after the proposal commit, while ordinary
+content updates retain their existing behavior. The focused regression passed,
+and the full integration suite passed on both PostgreSQL 16.15 and 17.10.
+
+`pnpm verify` passed formatting, lint, typecheck, all 615 unit files / 5,282
+tests, and the production build on the working tree. Both five-scenario
+migration drills passed with 98/98 migrations. The isolated Workspace
+Assistant Chromium journeys passed 4/4 (prompt editing at mobile widths,
+selected-reference clarification, streamed activity/validated output, and
+Arabic RTL); its English and Arabic/RTL accessibility cases also passed. A
+broad Chromium run was stopped after test 130/296 because of runtime and
+Next-server memory restarts; it had two timeout failures in unrelated calendar
+accessibility and sign-in middleware cases. The later Firefox invocation
+stalled without results and was stopped. WebKit, mobile, and visual release
+evidence remain open.
+
+These results are from a dirty worktree, not a verified clean SHA. Multi-item
+and broader calendar proposals, skill management, managed knowledge, durable
+run recovery, and model capability preferences remain unimplemented. Manual
+CI, independent review, live MiniMax account/model and data-processing UAT,
+privacy/retention review, production backup/rollback, and deployment
+verification are also open. M3.8 remains **In Progress** and must not be
+merged or deployed.
+
+### 2026-10-24 continuation — transcript privacy correction
+
+The assistant now treats conversations as private session metadata only.
+Transcript turns stay in browser memory and the browser may send at most eight
+recent turns with a request; session reads always return an empty message list.
+New sessions use a neutral title instead of storing the first user prompt. The
+legacy transcript table remains for migration compatibility and is neither
+read nor written by assistant runtime code. Any pre-existing rows still need a
+separately reviewed, backed-up retention decision.
+
+Focused route unit tests passed 19/19, PostgreSQL 16 assistant integration
+tests passed 5/5 (including an empty transcript table assertion), and the
+focused Chromium assistant journeys passed 4/4 after removing the obsolete
+transcript-save activity event. `pnpm verify` then passed formatting, lint,
+typecheck, all 615 unit files / 5,283 tests, and the production build. These
+remain dirty-worktree results. Browser/device release coverage, exact-clean-SHA
+evidence, manual CI, independent review, MiniMax account/model and privacy UAT,
+and production backup/rollback remain open. M3.8 remains **In Progress**; do
+not merge or deploy yet.
+
+### 2026-10-24 continuation — bounded run replay and responsive inventory
+
+Assistant requests now receive a durable run ID and persist a bounded sequence
+of sanitized activity events. Authorized members can replay events after a
+cursor and request server-side cancellation; stale nonterminal runs are
+reported as failed. The streamed answer and conversation turns remain in
+browser memory only. This is request-bound recovery, not durable worker
+resumption: a process restart still loses in-flight provider work, and worker
+leases/retry recovery remain open.
+
+The workspace assistant is included in the app-only visual route inventory and
+has English responsive baselines for 375/768/1024/1280/1440 widths. Arabic
+visual snapshots now cover the same five widths. Initial attempts reused the
+shared visual test account and stalled; the assistant Arabic visual test now
+uses a dedicated seeded user and loads the route once before resizing. Strict
+Chromium snapshot comparison passed all five Arabic and all five English
+viewports on 2026-10-24, including the `lang="ar"`, `dir="rtl"`, overflow, and
+accessibility assertions in the Arabic case. The rest of the full visual suite
+and browser/device release matrix remain open.
+
+On the dirty feature worktree, the current verification evidence is:
+
+- `pnpm verify`: passed formatting, lint, typecheck, 616 unit files / 5,288
+  tests, and production build.
+- Full integration suite: passed on PostgreSQL 16.15 and PostgreSQL 17.10.
+- Migration drill: passed 5/5 scenarios on PostgreSQL 17.10; the prior
+  PostgreSQL 16.15 drill passed before the latest non-schema stale-run change.
+- Focused Workspace Assistant Chromium E2E: 5/5 passed on isolated rerun;
+  bilingual assistant accessibility: 2/2 passed.
+- The complete multi-browser assistant run stalled after Chromium. The
+  assistant's dedicated English and Arabic/RTL visual comparisons each passed
+  5/5 viewports. The full visual suite and browser/device release matrix remain
+  open.
+
+These are not exact-clean-SHA evidence. Skill authoring/review and rollback,
+document/web ingestion, model preferences, durable worker recovery, broader
+calendar/multi-item proposals, live MiniMax account/model tool-call and privacy
+UAT, manual CI, independent review, production backup/rollback, and deployment
+verification remain open. M3.8 remains **In Progress**; do not merge or deploy.
+
+### 2026-10-24 continuation — authorized assignment workload context
+
+Added a workspace-scoped workload read service using the existing content
+feature boundary. It returns bounded counts by content owner and designer for
+the selected month, includes unassigned design work, omits email addresses and
+user IDs, and denies access outside the assistant's manager/planner role gate.
+The assistant loads this context only when the selected skill/request asks for
+workload analysis. The bilingual starter prompt and skill state explicitly
+that assignment totals do not establish available capacity, deadlines, or
+performance.
+
+Focused verification passed: typecheck, 11 unit tests across the tool/prompt/
+skill suites, and the PostgreSQL 16.15 Workspace Assistant integration suite
+(8/8, including workspace and month isolation). After the prompt library
+change, strict Chromium visual comparison passed the English and Arabic/RTL
+responsive matrices (5 viewports each). The current focused Workspace
+Assistant Chromium E2E passed 5/5, including knowledge editing/history,
+private prompt creation, content reference selection, streamed results, and
+Arabic RTL. The latest `pnpm verify` passed formatting, lint, typecheck, all
+616 unit files / 5,290 tests, and the production build.
+
+These are dirty-working-tree results. Full integration and migration
+verification must be repeated on the final clean SHA; complete browser/device
+coverage, exact-clean-SHA CI, independent review, provider/privacy UAT,
+production backup/rollback, and deployment remain open. Skill authoring/review
+and rollback, document/web ingestion, model preferences, durable worker
+recovery, and broader calendar/multi-item proposals remain unimplemented.
+M3.8 remains **In Progress** and is not eligible for merge or deployment.
+
+The complete PostgreSQL 16.15 integration suite subsequently completed on the
+dirty feature worktree, including all eight Workspace Assistant integration
+cases. The PostgreSQL 16.15 migration drill passed all five scenarios and
+replayed 100/100 migrations from zero. These results do not satisfy exact-clean
+SHA, manual CI, independent review, production backup/rollback, or deployment
+verification.
+
+The plan-review flow additionally supports an explicitly selected batch of up
+to three distinct fields on the same draft, applied in one revision-checked
+Planner content transaction. Workspace Assistant integration passed 10/10 and
+the focused Chromium suite passed 5/5 with the selected-batch UI and axe scan.
+Multi-item batches and exact-clean-SHA/release gates remain open.

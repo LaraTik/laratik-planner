@@ -7,8 +7,8 @@ import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { z } from "zod";
 
 export const BulkArchiveSchema = z.object({
-  workspaceId: z.string().uuid(),
-  contentItemIds: z.array(z.string().uuid()).min(1).max(500),
+  workspaceId: z.string().guid(),
+  contentItemIds: z.array(z.string().guid()).min(1).max(500),
 });
 export type BulkArchiveInput = z.infer<typeof BulkArchiveSchema>;
 
@@ -53,8 +53,8 @@ export async function bulkArchiveContentItems(actor: Actor, input: BulkArchiveIn
 }
 
 export const ArchiveContentItemSchema = z.object({
-  workspaceId: z.string().uuid(),
-  contentItemId: z.string().uuid(),
+  workspaceId: z.string().guid(),
+  contentItemId: z.string().guid(),
 });
 export type ArchiveContentItemInput = z.infer<typeof ArchiveContentItemSchema>;
 

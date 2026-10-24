@@ -12,6 +12,8 @@ export * from "./workflow";
 export * from "./channels";
 export * from "./planning";
 export * from "./monthly-planning";
+export * from "./workspace-assistant";
+export * from "./workspace-assistant-skills";
 export * from "./content";
 export * from "./discussions";
 export * from "./deliveries";

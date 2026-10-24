@@ -105,8 +105,8 @@ export async function claimAsDesigner(actor: Actor, contentItemId: string) {
  * manager / content planner only.
  */
 export const AssignDesignerSchema = z.object({
-  contentItemId: z.string().uuid(),
-  designerId: z.string().uuid(),
+  contentItemId: z.string().guid(),
+  designerId: z.string().guid(),
 });
 export type AssignDesignerInput = z.infer<typeof AssignDesignerSchema>;
 
@@ -204,8 +204,8 @@ export async function assignDesigner(actor: Actor, input: AssignDesignerInput) {
  * audit trail cannot drift apart.
  */
 export const AssignContentOwnerSchema = z.object({
-  contentItemId: z.string().uuid(),
-  ownerId: z.string().uuid(),
+  contentItemId: z.string().guid(),
+  ownerId: z.string().guid(),
 });
 export type AssignContentOwnerInput = z.infer<typeof AssignContentOwnerSchema>;
 
@@ -322,7 +322,7 @@ export async function assignContentOwner(actor: Actor, input: AssignContentOwner
  * the unassigned queue that no planner is allowed to fill.
  */
 export const ReleaseDesignTaskSchema = z.object({
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
 });
 export type ReleaseDesignTaskInput = z.infer<typeof ReleaseDesignTaskSchema>;
 

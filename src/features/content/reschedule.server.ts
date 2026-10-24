@@ -8,7 +8,7 @@ import { reconcileContentItemMediaFolders } from "@/features/media/server";
 import { z } from "zod";
 
 export const RescheduleContentItemSchema = z.object({
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
   plannedPublishAt: z.coerce.date(),
 });
 export type RescheduleContentItemInput = z.infer<typeof RescheduleContentItemSchema>;

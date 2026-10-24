@@ -70,7 +70,7 @@ export async function getNotificationPreferencesForUser(
 }
 
 export const SetNotificationPreferencesSchema = z.object({
-  prefs: z.record(
+  prefs: z.partialRecord(
     NotificationKindSchema,
     z.object({
       inAppEnabled: z.boolean(),

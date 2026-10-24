@@ -58,24 +58,24 @@ const ConnectionSchema = z.object({
     .optional(),
 });
 const CredentialSchema = z.object({
-  connectionId: z.string().uuid(),
+  connectionId: z.string().guid(),
   accessToken: z.string().min(1).max(8_000),
 });
-const ConnectionIdSchema = z.object({ connectionId: z.string().uuid() });
+const ConnectionIdSchema = z.object({ connectionId: z.string().guid() });
 const GraphVersionSchema = z.object({
-  connectionId: z.string().uuid(),
+  connectionId: z.string().guid(),
   graphApiVersion: z
     .string()
     .trim()
     .regex(/^v\d+\.\d+$/),
 });
 const AccountAccessSchema = z.object({
-  connectionId: z.string().uuid(),
-  accountId: z.string().uuid(),
+  connectionId: z.string().guid(),
+  accountId: z.string().guid(),
 });
 const GrantSchema = z.object({
-  accountId: z.string().uuid(),
-  workspaceId: z.string().uuid().optional(),
+  accountId: z.string().guid(),
+  workspaceId: z.string().guid().optional(),
   capability: z.enum([
     "read_campaigns",
     "read_adsets",
@@ -90,14 +90,14 @@ const GrantSchema = z.object({
   adIds: z.array(z.string().trim().min(1)).max(500).nullable(),
 });
 const FinancialAuthoritySchema = z.object({
-  accountId: z.string().uuid(),
-  workspaceId: z.string().uuid().optional(),
+  accountId: z.string().guid(),
+  workspaceId: z.string().guid().optional(),
 });
-const GrantIdSchema = z.object({ grantId: z.string().uuid() });
-const AuthorityIdSchema = z.object({ authorityId: z.string().uuid() });
+const GrantIdSchema = z.object({ grantId: z.string().guid() });
+const AuthorityIdSchema = z.object({ authorityId: z.string().guid() });
 const SyncStateSchema = z.object({
-  connectionId: z.string().uuid(),
-  accountId: z.string().uuid(),
+  connectionId: z.string().guid(),
+  accountId: z.string().guid(),
   enabled: z.enum(["true", "false"]).transform((value) => value === "true"),
 });
 

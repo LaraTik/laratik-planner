@@ -177,6 +177,7 @@ export function viewportsForSurface(surface: string): readonly {
   if (
     surface === "/app/w/acme/research" ||
     surface === "/app/w/acme/ai-settings" ||
+    surface === "/app/w/acme/ai-assistant" ||
     surface === "/app/w/acme/settings" ||
     surface === "/app/w/acme/media"
   ) {
@@ -289,6 +290,7 @@ export const APP_ONLY_SURFACES = [
   ADVERTISING_REPORTING_SURFACE,
   "/app/w/acme/research",
   "/app/w/acme/client/calendar",
+  "/app/w/acme/ai-assistant",
   "/app/w/acme/library",
   "/app/w/acme/team",
   "/app/w/acme/planning/new",

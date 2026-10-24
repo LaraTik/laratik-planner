@@ -883,6 +883,14 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
             },
             {
               kind: "link",
+              key: "agency-settings-ai-skills",
+              href: "/app/agency-settings/ai/skills",
+              label: "Assistant skills",
+              labelKey: "sidebar.settingsAiSkills",
+              icon: Sparkles,
+            },
+            {
+              kind: "link",
               key: "agency-settings-planning-packs",
               href: "/app/agency-settings/planning-packs",
               label: "Planning packs",

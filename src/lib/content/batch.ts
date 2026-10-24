@@ -33,7 +33,7 @@ export type BatchRowExtensions = z.infer<typeof BatchRowExtensionsSchema>;
  * record here lets the import surface carry every current and future
  * format-specific field without adding columns to `content_item`.
  */
-export const BatchFormatPayloadSchema = z.record(z.unknown());
+export const BatchFormatPayloadSchema = z.record(z.string(), z.unknown());
 export type BatchFormatPayload = z.infer<typeof BatchFormatPayloadSchema>;
 
 export type BatchIssueSeverity = "error" | "warning";
@@ -76,13 +76,13 @@ export const BatchItemSchema = z.object({
     "other",
   ]),
   brief: z.string().max(2000).optional().default(""),
-  plannedPublishAt: z.coerce.date(),
-  campaignId: z.string().uuid().optional(),
-  contentPillarId: z.string().uuid().optional(),
-  contentOwnerId: z.string().uuid().optional(),
+  plannedPublishAt: z.coerce.date({ error: "Invalid planned publish date" }),
+  campaignId: z.string().guid().optional(),
+  contentPillarId: z.string().guid().optional(),
+  contentOwnerId: z.string().guid().optional(),
   /** Omitted means all active channels; [] means intentionally none. */
   channelIds: z
-    .array(z.string().uuid())
+    .array(z.string().guid())
     .superRefine((ids, ctx) => {
       if (new Set(ids).size !== ids.length) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Duplicate channel" });
@@ -102,7 +102,7 @@ export const BatchItemSchema = z.object({
 });
 
 export const BatchCreateSchema = z.object({
-  workspaceId: z.string().uuid(),
+  workspaceId: z.string().guid(),
   items: z.array(BatchItemSchema).min(1).max(50),
 });
 
@@ -113,10 +113,10 @@ export const BatchClientRowSchema = z.object({
   format: z.string(),
   plannedPublishAt: z.string(),
   brief: z.string(),
-  channelIds: z.array(z.string().uuid()),
-  campaignId: z.string().uuid().optional(),
-  contentPillarId: z.string().uuid().optional(),
-  contentOwnerId: z.string().uuid().optional(),
+  channelIds: z.array(z.string().guid()),
+  campaignId: z.string().guid().optional(),
+  contentPillarId: z.string().guid().optional(),
+  contentOwnerId: z.string().guid().optional(),
   extensions: BatchRowExtensionsSchema.optional(),
   formatPayload: BatchFormatPayloadSchema.optional(),
 });

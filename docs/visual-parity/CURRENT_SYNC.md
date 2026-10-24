@@ -51,6 +51,14 @@ LaraTik tokens, not from the archived screen set.
 | Content detail                     | `/app/w/[slug]/planning/[id]`                                                                                                                   | Mobile                 | `627f80e530f04738a7e16f829ea35fe3` | Complete                                      |
 | Workspace settings                 | `/app/w/[slug]/settings`                                                                                                                        | Mobile                 | `176f9b09f4cb49b08b2051b820cb48ee` | Complete                                      |
 
+### App-only route added 2026-10-24
+
+The Workspace AI Assistant at `/app/w/[slug]/ai-assistant` has no dedicated
+screen in the current Stitch project, so it is tracked as an app-only surface.
+The responsive suite covers English/LTR and Arabic/RTL at 375, 768, 1024, 1280,
+and 1440px. The implementation follows the shared visual contract above; this
+route addition does not represent an upstream Stitch refresh.
+
 The remaining work is refinement, not route discovery: split a grouped surface
 into a separate Stitch screen only when the route has materially different
 information architecture or permissions. Do not reintroduce superseded variants

@@ -8,7 +8,7 @@ import { BULK_SELECTION_TOO_LARGE, MAX_BULK_SELECTION } from "@/lib/media/bulk-c
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const Body = z.object({ assetIds: z.array(z.string().uuid()).min(1) });
+const Body = z.object({ assetIds: z.array(z.string().guid()).min(1) });
 
 export async function POST(req: NextRequest) {
   const session = await auth();

@@ -71,8 +71,19 @@ export async function saveAiSettingsAction(
     const { actor } = await requireAdmin();
     const enabled = formData.get("enabled") === "on";
     const model = String(formData.get("model") ?? "").trim();
+    const submittedModels = formData
+      .getAll("permittedModels")
+      .map((value) => String(value).trim())
+      .filter(Boolean);
+    const permittedModels = submittedModels.length ? submittedModels : [model];
     const enabledCapabilities = AI_CAPABILITIES.filter((c) => formData.get(`cap_${c}`) === "on");
-    const parsed = UpdateAiSettingsSchema.safeParse({ enabled, model, enabledCapabilities });
+    const parsed = UpdateAiSettingsSchema.safeParse({
+      enabled,
+      model,
+      permittedModels,
+      enabledCapabilities,
+      toolCallingEnabled: formData.get("toolCallingEnabled") === "on",
+    });
     if (!parsed.success) {
       return { errorCode: "invalid_input" };
     }

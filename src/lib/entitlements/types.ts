@@ -376,8 +376,8 @@ export const OverrideShapeSchema = z.object({
  */
 export const AgencyEntitlementRowSchema = z
   .object({
-    agencyId: z.string().uuid(),
-    planTemplateId: z.string().uuid(),
+    agencyId: z.string().guid(),
+    planTemplateId: z.string().guid(),
     overrides: OverrideShapeSchema.nullable(),
     hardStopPercent: z.string().regex(/^\d+(\.\d+)?$/, "hardStopPercent must be a numeric string"),
     gracePolicy: z.enum(GRACE_POLICY_VALUES).nullable(),
@@ -391,7 +391,7 @@ export const AgencyEntitlementRowSchema = z
  */
 export const PlatformPlanTemplateRowSchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.string().guid(),
     slug: z.string().min(1),
     name: z.string().min(1),
     defaultLimits: OverrideShapeSchema.nullable(),

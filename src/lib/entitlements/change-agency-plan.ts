@@ -78,11 +78,11 @@ import type { Actor } from "@/lib/auth/policy";
  */
 
 export const ChangeAgencyPlanInputSchema = z.object({
-  agencyId: z.string().uuid(),
-  planTemplateId: z.string().uuid(),
+  agencyId: z.string().guid(),
+  planTemplateId: z.string().guid(),
   overrides: OverrideShapeSchema.optional(),
   reason: z.string().min(1).max(500),
-  actorUserId: z.string().uuid(),
+  actorUserId: z.string().guid(),
   /**
    * Optional current-usage map keyed by resource name (the same
    * vocabulary `agency_usage_threshold_event.resource` uses).

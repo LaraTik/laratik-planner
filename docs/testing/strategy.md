@@ -105,6 +105,10 @@ see at the same time never share a hue while a palette slot sits unused.
   default heap threshold. CI and lower-memory hosts keep their existing limit.
   `LARATIK_E2E_MAX_OLD_SPACE_SIZE` can set an explicit heap size in MiB; an
   existing `NODE_OPTIONS` heap setting takes precedence.
+- If a large release-candidate run still hits Next.js's 80% dev-heap restart,
+  `LARATIK_E2E_DISABLE_DEV_MEMORY_RESTART=1` disables that restart for the test
+  process only. Use it only on a host with enough available memory and monitor
+  the run; the default restart remains enabled for normal development.
 - Required tests may not use conditional assertions or configuration-based skips.
 - E2E support routes return 404 in production.
 - Dynamic visual values must be masked before baseline comparison.

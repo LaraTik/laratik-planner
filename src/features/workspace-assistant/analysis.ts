@@ -13,6 +13,7 @@ export type WorkspaceAssistantEvidence = {
   source: string;
   retrievedAt: string;
   period: string;
+  version?: string | null;
   completeness: "complete" | "bounded";
   itemCount: number;
 };
@@ -47,13 +48,31 @@ const responseSchema = z.object({
       }),
     )
     .max(8),
+  proposedChanges: z
+    .array(
+      z.object({
+        field: z.enum(["title", "brief", "plannedPublishAt"]),
+        title: z.string().trim().min(1).max(180),
+        afterValue: z.string().trim().min(1).max(2_000),
+        evidenceIds: z.array(z.string().max(160)).max(3),
+      }),
+    )
+    .max(3)
+    .default([]),
   limitations: z.array(z.string().trim().min(1).max(300)).max(8),
 });
 
 export type WorkspaceAssistantResponse = z.infer<typeof responseSchema>;
 
 export type WorkspaceAssistantToolResult = {
-  name: "get_plan_summary" | "get_calendar_distribution" | "get_content_mix";
+  name:
+    | "get_plan_summary"
+    | "get_calendar_distribution"
+    | "get_content_mix"
+    | "get_workload_summary"
+    | "read_brand_knowledge"
+    | "read_selected_plan_items"
+    | "read_selected_content_item";
   summary: string;
   data: Record<string, string | number | string[]>;
 };
@@ -151,6 +170,7 @@ export function parseWorkspaceAssistantResponse(
   const references = [
     ...parsed.findings.flatMap((finding) => finding.evidenceIds),
     ...parsed.recommendations.flatMap((recommendation) => recommendation.evidenceIds),
+    ...parsed.proposedChanges.flatMap((change) => change.evidenceIds),
   ];
   if (references.some((reference) => !allowedEvidenceIds.has(reference))) {
     throw new Error("Workspace assistant returned an unknown evidence reference");

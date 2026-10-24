@@ -76,11 +76,11 @@ export default async function QuickCreatePage({
       )[0]
     : null;
 
-  const researchObservationId = z.string().uuid().safeParse(query.researchPostObservationId);
+  const researchObservationId = z.string().guid().safeParse(query.researchPostObservationId);
   const researchPost = researchObservationId.success
     ? await querySocialPostObservation(db, ws.id, researchObservationId.data)
     : null;
-  const researchTeardownId = z.string().uuid().safeParse(query.researchTeardownId);
+  const researchTeardownId = z.string().guid().safeParse(query.researchTeardownId);
   const researchTeardownRow = researchTeardownId.success
     ? (
         await db

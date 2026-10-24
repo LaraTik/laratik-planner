@@ -18,7 +18,7 @@ import { mutatingApiHeaders } from "@/lib/security/headers";
 
 const queryShape = {
   workspace: z.string().min(1),
-  accountId: z.string().uuid(),
+  accountId: z.string().guid(),
   since: z.string().date(),
   until: z.string().date(),
 };

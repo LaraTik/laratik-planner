@@ -13,7 +13,7 @@ export const ChannelCommandSchema = z.object({
     "snapchat",
     "other",
   ]),
-  accountName: z.string().trim().min(2).max(120),
+  accountName: z.string().trim().min(2, "Must have at least 2 characters").max(120),
   handle: z.string().trim().max(120).optional(),
   url: z
     .string()
@@ -33,9 +33,9 @@ export const ChannelCommandSchema = z.object({
  * boundary.
  */
 export const ArchiveChannelCommandSchema = z.object({
-  channelId: z.string().uuid(),
+  channelId: z.string().guid(),
 });
 
 export const RestoreChannelCommandSchema = z.object({
-  channelId: z.string().uuid(),
+  channelId: z.string().guid(),
 });

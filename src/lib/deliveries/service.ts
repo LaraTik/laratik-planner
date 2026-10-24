@@ -47,7 +47,7 @@ import {
 
 export const SubmitDeliverySchema = z
   .object({
-    contentItemId: z.string().uuid(),
+    contentItemId: z.string().guid(),
     // The description is optional because the stored files are the
     // deliverable. A designer should not have to duplicate their filenames
     // in a narrative field just to advance the workflow.
@@ -63,7 +63,7 @@ export const SubmitDeliverySchema = z
     // would have to be duplicated in the service guard and the form.
     // `submitDelivery` owns the conditional floor; the `.max(20)` bound
     // stays here because it is unconditional.
-    mediaAssetIds: z.array(z.string().uuid()).max(20),
+    mediaAssetIds: z.array(z.string().guid()).max(20),
   })
   .strict();
 
@@ -312,7 +312,7 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
 }
 
 export const DecideApprovalSchema = z.object({
-  approvalRequestId: z.string().uuid(),
+  approvalRequestId: z.string().guid(),
   decision: z.enum(["approved", "changes_requested"]),
   feedback: z.string().max(2000).optional(),
 });
@@ -958,7 +958,7 @@ export async function listDeliveryVersionsForItem(
  */
 export const SetMediaRequiredSchema = z
   .object({
-    contentItemId: z.string().uuid(),
+    contentItemId: z.string().guid(),
     mediaRequired: z.boolean(),
   })
   .strict();

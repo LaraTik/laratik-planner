@@ -9,8 +9,8 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const Body = z.object({
-  assetIds: z.array(z.string().uuid()).min(1),
-  folderId: z.string().uuid().nullable(),
+  assetIds: z.array(z.string().guid()).min(1),
+  folderId: z.string().guid().nullable(),
 });
 
 export async function POST(req: NextRequest) {

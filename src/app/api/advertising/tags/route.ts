@@ -17,7 +17,7 @@ import {
 } from "@/lib/advertising/reporting-metadata-service";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 
-const querySchema = z.object({ workspace: z.string().min(1), accountId: z.string().uuid() });
+const querySchema = z.object({ workspace: z.string().min(1), accountId: z.string().guid() });
 
 function response(error: string, status: number) {
   return NextResponse.json({ error }, { status, headers: mutatingApiHeaders() });

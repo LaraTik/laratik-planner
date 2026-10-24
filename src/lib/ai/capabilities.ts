@@ -271,3 +271,18 @@ export const AI_PROVIDER = {
   defaultModel: "MiniMax-M3",
   defaultBaseUrl: "https://api.minimax.io/anthropic",
 } as const;
+
+/** Models documented for MiniMax's Anthropic-compatible Messages API. */
+export const MINIMAX_ANTHROPIC_MODELS = ["MiniMax-M3", "MiniMax-M3.1-Flash"] as const;
+
+/** Keep the environment-selected model available for deployments using a
+ * compatible provider override, while offering only MiniMax models verified
+ * for the default Anthropic-compatible transport. */
+export function getAiModelAllowlist(
+  envModel: string,
+  baseUrl: string = AI_PROVIDER.defaultBaseUrl,
+): string[] {
+  const normalizedBase = baseUrl.replace(/\/$/, "");
+  if (normalizedBase === AI_PROVIDER.defaultBaseUrl) return [...MINIMAX_ANTHROPIC_MODELS];
+  return envModel ? [envModel] : [];
+}

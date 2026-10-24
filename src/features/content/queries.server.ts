@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   contentAssignments,
@@ -143,6 +143,65 @@ export async function listWorkspaceContent(
     .orderBy(sql`${contentItems.plannedPublishAt} ASC`, sql`${contentItems.id} ASC`)
     .limit(opts.limit ?? 200)
     .offset(offset);
+}
+
+/**
+ * Return a bounded, workspace-authorized workload summary for one period.
+ * Names are limited to display names: email addresses and membership details
+ * are not needed to explain assignment distribution to workspace planners.
+ */
+export async function getWorkspaceWorkloadSummary(
+  actor: Actor,
+  workspaceId: string,
+  input: { monthStart: Date; monthEnd: Date; limit?: number },
+) {
+  await requirePolicy(
+    hasWorkspaceRole(actor, workspaceId, ["workspace_manager", "content_planner"]),
+    "view_content_workload",
+  );
+  const conditions = [
+    eq(contentItems.workspaceId, workspaceId),
+    isNull(contentItems.archivedAt),
+    sql`${contentItems.plannedPublishAt} >= ${input.monthStart}`,
+    sql`${contentItems.plannedPublishAt} < ${input.monthEnd}`,
+  ];
+  const limit = Math.min(Math.max(input.limit ?? 25, 1), 50);
+  const [totalRow, owners, designers] = await Promise.all([
+    db
+      .select({ itemCount: count() })
+      .from(contentItems)
+      .where(and(...conditions))
+      .then((rows) => rows[0]),
+    db
+      .select({ displayName: users.displayName, itemCount: count() })
+      .from(contentItems)
+      .leftJoin(users, eq(users.id, contentItems.contentOwnerId))
+      .where(and(...conditions))
+      .groupBy(contentItems.contentOwnerId, users.displayName)
+      .orderBy(desc(count()), asc(users.displayName))
+      .limit(limit + 1),
+    db
+      .select({ displayName: users.displayName, itemCount: count() })
+      .from(contentItems)
+      .leftJoin(users, eq(users.id, contentItems.designerId))
+      .where(and(...conditions))
+      .groupBy(contentItems.designerId, users.displayName)
+      .orderBy(desc(count()), asc(users.displayName))
+      .limit(limit + 1),
+  ]);
+  const shapeAssignments = (rows: typeof owners) => ({
+    members: rows.slice(0, limit).map((row) => ({
+      name: row.displayName ?? "Unassigned",
+      itemCount: row.itemCount,
+    })),
+    omittedMemberGroups: Math.max(rows.length - limit, 0),
+  });
+  return {
+    totalItems: totalRow?.itemCount ?? 0,
+    contentOwners: shapeAssignments(owners),
+    designers: shapeAssignments(designers),
+    bounded: owners.length > limit || designers.length > limit,
+  };
 }
 
 /**

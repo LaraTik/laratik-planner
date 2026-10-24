@@ -35,7 +35,7 @@ export const CreateAgencySchema = z.object({
   timezone: z.string().trim().min(2).max(80).default("UTC"),
   adminEmail: z.string().trim().toLowerCase().email(),
   adminName: z.string().trim().min(1).max(120),
-  planTemplateId: z.string().uuid(),
+  planTemplateId: z.string().guid(),
   overrides: OverrideShapeSchema.default({}),
   reason: z.string().trim().min(3).max(500),
 });
@@ -180,7 +180,7 @@ export async function createAgency(actor: Actor, raw: CreateAgencyInput) {
 }
 
 export const AgencyLifecycleActionSchema = z.object({
-  agencyId: z.string().uuid(),
+  agencyId: z.string().guid(),
   action: z.enum(["suspend", "restore", "archive", "unarchive"]),
   reason: z.string().trim().min(3).max(500),
 });

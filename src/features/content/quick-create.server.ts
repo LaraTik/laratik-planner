@@ -23,7 +23,7 @@ import {
 import { z } from "zod";
 
 export const QuickCreateSchema = z.object({
-  workspaceId: z.string().uuid(),
+  workspaceId: z.string().guid(),
   title: z.string().min(2).max(200),
   format: z.enum([
     "static_post",
@@ -38,15 +38,15 @@ export const QuickCreateSchema = z.object({
   brief: z.string().max(2000).optional().default(""),
   plannedPublishAt: z.coerce.date(),
   /** If omitted, all active workspace channels are auto-selected (master prompt §8). */
-  channelIds: z.array(z.string().uuid()).optional(),
-  campaignId: z.string().uuid().optional(),
-  contentPillarId: z.string().uuid().optional(),
-  designerId: z.string().uuid().optional(),
-  trendSignalId: z.string().uuid().optional(),
+  channelIds: z.array(z.string().guid()).optional(),
+  campaignId: z.string().guid().optional(),
+  contentPillarId: z.string().guid().optional(),
+  designerId: z.string().guid().optional(),
+  trendSignalId: z.string().guid().optional(),
   /** Optional workspace-scoped research source used to preserve provenance. */
-  researchPostObservationId: z.string().uuid().optional(),
+  researchPostObservationId: z.string().guid().optional(),
   /** Optional reviewed teardown used to seed a planner draft. */
-  researchTeardownId: z.string().uuid().optional(),
+  researchTeardownId: z.string().guid().optional(),
   /** Optional structured creative payload, validated against the selected format. */
   formatPayload: z.record(z.string(), z.unknown()).optional(),
 });

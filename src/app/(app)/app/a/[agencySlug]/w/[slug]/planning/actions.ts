@@ -310,7 +310,7 @@ export async function updateContentItemAction(
 
 // ─── Apply AI draft ───────────────────────────────────────────────────
 const ApplyAiDraftSchema = z.object({
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
   draftText: z.string().min(1).max(4000),
   mode: z.enum(["insert", "replace"]),
 });
@@ -987,7 +987,7 @@ export async function resolveCommentAction(input: {
  * and writes the canonical shape.
  */
 const UpdateFormatPayloadFormSchema = z.object({
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
   format: z.enum([
     "static_post",
     "carousel",
@@ -1111,7 +1111,7 @@ export async function updateAudienceCopyAction(
  *   - hashtags (optional, repeated — one per tag)
  */
 const PatchAudienceCopyFormSchema = z.object({
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
   caption: z.string().max(2200).optional(),
   firstComment: z.string().max(2200).optional(),
 });

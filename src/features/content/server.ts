@@ -21,6 +21,7 @@ export {
 } from "./audience-copy.server";
 export {
   countWorkspaceContent,
+  getWorkspaceWorkloadSummary,
   getContentItem,
   listUnassignedDesignWork,
   listWorkspaceContent,

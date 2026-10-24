@@ -62,7 +62,7 @@ export async function countUnreadNotifications(actor: Actor): Promise<number> {
 }
 
 export const MarkReadSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1).max(200),
+  ids: z.array(z.string().guid()).min(1).max(200),
 });
 export type MarkReadInput = z.infer<typeof MarkReadSchema>;
 
@@ -84,7 +84,7 @@ export async function markAllNotificationsRead(actor: Actor): Promise<void> {
 }
 
 export const MarkReadOneSchema = z.object({
-  notificationId: z.string().uuid(),
+  notificationId: z.string().guid(),
 });
 export type MarkReadOneInput = z.infer<typeof MarkReadOneSchema>;
 

@@ -1,14 +1,10 @@
 import type { Actor } from "@/lib/auth/policy";
 import type { McpTokenScope } from "@/lib/mcp/tokens";
-import type { ZodType, ZodTypeDef } from "zod";
+import type { z } from "zod";
 
 export type McpContext = { actor: Actor; scopes: McpTokenScope[] };
 export type McpResponseFormat = "json" | "markdown";
-export type McpResponseFormatSchema = ZodType<
-  McpResponseFormat,
-  ZodTypeDef,
-  McpResponseFormat | undefined
->;
+export type McpResponseFormatSchema = z.ZodType<McpResponseFormat, McpResponseFormat | undefined>;
 
 export type McpToolReply = {
   content: { type: "text"; text: string }[];

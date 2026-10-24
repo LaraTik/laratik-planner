@@ -10,8 +10,8 @@ export const runtime = "nodejs";
 
 const Body = z.object({
   sourceType: z.enum(["delivery_version", "library_selection"]),
-  sourceId: z.string().uuid().optional(),
-  assetIds: z.array(z.string().uuid()).max(100).optional(),
+  sourceId: z.string().guid().optional(),
+  assetIds: z.array(z.string().guid()).max(100).optional(),
   title: z.string().trim().min(1).max(160),
 });
 

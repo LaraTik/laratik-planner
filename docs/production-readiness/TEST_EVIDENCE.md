@@ -3427,12 +3427,12 @@ remains **In Progress**.
 
 ## Workspace AI Assistant — Phase 1 implementation checkpoint (working tree)
 
-The read-only Workspace AI Assistant now has a workspace page under Produce,
-English/Arabic copy, client-memory conversation, active-agency workspace and
-role checks, bounded plan/calendar/content-mix context, deterministic schedule
-gap findings, evidence-ID validation, and reuse of the agency-configured model,
-managed key, entitlement, rate limit, and token budget. No transcript or
-workspace mutation path was added. The remote Planner MCP contract was not
+The Workspace AI Assistant now has a workspace page under Produce,
+English/Arabic copy, private persistent conversations, active-agency workspace
+and role checks, bounded plan/calendar/content-mix context, deterministic
+schedule-gap findings, evidence-ID validation, and reuse of the
+agency-configured model, managed key, entitlement, rate limit, and token budget.
+The general assistant is read-only. The remote Planner MCP contract was not
 changed.
 
 `pnpm verify` passed on the implementation working tree: formatting, lint,
@@ -3444,3 +3444,571 @@ compatibility check, MiniMax subscription/data-processing review, EN/AR browser
 or visual result, or independent review was performed. This is a working-tree
 checkpoint, not exact-clean-SHA release evidence; M3.8 remains **In Progress**
 and this change is **not Verified**.
+
+### 2026-10-23 continuation — isolated development verification
+
+On the feature worktree, `pnpm verify` completed successfully: Prettier,
+ESLint, TypeScript, 610 unit files / 5,247 tests, and the production build.
+After adding the assistant browser spec's final provider-error and responsive
+checks, `pnpm format:check` and `pnpm typecheck` also passed. The full database
+integration suite passed against the task-specific disposable database
+`planner_test_workspace_ai_20261023`, including the two assistant persistence
+and prompt-governance cases. `pnpm migration-drill` passed all five drills
+against that disposable database. The server reported PostgreSQL 17.10
+(Homebrew), not the required PostgreSQL 16 container, so these DB results are
+supplemental and do not satisfy the repository's standard PostgreSQL 16
+release evidence.
+
+The assistant's targeted E2E passed in Chromium (2 tests): prompt creation and
+provider-error handling, serious/critical axe scan, EN layout at 375/768/1024/
+1280/1440 px, and Arabic RTL at 375 px. The complete configured six-project
+runner passed Chromium and then stalled while starting Firefox; it was stopped
+and the other projects were not verified. Docker Desktop was not reachable, so
+the required disposable PostgreSQL 16 environment could not be provisioned.
+No MiniMax account smoke/data-processing review, exact-clean-SHA CI run,
+independent verification, or production deploy evidence exists. M3.8 remains
+**In Progress** and this change is not eligible for merge or deployment.
+
+### 2026-10-23 continuation — content references and provider streaming
+
+The feature worktree now resolves a content-item ID, Planner URL, or title only
+through authorized workspace content services. Ambiguous titles return bounded
+candidates for user selection; foreign-workspace references return the same
+not-found result as unknown IDs. One selected item's bounded creative fields,
+revision, and source timestamp are attached as evidence. The assistant route
+also supports MiniMax's documented Anthropic-compatible stream through SSE,
+reports actual context/skill/analysis/provider/validation/persistence events,
+streams only the visible answer text (never thinking blocks), and accepts
+client cancellation for the request.
+
+On the PostgreSQL 17.10 Homebrew disposable database
+`planner_test_workspace_ai_refs_20261023`, the targeted Chromium assistant
+suite passed 4/4, including ambiguous item selection, streamed activity, EN/AR
+layout, and axe checks. Focused unit suites passed 33/33 across provider,
+assistant route, and reference resolution. On this working tree, `pnpm verify`
+passed formatting, lint, typecheck, 611 unit files / 5,254 tests, and the
+production build. These checks are not a clean-SHA release bundle. The full
+six-project browser matrix has not been rerun. Durable run event
+replay/reconnect, MiniMax live UAT, prompt parameters, assistant proposals/apply,
+privacy review, PostgreSQL 16 migration evidence, manual CI, and independent
+verification remain outstanding. M3.8 remains **In Progress** and this change
+is not eligible for merge or deployment.
+
+### 2026-10-23 continuation — reference selection and live provider stream
+
+The current feature worktree resolves authorized content items by Planner URL,
+ID, or title, prompts for a choice when a title is ambiguous, and resolves
+calendar/planning URLs or month names against the existing month-based
+calendar. Selected content context is allowlisted and includes its revision
+and source evidence. The MiniMax-compatible streaming path emits real
+context, skill, analysis, provider, validation, and persistence transitions;
+it streams only the user-visible answer text and discards provider thinking
+blocks. Client cancellation aborts the provider request. Conversations and
+approved prompt revisions persist in the workspace database.
+
+On disposable PostgreSQL 17.10 Homebrew database
+`planner_test_workspace_ai_refs_20261023`, the latest working-tree `pnpm verify`
+passed Prettier, ESLint, TypeScript, 611 unit files / 5,257 tests, and the
+production build. Focused assistant/provider/reference/skill/prompt unit tests
+passed 40/40. `pnpm migration-drill` passed all five drills, and the full
+database integration suite exited successfully, including assistant
+conversation/prompt access isolation. The isolated Chromium assistant suite
+passed 4/4 with responsive, ambiguity-selection, streaming activity, Arabic
+RTL, and axe checks. This is dirty-working-tree evidence on PostgreSQL 17,
+not an exact-clean-SHA release bundle or the required PostgreSQL 16 evidence.
+
+### 2026-10-23 continuation — confirmed selected-draft proposals
+
+The current implementation adds an expiring, actor/workspace/conversation-
+bound proposal for title or brief edits to one explicitly selected existing
+draft. The preview carries the exact current value, proposed value, content
+revision and evidence ID. Apply rechecks actor membership, role, workflow
+status, expiry, and expected revision; writes through the content service and
+its audit path in one transaction; and treats replay as already applied.
+Integration coverage verifies one-time apply, replay, stale-version conflict,
+and denial without workspace membership. This path does not approve, publish,
+or change workflow status.
+
+### 2026-10-24 continuation — atomic multi-draft proposal batch
+
+Apply now accepts an explicitly selected set of 2–10 proposals targeting at
+most five drafts. The server locks proposal rows and draft rows in stable
+order, rechecks owner/workspace, expiry, workflow status, revision, and exact
+before-values, then applies all selected fields through the existing content
+service in one transaction. A stale member rejects the entire selected batch;
+successful application remains replay-safe. Scheduled-folder reconciliation
+is best effort after the transaction commits. This does not change transcript
+privacy or add workflow approval/publishing actions.
+
+| Gate                                                              | Result                                                                                                            |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `pnpm exec tsc --noEmit`                                          | Pass on dirty feature worktree                                                                                    |
+| Workspace Assistant integration suite on disposable PostgreSQL 16 | Pass — 11/11, including same-draft and multi-draft batch apply, replay, role isolation, and stale-batch rejection |
+| `pnpm verify`                                                     | Pass — formatting, lint, typecheck, 616 unit files / 5,290 tests, and production build                            |
+| Isolated Workspace Assistant Chromium suite                       | Pass — 5/5; the runner's subsequent browser pass was interrupted and remains unverified                           |
+
+This is working-tree evidence, not exact-clean-SHA evidence. The full browser
+and visual matrix, external MiniMax UAT, independent review, manual CI,
+backup/rollback evidence, merge, and deployment remain open.
+
+### 2026-10-24 continuation — agency model allowlist and member preference
+
+Agency AI settings now persist the permitted MiniMax model IDs and require the
+agency default model to remain in that list. Legacy settings backfill to their
+existing default. The assistant lists only agency-permitted choices and saves
+the member's preference in browser storage scoped to the user and agency. The
+request handler validates the submitted choice against the persisted agency
+list and server model allowlist before context retrieval or budget reservation;
+reasoning options, tool support, provider calls, and usage events use that
+selected model. Tool use still requires the agency's explicit toggle and a
+model whose registry declares tool support.
+
+| Gate                                                         | Result                                                                                                                 |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Focused AI settings and Workspace Assistant route unit tests | Pass — 54/54 after final model-policy assertions                                                                       |
+| Workspace Assistant integration suite, PostgreSQL 16         | Pass — 11/11                                                                                                           |
+| Full migration drill, PostgreSQL 16                          | Pass — 5/5, 101/101 migrations from zero; skipped-migration repair replayed migration 0100                             |
+| Workspace Assistant Chromium suite                           | Pass — 6/6, including agency model publication, allowed member preference persistence, Arabic RTL, and mobile overflow |
+| EN/AR visual and accessibility capture                       | Pass — Workspace Assistant RTL and Agency AI settings RTL, 2/2 responsive suites across five viewport widths each      |
+
+This evidence is from the dirty feature worktree. The broader cross-browser
+release suite, exact-clean-SHA CI, MiniMax account/key/model and privacy UAT,
+independent reviewer verification, and production backup/deploy gates remain
+open.
+
+On 2026-10-23, `pnpm verify` exited 0 on the dirty feature worktree: format,
+lint, TypeScript, 611 unit files / 5,258 tests, and production build. The full
+`pnpm test:integration` run exited 0 on disposable Homebrew PostgreSQL 17.10;
+the four Workspace Assistant DB integration cases passed, including the new
+confirmed-proposal cases. `pnpm migration-drill` previously passed all five
+drills on disposable PostgreSQL 17.10, including 94/94 migrations from zero.
+The isolated Workspace Assistant Chromium suite passed 4/4 on the current UI,
+including the before/after proposal preview and apply interaction. These are
+working-tree checks, not exact-clean-SHA evidence, and PostgreSQL 17 does not
+satisfy the PostgreSQL 16 release requirement.
+
+The implementation is still a limited first vertical slice of the attached
+specification. Durable assistant run activity exists, but restart-safe worker
+leases/retries do not. Skill authoring/review/rollback, document ingestion and
+semantic retrieval, campaign/analytics retrieval, and proposal generation
+across multiple selected drafts remain unimplemented. Proposal application
+supports title, brief, and schedule changes; a user can atomically apply
+already-created proposals across up to five drafts. MiniMax account/model smoke, provider
+retention and data-processing review, the full configured browser/device and
+visual matrix, PostgreSQL 16 migration evidence, exact-clean-SHA manual CI,
+independent reviewer verification, production backup/rollback evidence, and
+deployment verification remain outstanding. M3.8 remains **In Progress**, and
+the change is not ready to merge or deploy.
+
+### 2026-10-23 continuation — repository browser release path
+
+`TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test_workspace_ai_refs_20261023 pnpm test:affected -- --layer browser`
+ran the full isolated Chromium suite against disposable Homebrew PostgreSQL
+17.10. Result: 291 passed, 1 skipped, 4 failed (296 total), exit code 1, in
+22.6 minutes. During the run the test server logged that it was approaching its
+memory threshold and restarting. The four failures were calendar accessibility
+timeout, forgot-password request connection reset, workspace AI settings
+Arabic page blank during the restart, and Trend Radar navigation connection
+reset. Follow-up isolated Chromium runs passed: the forgot-password, Arabic AI
+settings, and Trend Radar cases passed 3/3; the workspace calendar and client
+calendar accessibility checks passed 2/2. The focused Workspace Assistant E2E
+also passed 4/4 in the full run. These follow-up passes support the server
+restart diagnosis but do not convert the failed full matrix into a passing
+release gate. All results remain dirty-working-tree checks on PostgreSQL 17.10,
+not PostgreSQL 16 or exact-clean-SHA evidence. M3.8 remains **In Progress** and
+the change is not eligible for merge or deployment.
+
+### 2026-10-23 continuation — Ask, Plan, and Apply modes
+
+The assistant now sends a validated `ask` / `plan` / `apply` mode with each
+request. Ask cannot create proposals. Plan may create an expiring title/brief
+preview only for an explicitly selected draft and explicit edit request.
+Apply mode cannot create a new proposal; it only enables the separate
+per-proposal confirmation control. The server still applies only the saved,
+actor/workspace-bound proposal after permission and revision revalidation.
+Model-proposed edits must cite evidence from the current authorized context;
+unknown evidence rejects the response.
+
+On 2026-10-23, `pnpm verify` exited 0 on the dirty feature worktree: format,
+lint, typecheck, 611 unit files / 5,261 tests, and production build. Focused
+route and analysis tests passed 19/19. The isolated Workspace Assistant
+Chromium suite passed 4/4, including mode controls and explicit Apply-mode
+confirmation. This did not rerun the full 296-case browser suite, PostgreSQL
+integration suite, or migration drill. The earlier full Chromium run remains
+291 passed, 1 skipped, and 4 server-restart failures with isolated reruns
+passing; its full matrix is still not a passing release gate. PostgreSQL 16,
+clean-SHA CI, independent review, live MiniMax/retention UAT, and production
+backup/rollback evidence remain outstanding. M3.8 remains **In Progress**.
+
+### 2026-10-23 continuation — conversation mode persistence
+
+Ask/Plan/Apply is now persisted on each private assistant conversation and
+restored on open. A database constraint restricts the stored values; existing
+rows receive Ask. Conversation writes continue through the active-workspace
+and owner-scoped service. The mode is a UI operating preference and does not
+grant permissions.
+
+On the dirty feature worktree, `pnpm verify` passed Prettier, ESLint,
+TypeScript, 611 unit files / 5,261 tests, and the production build. The focused
+assistant route/analysis tests passed 19/19; the assistant database suite
+passed 4/4; and its isolated Chromium suite passed 4/4. `pnpm migration-drill`
+passed all five drills (95/95 migrations from zero) on disposable Homebrew
+PostgreSQL 17.10. The full `pnpm test:integration` runner did not pass: it
+timed out in the unrelated MCP brand-kit workspace-denial test after earlier
+suite runs had passed. A focused rerun of `mcp-brand-kit.test.ts` passed 10/10,
+and the focused assistant database suite passed 4/4. These are
+dirty-working-tree results, not exact-clean-SHA evidence. PostgreSQL 16, the
+full browser/device and visual checks, manual CI,
+independent review, live MiniMax account/retention review, production backup
+and rollback evidence, and deployment verification remain open. M3.8 stays
+**In Progress**; do not merge or deploy.
+
+### 2026-10-23 continuation — bounded MiniMax tool orchestration
+
+The assistant now has a provider-neutral bounded tool loop, a server-only
+MiniMax Anthropic-compatible adapter, and read-only tools for the active
+month's summary, calendar distribution, content mix, bounded item list, the
+explicitly selected content item, and authorized brand guidance. Calls are
+schema validated, limited to three tool rounds and eight calls, and tool
+results are bounded. The feature is disabled by default and agency settings
+allow enabling it only for `MiniMax-M3.1-Flash`; a real account/model smoke is
+still required before enabling it. The model receives no workspace selector
+and cannot add tools or perform writes.
+
+On the dirty worktree, `pnpm verify` passed formatting, lint, typecheck, all
+615 unit files / 5,279 tests, and the production build. The full
+`pnpm test:integration` suite passed, including all four Workspace Assistant
+database cases. The focused Workspace Assistant Chromium suite passed 4/4 in
+English and Arabic/RTL. `pnpm migration-drill` passed all five scenarios,
+including from-zero at 97/97 migrations and skipped-migration replay, on
+disposable PostgreSQL 17.10. The first replay attempt exposed a non-idempotent
+column addition; migration `0096` now uses `ADD COLUMN IF NOT EXISTS`, and the
+full drill passed after that correction. These are working-tree checks, not
+exact-clean-SHA evidence. PostgreSQL 16, the complete browser/device and
+visual matrix, manual CI, independent review, MiniMax live account/tool and
+data-processing UAT, privacy/retention review, production backup/rollback, and
+deployment verification remain outstanding. M3.8 remains **In Progress**;
+the change is not ready to merge or deploy.
+
+### Workspace AI Assistant continuation — skill catalog and final local verification (2026-10-23)
+
+The first-party procedural registry now contains 30 versioned Planner-authored
+skills across strategy, planning, creation, and quality. Discovery returns
+metadata and only loads instructions for selected skills. No skill authoring,
+review, activation, or rollback UI is present. The bounded MiniMax-M3.1-Flash
+read-only tool loop remains agency-gated and disabled by default.
+
+Latest working-tree `pnpm verify` passed formatting, lint, typecheck, 615 unit
+files / 5,280 tests, and production build. Focused assistant tool, skill, and
+route tests passed 25/25. The isolated Workspace Assistant Chromium E2E passed
+4/4 on PostgreSQL 17.10, including prompt creation, reference clarification,
+streamed activity, validated output, and Arabic/RTL. PostgreSQL 16/17
+integration and five-scenario migration-drill results recorded above predate
+only this procedural-catalog/documentation change, which does not alter
+database or integration behavior. These are dirty-working-tree results, not
+exact-clean-SHA evidence. Firefox remains stalled; WebKit, mobile, visual,
+manual CI, independent review, live MiniMax account/model and data-processing
+UAT, privacy/retention review, production backup/rollback, and deployment
+verification remain open. M3.8 stays **In Progress** and is not ready to
+merge or deploy.
+
+### 2026-10-23 continuation — PostgreSQL 16 evidence
+
+The five-scenario `pnpm migration-drill` passed on a separate temporary
+PostgreSQL 16.15 cluster: from-zero with 97/97 migrations, skipped-migration
+repair, in-place upgrade, backup/restore, and failed-migration abort. The full
+`pnpm test:integration` suite also passed against that PostgreSQL 16 cluster,
+including all four Workspace Assistant persistence/prompt/proposal cases.
+These remain dirty-working-tree results rather than exact-clean-SHA release
+evidence.
+
+The assistant E2E passed 4/4 on Chromium against PostgreSQL 16, including
+English, Arabic/RTL, prompt creation, selected-reference clarification,
+streamed activity, and validated results. The configured multi-browser run
+passed Chromium, then stalled in Firefox before returning diagnostic output;
+it was stopped, so Firefox, WebKit, mobile, and visual checks remain
+incomplete. The earlier full Chromium release run also had four unrelated
+Next-server-restart timeouts and visual baselines showed drift. Exact-clean-SHA
+CI, a complete browser/visual matrix, independent review, MiniMax live
+account/tool and data-processing UAT, privacy/retention review, and production
+backup/rollback and deployment verification remain open. M3.8 stays **In
+Progress** and is not eligible for merge or deployment.
+
+### 2026-10-24 — schedule proposal and two-version database evidence
+
+The planned-date proposal now applies through the existing content service,
+preserves the existing UTC posting time, and performs best-effort media-folder
+reconciliation only after its transaction commits. This fixes a lock cycle
+reproduced by the integration test.
+
+| Check                                                              | Result                                                                                                      |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                      | Pass — formatting, lint, typecheck, 615 unit files / 5,282 tests, production build                          |
+| Full `pnpm test:integration`                                       | Pass on PostgreSQL 16.15 and 17.10; includes all five Workspace Assistant persistence/prompt/proposal cases |
+| `pnpm migration-drill`                                             | Pass on PostgreSQL 16.15 and 17.10; all five scenarios, 98/98 from zero                                     |
+| Workspace Assistant Chromium E2E                                   | Pass 4/4; EN/AR/RTL and mobile prompt form                                                                  |
+| Assistant route accessibility                                      | Pass in English and Arabic/RTL, no critical violations                                                      |
+| Broad Chromium suite                                               | Stopped after case 130/296; two unrelated timeout failures observed during server memory restarts           |
+| Firefox invocation                                                 | Stalled without test results; stopped. WebKit/mobile/visual not completed                                   |
+| Exact-clean-SHA, manual CI, independent review                     | Open                                                                                                        |
+| Live MiniMax/model eligibility, data-processing and privacy review | Open                                                                                                        |
+| Production backup, rollback and deployment evidence                | Open                                                                                                        |
+
+All results above are from the working tree and do not meet exact-clean-SHA
+release requirements. M3.8 remains **In Progress** and is not eligible for
+merge or deployment.
+
+### 2026-10-24 — assistant transcript privacy correction
+
+The Workspace Assistant now stores only session metadata and short-lived
+proposals. Transcript turns remain in browser memory; each request may include
+at most eight recent turns, while session APIs return no messages. The runtime
+no longer reads or writes the legacy transcript table. Existing legacy rows,
+if present, still require a separately reviewed and backed-up retention
+decision; no destructive cleanup migration was added.
+
+| Check                                 | Result                                                                             |
+| ------------------------------------- | ---------------------------------------------------------------------------------- |
+| Workspace Assistant route unit tests  | Pass — 19/19, including client-memory history bounds                               |
+| Workspace Assistant integration tests | Pass — PostgreSQL 16.15, 5/5, verifies session privacy and no transcript rows      |
+| Workspace Assistant Chromium E2E      | Pass — 4/4, including EN/AR/RTL and the updated stream contract                    |
+| `pnpm verify`                         | Pass — formatting, lint, typecheck, 615 unit files / 5,283 tests, production build |
+
+These are dirty-working-tree results. Full browser/device and visual release
+coverage, exact-clean-SHA evidence, manual CI, independent review, external
+provider/privacy UAT, and production backup/rollback remain open. M3.8 remains
+**In Progress** and is not eligible for merge or deployment.
+
+### 2026-10-24 — governed workspace knowledge vertical slice
+
+Added bilingual workspace knowledge management under Produce, with category,
+verification state, bounded title/content search, workspace or agency scope,
+manager/admin authorization, source links, soft archive, immutable revisions,
+and optimistic conflict detection. Authorized entries are retrieved as
+untrusted source-linked context; in tool mode, the assistant can cite only the
+knowledge evidence IDs actually returned by the tool. External document upload,
+web ingestion, semantic retrieval, and richer usage provenance remain open.
+
+| Check                            | Result                                                                                                                             |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm typecheck`                 | Pass after adding the knowledge routes and UI                                                                                      |
+| Focused unit suites              | Pass — 29/29 for tool orchestration, assistant route, and bounded tools                                                            |
+| Workspace Assistant integration  | Pass — PostgreSQL 16.15, 6/6, including tenant isolation, shared agency knowledge, role denial, revisions, and stale-edit conflict |
+| Workspace Assistant Chromium E2E | Pass — 5/5, including create/edit/history, prompt library, reference resolution, streamed activity, and Arabic/RTL                 |
+| `pnpm migration-drill`           | Pass — PostgreSQL 16.15, all five scenarios and 99/99 migrations from zero                                                         |
+
+The first drill run exposed that the skipped-migration repair scenario did not
+remove tables introduced by later assistant migrations before replay. The
+disposable-database drill setup now drops those tables and their revision child
+before replay; the complete drill then passed. These are working-tree results,
+not exact-clean-SHA release evidence. Full `pnpm verify`, migration evidence
+against both PostgreSQL versions, full browser/device and visual coverage,
+manual CI, independent review, MiniMax account and privacy UAT, and production
+backup/rollback remain open. M3.8 remains **In Progress** and is not eligible
+for merge or deployment.
+
+### 2026-10-24 — model capability and evidence validation hardening
+
+Added a shared MiniMax model capability registry and use it to control
+reasoning controls and agency tool-calling settings. The server rejects a
+reasoning effort unsupported by the configured model before reserving AI
+budget. Tool results now carry bounded evidence IDs into response validation;
+the assistant cannot cite every preloaded knowledge entry merely because a
+knowledge search tool ran.
+
+| Check                                | Result                                                                                                          |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `pnpm typecheck`                     | Pass                                                                                                            |
+| Focused AI and Assistant unit suites | Pass — 53/53, including model capabilities, budget precheck, tool limits, evidence citation and agency settings |
+
+Full `pnpm verify`, E2E after this model-control change, and remaining release
+gates listed above are still open. M3.8 remains **In Progress** and is not
+eligible for merge or deployment.
+
+### 2026-10-24 — full local baseline on current worktree
+
+| Check                            | Result                                                                                                                                                                 |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                    | Pass — formatting, lint, typecheck, 616 unit files / 5,293 tests, and production build                                                                                 |
+| `pnpm test:integration`          | Pass — full integration suite on PostgreSQL 16.15, including workspace-assistant knowledge tests                                                                       |
+| Workspace Assistant Chromium E2E | Pass — 5/5 on PostgreSQL 16.15, including EN/AR/RTL, accessibility, responsive layout, knowledge editing/history, prompt execution, references, and streamed responses |
+| `pnpm migration-drill`           | Pass — all five migration scenarios on PostgreSQL 16.15, 99/99 migrations from zero                                                                                    |
+| Workspace Assistant visual       | Pass — strict Chromium snapshot comparison, English/LTR 5/5 and Arabic/RTL 5/5 viewports at 375/768/1024/1280/1440px                                                   |
+| Focused assistant run recovery   | Pass — PostgreSQL integration 7/7; replay, cancellation, and stale-run coverage                                                                                        |
+| Latest `pnpm verify`             | Pass — formatting, lint, typecheck, 616 unit files / 5,293 tests, and production build                                                                                 |
+
+These checks are still from an uncommitted working tree. Full configured
+browser/device and visual coverage beyond the assistant route, exact-clean-SHA CI, manual workflow
+dispatches, independent review, MiniMax subscription-key/model and privacy UAT,
+transcript-retention decision, production backup/rollback, and deployment
+verification remain open. The AI milestone remains **In Progress** and is not
+eligible for merge or deployment.
+
+### 2026-10-24 — PostgreSQL 17 compatibility continuation
+
+The complete integration suite also passed against disposable PostgreSQL
+17.10. The five-scenario migration drill passed on PostgreSQL 17.10 with
+99/99 migrations from zero, in addition to the PostgreSQL 16.15 results above.
+The six Workspace Assistant integration cases passed, including private
+session transcript handling, prompt publication isolation, knowledge revision
+conflicts, and single-draft proposal replay/stale-version checks.
+
+This closes the local PostgreSQL 17 compatibility check for the current dirty
+working tree. It does not close production backup/rollback evidence, exact
+clean-SHA verification, complete browser/device and visual coverage, external
+MiniMax account/privacy UAT, independent review, manual CI, or deployment.
+M3.8 remains **In Progress**.
+
+### 2026-10-24 continuation — explicitly confirmed multi-field edits
+
+The plan-review UI now lets a member select two or three distinct proposed
+fields for one explicitly selected draft and apply them with one confirmation.
+The server locks the proposals and draft, rechecks role, workspace, common
+revision, workflow state, expiry, and each exact before-value, then calls the
+existing content update service once in the same transaction. It marks every
+selected proposal applied together; stale previews apply no fields, and replay
+returns the already-applied result. Schedule edits preserve the existing UTC
+posting time and retain best-effort media-folder reconciliation.
+
+| Check                            | Result                                                                                       |
+| -------------------------------- | -------------------------------------------------------------------------------------------- |
+| TypeScript                       | Pass                                                                                         |
+| `pnpm verify`                    | Pass — formatting, lint, typecheck, 616 unit files / 5,290 tests, and production build       |
+| Workspace Assistant integration  | Pass — 10/10, including three-field atomic apply, one revision bump, replay, stale, and RBAC |
+| Workspace Assistant Chromium E2E | Pass — 5/5; batch flow includes axe scan and a focused 375px overflow check                  |
+
+This is a dirty-worktree result. Multi-item proposal batches, full browser and
+visual release coverage, exact-clean-SHA CI, independent review, MiniMax
+account/privacy UAT, and production backup/rollback/deployment evidence remain
+open. M3.8 remains **In Progress**.
+
+The strict `pnpm test:e2e:release` command was also started on the current
+working tree. It reached 117 of 297 Chromium cases before being stopped after
+the Next.js test server repeatedly restarted near its memory threshold. Two
+cases timed out during that long run: workspace calendar accessibility and
+the public `/setup` route. Immediate isolated reruns passed (calendar checks
+2/2; `/setup` 1/1). This classifies those individual failures as run-level
+instability, but the complete browser and visual release suite remains open.
+
+### 2026-10-24 — authorized workload summary slice
+
+Added a bounded content-owner/designer assignment summary for the selected
+workspace month. The query uses the authorized content feature boundary and is
+limited to workspace managers and content planners. It returns display names
+and counts only, includes unassigned designer work, and is loaded by the
+assistant only when workload-related intent selects the matching skill. The
+English/Arabic prompt and skill explicitly prohibit treating assignment counts
+as proof of capacity, deadlines, or performance.
+
+| Check                                 | Result                                                                                  |
+| ------------------------------------- | --------------------------------------------------------------------------------------- |
+| `pnpm typecheck`                      | Pass                                                                                    |
+| Focused Assistant unit suites         | Pass — 11/11 for typed tools, bilingual built-in prompt, and skill selection            |
+| Workspace Assistant integration suite | Pass — PostgreSQL 16.15, 8/8, including workspace/month isolation and permission denial |
+
+These are dirty-working-tree results. After the prompt library change, strict
+Chromium visual comparison passed the English and Arabic/RTL responsive
+matrices (5 viewports each). The current focused Workspace Assistant Chromium
+E2E passed 5/5, including knowledge editing/history, private prompt creation,
+ambiguous content selection, streamed results, and Arabic RTL. The latest
+`pnpm verify` passed formatting, lint, typecheck, all 616 unit files / 5,290
+tests, and the production build. Full integration and migration verification
+must be repeated on the final clean SHA; the complete browser/device and visual
+release matrices, exact-clean-SHA CI, independent review, provider/privacy
+UAT, production backup/rollback, and deployment verification remain open.
+
+### 2026-10-24 continuation — full PostgreSQL 16 verification
+
+The complete integration suite completed on the disposable PostgreSQL 16.15
+database after the workload-summary slice; the Workspace Assistant integration
+file passed 8/8, including transcript privacy, prompt publication isolation,
+knowledge revisions, proposal conflict/replay, run cancellation, and workload
+workspace/month isolation. The PostgreSQL 16 migration drill passed all five
+scenarios, including from-zero replay of 100/100 migrations, skipped migration
+repair, in-place upgrade, backup/restore, and failed-migration rollback.
+
+These remain working-tree checks. They do not replace exact-clean-SHA, manual
+CI, independent review, production backup/rollback, or deployment evidence.
+M3.8 remains **In Progress**.
+
+### 2026-10-24 continuation — agency skill governance and release check
+
+Agency admins can author and revise agency-scoped assistant skills, submit an
+immutable revision for review, and archive skills. A different agency admin
+must approve or reject a submitted revision. Rollback creates a new draft
+revision tied to its approved source; it does not reactivate historical content
+directly. Custom skills carry instructions only and cannot register tools or
+permissions. A bilingual management page lives at
+`/app/agency-settings/ai/skills`.
+
+| Check                                                     | Result                                                                                                                                                                                |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                             | Pass — formatting, lint, typecheck, 616 unit files / 5,294 tests, and production build                                                                                                |
+| `TEST_DATABASE_URL=… NODE_ENV=test pnpm migration-drill`  | Pass — all five scenarios; PostgreSQL 16.15; 103/103 from zero                                                                                                                        |
+| `TEST_DATABASE_URL=… NODE_ENV=test pnpm test:integration` | Pass — complete integration suite; Workspace Assistant 12/12, including separate-admin review, active-version preservation, rollback provenance, archive, and workspace authorization |
+| Workspace Assistant Chromium E2E                          | Pass — 7/7; includes skill governance English/Arabic RTL, mobile layout, and axe checks                                                                                               |
+| Assistant skill Arabic RTL visual/accessibility           | Pass — 1/1 across five viewports                                                                                                                                                      |
+| Isolated retries of full-run failures                     | Pass — 4/4 for workspace calendar accessibility and the public auth providers route                                                                                                   |
+| `pnpm test:e2e:release`                                   | Incomplete — interrupted at 128/299 after repeated Next.js memory-threshold restarts and stalled progress; two unrelated route cases failed before isolated retries passed            |
+
+These are dirty-working-tree results. Full browser and visual coverage remains
+open. Exact-clean-SHA verification and manual CI, independent review, the
+configured MiniMax account/model/tool smoke, MiniMax data-processing/privacy
+review, separated-account human UAT, production backup/restore, rollback, and
+deployment evidence remain open. M3.8 remains **In Progress** and is not
+eligible for merge or deployment.
+
+A second `pnpm test:e2e:release` attempt used the verified disposable database
+and a capped Node heap. The Next.js dev server still restarted at its memory
+threshold; the workspace planning-list accessibility check timed out during a
+restart. The run was stopped after 23 cases (22 passed, one timed out), so the
+complete browser and visual release suite remains incomplete. The assistant's
+focused 7/7 Chromium checks and the isolated calendar/auth-provider retries
+remain passing evidence, but they do not substitute for the full matrix.
+
+The follow-up added an opt-in to suppress Next.js's dev-heap restart, with the
+default safety behavior unchanged. With that opt-in and an 8 GiB heap, the
+server no longer restarted, but the local process exhausted its heap while
+loading the workspace route matrix after 44 passing Chromium cases. The run
+was interrupted at case 81 after subsequent requests failed against the dead
+server. This host cannot complete the full matrix with the current dev-server
+memory footprint; the opt-in is documented for hosts with adequate headroom.
+
+### 2026-10-24 continuation — final local verification and focused retest
+
+The opt-in is implemented through Next.js's
+`experimental.devMemoryThresholdRestart` setting and is disabled only when
+`LARATIK_E2E_DISABLE_DEV_MEMORY_RESTART=1` is explicitly present. The default
+remains enabled. A final `pnpm verify` passed formatting, lint, typecheck, 616
+unit files / 5,294 tests, and the production build. The focused Workspace AI
+Assistant Chromium suite then passed 7/7 on the disposable PostgreSQL 16
+database, including model governance, knowledge history, prompt creation,
+reference clarification, streamed results, Arabic RTL, mobile layout, and
+accessibility. The broad browser/visual matrix is still incomplete; the host
+exhausted an 8 GiB dev-server heap when the restart was explicitly disabled.
+These are working-tree results, not clean-SHA release evidence.
+
+### 2026-10-24 continuation — Zod security update and final working-tree checks
+
+The production dependency audit found high advisories in Zod and transitive
+`body-parser`. Zod is now on 4.6.7 and `body-parser` is overridden to 2.4.0;
+the audit reports zero high or critical findings (two low and seven moderate
+remain). The Zod 4 compatibility pass preserves existing GUID acceptance,
+partial notification-preference updates, and caller-facing validation copy.
+Remote MCP date inputs are now ISO date-time strings converted to `Date` only
+after validation, so the tool registry can publish valid JSON Schemas.
+
+| Check                                  | Result                                                                                                                              |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                          | Pass — formatting, lint, typecheck, all 616 unit files / 5,294 tests, and production build                                          |
+| `pnpm audit --prod --audit-level high` | Pass — 0 high/critical; 2 low and 7 moderate findings remain                                                                        |
+| PostgreSQL 16 migration drill          | Pass — five scenarios, 103/103 migrations from zero, repair, upgrade, backup/restore, and failed-migration safety                   |
+| PostgreSQL 16 integration suite        | Pass — full configured integration suite, including Workspace Assistant 12/12 and MCP HTTP/tool cases                               |
+| Workspace Assistant Chromium E2E       | Pass — 7/7 on disposable PostgreSQL 16, including English/Arabic RTL, mobile, axe, knowledge, prompts, streaming, and references    |
+| Full browser release matrix            | Incomplete — the local dev server exhausted the host's available heap during the 299-case suite; the focused assistant suite passes |
+
+These checks are still from the working tree. Exact-clean-SHA verification,
+manual GitHub checks, independent review, external MiniMax model/tool and
+data-processing verification, separated-account human UAT, and production
+backup/rollback evidence are still required before M3.8 can be marked verified
+or the production deployment can proceed.

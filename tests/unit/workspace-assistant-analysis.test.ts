@@ -83,4 +83,51 @@ describe("workspace assistant analysis", () => {
       ),
     ).toThrow();
   });
+
+  it("rejects a proposed edit that cites evidence outside the authorized context", () => {
+    expect(() =>
+      parseWorkspaceAssistantResponse(
+        JSON.stringify({
+          answer: "Review",
+          findings: [],
+          recommendations: [],
+          proposedChanges: [
+            {
+              field: "title",
+              title: "Edit title",
+              afterValue: "A clearer title",
+              evidenceIds: ["foreign-item-revision-1"],
+            },
+          ],
+          limitations: [],
+        }),
+        new Set(["workspace-content-2026-11"]),
+      ),
+    ).toThrow("unknown evidence reference");
+  });
+
+  it("accepts an evidence-bound scheduling preview for a selected content item", () => {
+    const response = parseWorkspaceAssistantResponse(
+      JSON.stringify({
+        answer: "The selected draft could move to November 13.",
+        findings: [],
+        recommendations: [],
+        proposedChanges: [
+          {
+            field: "plannedPublishAt",
+            title: "Move the planned date",
+            afterValue: "2026-11-13",
+            evidenceIds: ["content-item-123-revision-4"],
+          },
+        ],
+        limitations: [],
+      }),
+      new Set(["content-item-123-revision-4"]),
+    );
+
+    expect(response.proposedChanges[0]).toMatchObject({
+      field: "plannedPublishAt",
+      afterValue: "2026-11-13",
+    });
+  });
 });

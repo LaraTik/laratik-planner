@@ -32,7 +32,7 @@ const querySchema = z.object({
 const createSchema = z.object({
   name: z.string().min(1).max(80),
   shareScope: z.enum(["me", "workspace", "agency"]),
-  filters: z.record(z.unknown()),
+  filters: z.record(z.string(), z.unknown()),
   workspaceSlug: z.string().min(1),
 });
 
@@ -194,7 +194,7 @@ export async function PATCH(req: NextRequest) {
   const json = await req.json().catch(() => ({}));
   const parsed = z
     .object({
-      id: z.string().uuid(),
+      id: z.string().guid(),
       workspaceSlug: z.string().min(1),
       shareScope: z.enum(["me", "workspace", "agency"]),
     })

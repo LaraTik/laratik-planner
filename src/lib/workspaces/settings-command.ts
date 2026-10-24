@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { ianaTimezoneSchema } from "./timezone";
 
-const nullableUserId = z.string().uuid().nullable();
+const nullableUserId = z.string().guid().nullable();
 
 export const workspaceSettingsCommandSchema = z.object({
-  workspaceId: z.string().uuid(),
+  workspaceId: z.string().guid(),
   timezone: ianaTimezoneSchema,
   approvalMode: z.enum(["simple", "internal_then_client"]),
   monthlyTarget: z.number().int().min(1).max(10_000).nullable(),

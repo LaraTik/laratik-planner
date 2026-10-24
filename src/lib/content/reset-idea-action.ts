@@ -43,7 +43,7 @@ import { logWarn } from "@/lib/observability/logger";
  */
 
 const resetIdeaCommandSchema = z.object({
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
   typedPhrase: z.string().min(1).max(500),
   reason: z
     .string()

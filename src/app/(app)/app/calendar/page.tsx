@@ -756,10 +756,10 @@ export default async function GlobalCalendarPage({
   const requestedParams = await searchParams;
   const requested = requestedParams.month;
   const valid = requested?.match(/^(\d{4})-(\d{2})$/);
-  const workspaceId = z.string().uuid().safeParse(requestedParams.workspaceId).success
+  const workspaceId = z.string().guid().safeParse(requestedParams.workspaceId).success
     ? requestedParams.workspaceId
     : undefined;
-  const assigneeId = z.string().uuid().safeParse(requestedParams.assigneeId).success
+  const assigneeId = z.string().guid().safeParse(requestedParams.assigneeId).success
     ? requestedParams.assigneeId
     : undefined;
   const taskStatus = TASK_STATUSES.includes(requestedParams.taskStatus as TaskStatus)

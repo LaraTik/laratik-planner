@@ -15,7 +15,7 @@ import { recordMaterialityEvent } from "@/lib/publishing/materiality";
 
 /** Canonical audience copy updates remain material edits. */
 export const UpdateAudienceCopySchema = z.object({
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
   format: z.enum([
     "static_post",
     "carousel",
@@ -120,7 +120,7 @@ export async function updateAudienceCopy(actor: Actor, input: UpdateAudienceCopy
  * material audience-copy update and preserve the legacy edit scope.
  */
 export const PatchAudienceCopySchema = z.object({
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
   caption: z.string().max(2200).optional(),
   hashtags: z.array(z.string().min(1).max(80)).max(30).optional(),
   firstComment: z.string().max(2200).optional(),

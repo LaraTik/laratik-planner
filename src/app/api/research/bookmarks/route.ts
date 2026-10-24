@@ -12,7 +12,7 @@ import { queryResearchPostObservation } from "@/lib/social/analytics-query";
 
 const bodySchema = z.object({
   workspaceSlug: z.string().min(1),
-  observationId: z.string().uuid(),
+  observationId: z.string().guid(),
 });
 
 async function getContext(workspaceSlug: string) {

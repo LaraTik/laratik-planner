@@ -8,7 +8,7 @@ import { workspaces } from "@/lib/db/schema";
 import { completeStorageUpload, StorageIntentError } from "@/lib/storage/intent-service";
 import { StorageConfigurationError } from "@/lib/storage/r2-adapter";
 
-const Body = z.object({ intentId: z.string().uuid(), workspaceId: z.string().uuid() });
+const Body = z.object({ intentId: z.string().guid(), workspaceId: z.string().guid() });
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
