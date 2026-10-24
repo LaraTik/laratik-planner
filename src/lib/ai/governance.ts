@@ -345,6 +345,29 @@ export async function enforceAiBudget(input: {
   });
 }
 
+/** Reserve another bounded provider round without counting a second AI request. */
+export async function reserveAdditionalAiBudgetTokens(input: {
+  agencyId: string;
+  inputTokens: number;
+  outputTokens: number;
+}): Promise<void> {
+  const { agencyId, inputTokens, outputTokens } = input;
+  if (
+    !Number.isSafeInteger(inputTokens) ||
+    inputTokens < 0 ||
+    !Number.isSafeInteger(outputTokens) ||
+    outputTokens < 0
+  ) {
+    throw new Error("Additional AI budget reservations must be non-negative safe integers");
+  }
+  await db.transaction(async (tx) => {
+    await reserveCapacity(tx, agencyId, [
+      ...(inputTokens > 0 ? [{ resource: AI_BUDGET_MONTHLY_INPUT, increase: inputTokens }] : []),
+      ...(outputTokens > 0 ? [{ resource: AI_BUDGET_MONTHLY_OUTPUT, increase: outputTokens }] : []),
+    ]);
+  });
+}
+
 // ─── Reconciliation ──────────────────────────────────────────────────
 
 /**
@@ -358,13 +381,12 @@ export async function enforceAiBudget(input: {
  *   - The monthly request counter is already at its final value
  *     (1). Reconciliation does NOT modify it either.
  *   - The monthly input and output token counters are reconciled
- *     by adding the difference (actual - estimated) to each via
- *     `reserveCapacity`. A negative delta is applied via
- *     `recordUsage` so the counter is decremented.
+ *     by adding the difference (actual - estimated) to each. Positive
+ *     deltas record consumed provider usage even when it exceeds the cap;
+ *     negative deltas refund unused reserved capacity.
  *
- * The function is idempotent: calling it twice with the same
- * inputs is a no-op. The route calls it exactly once per
- * successful request.
+ * This operation is not idempotent. Call it once for each request
+ * reservation, using the total tokens reserved across provider rounds.
  */
 export async function reconcileAiBudget(input: {
   agencyId: string;
@@ -401,10 +423,12 @@ export async function reconcileAiBudget(input: {
   if (outputDelta > 0)
     positiveAdjustments.push({ resource: AI_BUDGET_MONTHLY_OUTPUT, increase: outputDelta });
 
-  if (positiveAdjustments.length > 0) {
-    await db.transaction(async (tx) => {
-      await reserveCapacity(tx, agencyId, positiveAdjustments);
-    });
+  // This is a reconciliation after a provider has already consumed tokens.
+  // Record actual usage even if it crosses the plan cap; failing a reservation
+  // here would omit billable usage from the counter. The next request's
+  // preflight reservation will enforce the cap.
+  for (const adjustment of positiveAdjustments) {
+    await recordUsage(db, agencyId, adjustment.resource, adjustment.increase);
   }
 
   // Negative deltas: refund the unused tokens to the monthly

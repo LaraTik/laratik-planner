@@ -125,7 +125,7 @@ export async function proxy(req: NextRequest) {
   const secureCookie = isSecureRequest(req);
   const token = await getToken({
     req,
-    secret: serverEnv.AUTH_SECRET,
+    ...(serverEnv.AUTH_SECRET ? { secret: serverEnv.AUTH_SECRET } : {}),
     secureCookie,
     // salt intentionally omitted: getToken defaults salt = cookieName,
     // which is exactly what NextAuth() uses to write the JWT. Passing a

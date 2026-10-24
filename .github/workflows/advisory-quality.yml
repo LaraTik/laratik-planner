@@ -30,6 +30,7 @@ jobs:
   # is separately dispatched and opens/updates an issue instead of failing CI.
   # See docs/operations/runbook.md § "Patching a dependency advisory".
   dependency-advisory:
+    if: github.ref == 'refs/heads/main'
     name: Dependency advisory
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -114,6 +115,7 @@ jobs:
             return github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body });
 
   coverage:
+    if: github.ref == 'refs/heads/main'
     name: Coverage advisory
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -258,6 +260,7 @@ jobs:
         run: exit 1
 
   e2e:
+    if: github.ref == 'refs/heads/main'
     name: E2E advisory
     runs-on: ubuntu-latest
     timeout-minutes: 60

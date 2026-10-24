@@ -142,6 +142,11 @@ describe("authenticated MCP HTTP transport", () => {
     expect(
       listBody.result?.tools?.some((tool) => tool.name === "laratik_planner_create_task"),
     ).toBe(true);
+    expect(
+      listBody.result?.tools?.some((tool) =>
+        /assistant|prompt|skill|knowledge|proposal/i.test(tool.name ?? ""),
+      ),
+    ).toBe(false);
 
     const research = await postMcp(issued.token, {
       jsonrpc: "2.0",

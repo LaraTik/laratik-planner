@@ -65,8 +65,12 @@ export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5432/pl
 psql "$TEST_DATABASE_URL" -tAc 'select current_database()'
 ```
 
-Run `NODE_ENV=test pnpm migration-drill` and `pnpm test:integration` before
-browser checks. The `test:e2e:isolated`, `test:e2e:critical`, and `test:visual`
+Run focused tests during development and affected unit/integration checks
+before pushing. Run the full `pnpm test:integration` suite once for a release
+candidate, locally against disposable PostgreSQL; never run it in GitHub
+Actions (ADR 0020). See `docs/operations/local-test-speed-plan.md` for the
+fast local loop and staged suite optimization. The `test:e2e:isolated`,
+`test:e2e:critical`, and `test:visual`
 scripts all use `scripts/run-e2e-tests.ts`; it refuses non-test URLs, applies
 migrations, and injects deterministic test-only Auth.js secrets. Never point
 `TEST_DATABASE_URL` at `planner` or a production database.
@@ -215,9 +219,10 @@ in one pass or extract code only to reduce file length.
 - ✅ Every migration must be registered in `src/lib/db/migrations/meta/_journal.json`, target the exact table names in the Drizzle schema, and include forward, compatibility, backup, rollback, from-zero, and upgrade evidence. A successful build does not prove that a migration runs.
 - ✅ Record verification against the exact clean commit SHA. If the branch advances or becomes dirty after verification, rerun the affected gates before calling the work complete.
 - ✅ Pre-commit hook catches lint/format/typecheck/unit-test issues early — keep it fast by keeping its scope tight (lint-staged on staged files, `vitest related` on staged sources, sentinel-driven `tsc --noEmit`). Skip with `git commit --no-verify` or `SKIP_TYPECHECK=1` for WIP / hotfixes.
-- ✅ Pre-push hook runs affected unit/integration checks for the pushed range; it does not run E2E. Use `pnpm test:affected -- --layer browser` for local affected E2E and `pnpm test:e2e:release` for the strict full browser + visual release-candidate check. All GitHub Actions workflows are manual-only; dispatch the required checks against the reviewed ref. Skip with `git push --no-verify`, `SKIP_PREPUSH=1`, or `SKIP_INTEGRATION=1` for trivial pushes.
-- ✅ Always merge finished work to `main` — review, commit, push after `pnpm verify`, the local pre-merge E2E checklist, and any required manually dispatched GitHub checks are complete. No half-finished work sits in the local working tree or on a stale local branch. Production deployment requires a separate manual dispatch of the deploy workflow.
-- ✅ CI is authoritative — local git hooks are optional and never replace CI
+- ✅ Pre-push hook runs affected unit and integration checks for the pushed range; it does not run the full integration suite or E2E. Use `pnpm test:affected -- --layer browser` for normal UI changes and `pnpm test:e2e:release` for release candidates and broad shared-surface changes. Run the full integration suite once for a release candidate, locally before merge. GitHub Actions are not part of normal review or release; do not dispatch them for branch checks or routine releases. See ADR 0020 and `docs/operations/local-test-speed-plan.md`.
+- ✅ Review and verify locally before merging: inspect the complete diff, obtain independent approval, run `pnpm verify`, and complete applicable local integration, migration, bilingual browser, accessibility, and visual gates on the exact clean SHA. Merge finished work to `main` and push it to `origin`; build and publish the exact SHA-tagged app/migrator images locally, then invoke VPS deployment from the operator machine using the runbook. Do not use GitHub Actions to test, build, publish, review, or deploy a release. No finished work sits in a dirty tree or stale branch.
+- ✅ GitHub `main` protection requires a pull request, one approval from someone other than the latest pusher, dismissal of stale approvals, resolved review conversations, and linear history. There are no PR status-check requirements because checks are dispatched on `main` after merge; local release evidence and independent review are required before merge.
+- ✅ Local evidence is the release authority. GitHub stores the source, PR discussion, independent approval, and merge record; workflow results are not release gates. Keep the disposable-database guard and record full integration evidence at the release candidate SHA.
 - ✅ Keep the remote Planner MCP current on every change: update the implementation, `docs/api/mcp.md`, `docs/api/README.md`, `docs/api/mcp-evaluation.xml`, affected bilingual Account UI copy, tests, and production-readiness evidence together. Follow [`docs/operations/mcp-maintenance.md`](docs/operations/mcp-maintenance.md); never ship a new tool, scope, error, or transport behavior with stale client documentation.
 - ✅ Staging before production: not yet (single-environment for v1, see Goal 14)
 - ✅ Disk hygiene before deploy: ensure VPS `/` is < 70% (use the vps-ops `disk-cleanup.sh apply` if needed)
@@ -513,7 +518,7 @@ The independent reviewer (Task 13) flips the verdict to `READY` after the
 30-step §23 journey and the owner checks in
 `docs/production-readiness/EXTERNAL_SERVICES_UAT.md` are signed.
 
-> Workflow contract — see `docs/testing/strategy.md` (Release gates) and ADR 0019. All four GitHub Actions workflows are manual-only. `ci.yml` is the authoritative check (full unit/integration, audit, build, Docker smoke, SMTP-cert probe, workflow linters). `advisory-quality.yml` runs targeted or release-candidate checks only by dispatch. Local E2E is explicit via `pnpm test:affected -- --layer browser` or `pnpm test:e2e:release`; pre-push runs affected unit/integration only. `deploy.yml` deploys only after a separate operator dispatch.
+> Workflow contract — see `docs/testing/strategy.md`, ADR 0019/0020/0021, and `docs/operations/local-test-speed-plan.md`. GitHub Actions are legacy recovery tooling and are not dispatched for normal branch checks or releases. Review, verification, build, image publication, and deployment are locally operated. The pre-push hook runs affected unit/integration checks only; the full integration suite is a local release-candidate gate. E2E is explicit through `pnpm test:affected -- --layer browser` and the release matrix through `pnpm test:e2e:release`.
 
 ## Activity log rendering
 
@@ -568,7 +573,7 @@ diff shapes, and extension recipe.
 - **Branches:** `main` is production. `feat/*` for features, `fix/*` for hotfixes, `chore/*` for chores. Squash-merge.
 - **PRs:** must pass CI (`pnpm verify` + build + smoke e2e). Reference the goal number in the PR title.
 - **ADRs:** material deviations from the master prompt go in `docs/decisions/`. The first one (`docs/decisions/0001-vps-port.md`) records the choice to self-host on the LaraTik VPS instead of Supabase + Vercel.
-- **Merge on completion:** when a change is finished and `pnpm verify` is green, the local pre-merge E2E checklist (`pnpm test:e2e:isolated` + `pnpm test:visual`) is complete, and required GitHub checks have been manually dispatched and reviewed, commit it with a `<type>(<scope>): <description>` message and push to `main`. Production deploy is a separate manual dispatch. No finished work sits in the local working tree or on a stale local branch; feature branches (`feat/*`, `fix/*`, `chore/*`) are temporary scratch space.
+  - **Merge on completion:** when local release evidence is green on the exact clean SHA and an independent reviewer has approved it, merge it to `main`. Normal changes require `pnpm verify`, local integration/migration gates, affected browser checks, and bilingual accessibility/visual evidence for touched screens. Run the full `pnpm test:e2e:release` matrix for release candidates and broad shared-surface changes. Do not dispatch GitHub workflows for feature branches. Dispatch main-only CI after merge to build and publish the image; production deployment is a separate manual dispatch after CI succeeds. No finished work sits in the local working tree or on a stale local branch; feature branches (`feat/*`, `fix/*`, `chore/*`) are temporary scratch space.
 
 ## Product UI/UX Engineering Rules
 
@@ -2085,7 +2090,7 @@ second generic project taxonomy unless multi-collection reuse is evidenced.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
-# This is NOT the Next.js you know
+## This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 

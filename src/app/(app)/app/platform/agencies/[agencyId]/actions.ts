@@ -42,7 +42,7 @@ export async function platformEditAgencyAction(
   formData: FormData,
 ): Promise<PlatformEditAgencyActionState> {
   const actor = await requirePlatformActor();
-  const agencyId = z.string().uuid().safeParse(formData.get("agencyId"));
+  const agencyId = z.string().guid().safeParse(formData.get("agencyId"));
   if (!agencyId.success) return { error: "Missing or invalid agency id." };
   const parsed = UpdateAgencySchema.safeParse({
     name: formData.get("name"),

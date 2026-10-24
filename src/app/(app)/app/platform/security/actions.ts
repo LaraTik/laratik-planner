@@ -51,8 +51,8 @@ async function requirePlatformActor() {
 const CreateSupportAccessRequestFormSchema = z.object({
   ticketReference: z.string().trim().min(3).max(120),
   reason: z.string().trim().min(8).max(2000),
-  targetAgencyId: z.string().uuid(),
-  scopeWorkspaceId: z.string().uuid().nullable().optional(),
+  targetAgencyId: z.string().guid(),
+  scopeWorkspaceId: z.string().guid().nullable().optional(),
   scopeMetadataOnly: z.boolean().default(false),
   requestedDurationHours: z.coerce.number().int().min(1).max(168),
   downloadsRequested: z.boolean().default(false),
@@ -113,7 +113,7 @@ export async function createSupportAccessRequestFormAction(
 }
 
 const RevokeFormSchema = z.object({
-  grantId: z.string().uuid(),
+  grantId: z.string().guid(),
   reason: z.string().trim().min(3).max(2000),
 });
 
@@ -187,7 +187,7 @@ function translateSupportError(e: unknown): { ok: false; error: string; code?: s
     return { ok: false, error: e.message, code: e.code };
   }
   if (e instanceof z.ZodError) {
-    return { ok: false, error: e.errors.map((issue) => issue.message).join("; ") };
+    return { ok: false, error: e.issues.map((issue) => issue.message).join("; ") };
   }
   return { ok: false, error: "Unexpected error" };
 }

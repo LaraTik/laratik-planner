@@ -82,9 +82,9 @@ export type MaterialityReasonCode = z.infer<typeof MaterialityReasonCodeSchema>;
 
 export const RecordMaterialityEventInputSchema = z.object({
   actor: z
-    .object({ id: z.string().uuid() })
+    .object({ id: z.string().guid() })
     .describe("Actor for the policy gate; the persistence layer uses id only."),
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
   resource: z.enum(MATERIAL_RESOURCES),
   beforeValue: z.unknown().nullable(),
   afterValue: z.unknown().nullable(),
@@ -322,11 +322,11 @@ export async function recordMaterialityEventInTx(
  * internal notes must not change approvals" sentence covers.
  */
 export const RecordNonMaterialityEventInputSchema = z.object({
-  actor: z.object({ id: z.string().uuid() }),
-  contentItemId: z.string().uuid(),
+  actor: z.object({ id: z.string().guid() }),
+  contentItemId: z.string().guid(),
   resource: z.string().min(1).max(80),
   summary: z.string().min(1).max(200),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 export type RecordNonMaterialityEventInput = z.infer<typeof RecordNonMaterialityEventInputSchema>;
 

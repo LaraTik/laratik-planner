@@ -74,7 +74,7 @@ export const ReadinessIssueSchema = z.object({
 export type ReadinessIssue = z.infer<typeof ReadinessIssueSchema>;
 
 export const ChannelReadinessSchema = z.object({
-  socialChannelId: z.string().uuid(),
+  socialChannelId: z.string().guid(),
   platform: z.string().nullable(),
   hasPayload: z.boolean(),
   requiredTotal: z.number().int().min(0),
@@ -86,7 +86,7 @@ export const ChannelReadinessSchema = z.object({
 export type ChannelReadiness = z.infer<typeof ChannelReadinessSchema>;
 
 export const ReadinessReportSchema = z.object({
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
   revision: z.number().int().min(0),
   blockers: z.number().int().min(0),
   recommendations: z.number().int().min(0),
@@ -125,8 +125,8 @@ export interface ReadinessInput {
 }
 
 export const ConfirmPublishReadinessInputSchema = z.object({
-  workspaceId: z.string().uuid(),
-  contentItemId: z.string().uuid(),
+  workspaceId: z.string().guid(),
+  contentItemId: z.string().guid(),
 });
 export type ConfirmPublishReadinessInput = z.infer<typeof ConfirmPublishReadinessInputSchema>;
 

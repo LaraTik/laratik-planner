@@ -23,13 +23,13 @@ export const runtime = "nodejs";
 const InspectBody = z.object({
   mode: z.literal("inspect"),
   url: z.string().trim().min(1).max(2048),
-  workspaceId: z.string().uuid(),
+  workspaceId: z.string().guid(),
 });
 
 const ImportBody = z.object({
   mode: z.literal("import"),
   folderId: z.string().trim().min(1).max(160),
-  workspaceId: z.string().uuid(),
+  workspaceId: z.string().guid(),
   items: z
     .array(
       z.object({
@@ -40,7 +40,7 @@ const ImportBody = z.object({
     .min(1)
     .max(MAX_FOLDER_BATCH_IMPORT),
   visibility: z.enum(["workspace", "agency"]).optional(),
-  contentItemId: z.string().uuid().optional(),
+  contentItemId: z.string().guid().optional(),
 });
 
 const Body = z.discriminatedUnion("mode", [InspectBody, ImportBody]);

@@ -332,6 +332,7 @@ async function drillSkippedMigrationRepair(): Promise<void> {
     ["notification", "message_params"],
     ["activity_event", "message_key"],
     ["activity_event", "message_params"],
+    ["ai_feature_setting", "permitted_models"],
   ] as const;
 
   try {
@@ -344,6 +345,7 @@ async function drillSkippedMigrationRepair(): Promise<void> {
       await c.query('ALTER TABLE "notification" DROP COLUMN IF EXISTS "message_params"');
       await c.query('ALTER TABLE "activity_event" DROP COLUMN IF EXISTS "message_key"');
       await c.query('ALTER TABLE "activity_event" DROP COLUMN IF EXISTS "message_params"');
+      await c.query('ALTER TABLE "ai_feature_setting" DROP COLUMN IF EXISTS "permitted_models"');
       // The historical rewind replays every later migration. Keep the
       // disposable drill honest for additive table migrations as well as
       // column migrations by removing the new table before replay.
@@ -356,6 +358,17 @@ async function drillSkippedMigrationRepair(): Promise<void> {
       await c.query('DROP TABLE IF EXISTS "research_watchlist_member" CASCADE');
       await c.query('DROP TABLE IF EXISTS "research_watchlist" CASCADE');
       await c.query('DROP TABLE IF EXISTS "research_watchlist_account" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "workspace_assistant_skill_revision" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "workspace_assistant_skill" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "workspace_assistant_proposal" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "workspace_assistant_run_event" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "workspace_assistant_run" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "workspace_assistant_prompt_revision" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "workspace_assistant_prompt" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "workspace_assistant_message" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "workspace_assistant_conversation" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "workspace_assistant_knowledge_revision" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "workspace_assistant_knowledge" CASCADE');
       await c.query("DELETE FROM drizzle.__drizzle_migrations WHERE created_at >= $1", [
         migrationTimestamp,
       ]);

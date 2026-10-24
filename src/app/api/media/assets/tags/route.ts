@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const Body = z.object({
-  assetIds: z.array(z.string().uuid()).min(1),
+  assetIds: z.array(z.string().guid()).min(1),
   add: z.array(z.string().trim().min(1).max(64)).optional(),
   remove: z.array(z.string().trim().min(1).max(64)).optional(),
 });

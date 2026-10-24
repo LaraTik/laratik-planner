@@ -27,12 +27,12 @@ export const CreateTemplateSchema = z.object({
   name: z.string().trim().min(2).max(120),
   format: z.enum(FORMAT_VALUES),
   briefTemplate: z.string().trim().max(8000).optional(),
-  contentPillarId: z.string().uuid().optional(),
-  defaultChannelIds: z.array(z.string().uuid()).optional().default([]),
-  defaultDesignerId: z.string().uuid().optional(),
-  defaultReviewerId: z.string().uuid().optional(),
-  formatPayload: z.record(z.unknown()).optional(),
-  relativeScheduleRule: z.record(z.unknown()).optional(),
+  contentPillarId: z.string().guid().optional(),
+  defaultChannelIds: z.array(z.string().guid()).optional().default([]),
+  defaultDesignerId: z.string().guid().optional(),
+  defaultReviewerId: z.string().guid().optional(),
+  formatPayload: z.record(z.string(), z.unknown()).optional(),
+  relativeScheduleRule: z.record(z.string(), z.unknown()).optional(),
 });
 export type CreateTemplateInput = z.infer<typeof CreateTemplateSchema>;
 

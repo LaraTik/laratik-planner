@@ -20,10 +20,10 @@ import { registerResearchTools } from "@/features/mcp/research-tools";
 import { registerSocialAnalyticsTools } from "@/features/mcp/social-tools";
 import type { McpContext } from "@/features/mcp/tool-contracts";
 
-const workspaceId = z.string().uuid().describe("Exact workspace UUID returned by list_workspaces.");
-const contentItemId = z.string().uuid().describe("Exact content item UUID.");
-const agencyId = z.string().uuid().describe("Exact agency UUID returned by list_agencies.");
-const taskId = z.string().uuid().describe("Exact agency task UUID.");
+const workspaceId = z.string().guid().describe("Exact workspace UUID returned by list_workspaces.");
+const contentItemId = z.string().guid().describe("Exact content item UUID.");
+const agencyId = z.string().guid().describe("Exact agency UUID returned by list_agencies.");
+const taskId = z.string().guid().describe("Exact agency task UUID.");
 const responseFormat = z.enum(["json", "markdown"]).default("json");
 
 export class McpToolError extends Error {

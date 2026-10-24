@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   CANONICAL_SURFACES,
+  APP_ONLY_SURFACES,
   ADVERTISING_REPORTING_SURFACE,
   ADVERTISING_REPORTING_VIEWPORTS,
   PLANNING_DETAIL_VIEWPORTS,
@@ -128,6 +129,7 @@ describe("visual regression harness contract (Task 7)", () => {
     for (const surface of [
       "/app/w/acme/research",
       "/app/w/acme/ai-settings",
+      "/app/w/acme/ai-assistant",
       "/app/w/acme/settings",
       "/app/w/acme/media",
     ]) {
@@ -137,6 +139,7 @@ describe("visual regression harness contract (Task 7)", () => {
     }
 
     expect(CANONICAL_SURFACES).toContain("/app/w/acme/media");
+    expect(APP_ONLY_SURFACES).toContain("/app/w/acme/ai-assistant");
 
     const advertisingViewports = viewportsForSurface(ADVERTISING_REPORTING_SURFACE);
     expect(advertisingViewports).toBe(ADVERTISING_REPORTING_VIEWPORTS);

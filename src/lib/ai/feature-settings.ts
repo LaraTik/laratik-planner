@@ -14,6 +14,8 @@ import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
 import { serverEnv } from "@/lib/validation/env";
 import { hasManagedAiSecret, loadManagedAiSecret } from "@/lib/ai/provider-secret";
+import { getAiModelAllowlist } from "@/lib/ai/capabilities";
+import { getAiModelDefinition } from "@/lib/ai/model-registry";
 
 /**
  * STUDIOFLOW_MASTER_PROMPT.md §15 — AI feature settings service.
@@ -55,7 +57,9 @@ export type AiCapability = (typeof AI_CAPABILITIES)[number];
 export const UpdateAiSettingsSchema = z.object({
   enabled: z.boolean(),
   model: z.string().min(1).max(120),
+  permittedModels: z.array(z.string().min(1).max(120)).min(1).max(12).optional(),
   enabledCapabilities: z.array(z.enum(AI_CAPABILITIES)),
+  toolCallingEnabled: z.boolean().optional(),
 });
 export type UpdateAiSettingsInput = z.infer<typeof UpdateAiSettingsSchema>;
 
@@ -140,14 +144,32 @@ export async function updateAiFeatureSettings(
   const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) throw new Error("Agency not configured");
   await requirePolicy(isAgencyAdmin(actor, agencyId), "update_ai_settings");
-  // Validate model against the server allowlist. The allowlist is the
-  // env's MINIMAX_MODEL plus the two documented alternates. Unknown
-  // model strings are rejected to keep the setting truthful.
-  const allowedModels = new Set([serverEnv.MINIMAX_MODEL, "MiniMax-M3", "MiniMax-M2"]);
+  // Validate model against the server allowlist. M2 models use MiniMax's
+  // standard API, not the Anthropic-compatible Messages API used here.
+  const allowedModels = new Set(
+    getAiModelAllowlist(serverEnv.MINIMAX_MODEL, serverEnv.MINIMAX_BASE_URL),
+  );
   if (!allowedModels.has(input.model)) {
     throw new Error(
       `Model "${input.model}" is not in the server allowlist. Allowed: ${Array.from(allowedModels).join(", ")}`,
     );
+  }
+  const requestedPermittedModels = input.permittedModels ?? [input.model];
+  const permittedModels = [...new Set(requestedPermittedModels)];
+  if (
+    permittedModels.length !== requestedPermittedModels.length ||
+    permittedModels.some((model) => !allowedModels.has(model)) ||
+    !permittedModels.includes(input.model)
+  ) {
+    throw new Error(
+      "The permitted models must be unique supported models and include the default.",
+    );
+  }
+  if (
+    input.toolCallingEnabled &&
+    !permittedModels.some((model) => getAiModelDefinition(model)?.toolCalling)
+  ) {
+    throw new Error("No permitted model supports the configured tool-calling workflow.");
   }
   const [existing] = await db
     .select()
@@ -159,7 +181,9 @@ export async function updateAiFeatureSettings(
     agencyId,
     enabled: input.enabled,
     model: input.model,
+    permittedModels,
     enabledCapabilities: input.enabledCapabilities,
+    toolCallingEnabled: input.toolCallingEnabled ?? false,
     keySource: (existing?.keySource ?? "environment") as "environment" | "managed_secret",
     ...(existing?.maskedKeySuffix ? { maskedKeySuffix: existing.maskedKeySuffix } : {}),
     updatedBy: actor.id,

@@ -72,6 +72,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
         "tests/unit/architecture/module-ownership.test.ts",
         "tests/unit/testing/test-affected-core.test.ts",
         "tests/unit/testing/run-e2e-tests-core.test.ts",
+        "tests/unit/pre-push-env.test.ts",
       ],
       integrationFiles: [],
       browser: [],
@@ -332,6 +333,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
       id: "ai",
       sourceGlobs: [
         "src/features/ai/**",
+        "src/features/workspace-assistant/**",
         "src/lib/ai/**",
         "src/app/api/ai/**",
         "src/app/(app)/app/agency-settings/planning-packs/**",
@@ -339,12 +341,16 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
         "src/components/ai/**",
         "src/app/(app)/app/agency-settings/ai/**",
         "src/app/(app)/app/a/[agencySlug]/w/[slug]/ai-settings/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/ai-assistant/**",
+        "src/messages/en/workspaceAssistant.json",
+        "src/messages/ar/workspaceAssistant.json",
       ],
       unitFiles: [
         "tests/unit/ai/**",
         "tests/unit/ai-*.test.ts",
         "tests/unit/ai-*.test.tsx",
         "tests/unit/community-test-lab-route.test.ts",
+        "tests/unit/workspace-assistant-analysis.test.ts",
       ],
       integrationFiles: [
         "tests/integration/ai-governance.test.ts",
@@ -354,7 +360,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
         {
           spec: "tests/e2e/a11y-routes.spec.ts",
           projects: chromium,
-          grep: "agency-settings/ai|ai-settings",
+          grep: "agency-settings/ai|ai-settings|workspace AI assistant",
         },
         {
           spec: "tests/e2e/locale-rtl.spec.ts",

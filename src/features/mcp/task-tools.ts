@@ -25,8 +25,8 @@ import type { McpTokenScope } from "@/lib/mcp/tokens";
 import { z } from "zod";
 
 type TaskToolDependencies = McpToolResultHelpers & {
-  agencyId: z.ZodType<string, z.ZodTypeDef, string>;
-  taskId: z.ZodType<string, z.ZodTypeDef, string>;
+  agencyId: z.ZodString;
+  taskId: z.ZodString;
   requireScope: (context: McpContext, scope: McpTokenScope) => void;
 };
 
@@ -111,8 +111,8 @@ export function registerTaskTools(
         search: z.string().trim().max(160).optional(),
         status: z.enum(TASK_STATUSES).optional(),
         priority: z.enum(TASK_PRIORITIES).optional(),
-        workspace_id: z.string().uuid().optional(),
-        assignee_id: z.string().uuid().optional(),
+        workspace_id: z.string().guid().optional(),
+        assignee_id: z.string().guid().optional(),
         mine: z.boolean().default(false),
         overdue: z.boolean().default(false),
         response_format: responseFormat,
@@ -181,9 +181,9 @@ export function registerTaskTools(
         agency_id: agencyId,
         title: z.string().trim().min(1).max(200),
         description: z.string().trim().max(10000).optional(),
-        workspace_id: z.string().uuid().nullable().optional(),
-        assignee_id: z.string().uuid().nullable().optional(),
-        due_at: z.coerce.date().nullable().optional(),
+        workspace_id: z.string().guid().nullable().optional(),
+        assignee_id: z.string().guid().nullable().optional(),
+        due_at: z.string().datetime().nullable().optional(),
         priority: z.enum(TASK_PRIORITIES).optional(),
         response_format: responseFormat,
       }),
@@ -200,7 +200,7 @@ export function registerTaskTools(
           description: input.description,
           workspaceId: input.workspace_id,
           assigneeId: input.assignee_id,
-          dueAt: input.due_at,
+          dueAt: input.due_at == null ? input.due_at : new Date(input.due_at),
           priority: input.priority,
         });
         return result({ task }, input.response_format);
@@ -220,9 +220,9 @@ export function registerTaskTools(
         task_id: taskId,
         title: z.string().trim().min(1).max(200).optional(),
         description: z.string().trim().max(10000).optional(),
-        workspace_id: z.string().uuid().nullable().optional(),
-        assignee_id: z.string().uuid().nullable().optional(),
-        due_at: z.coerce.date().nullable().optional(),
+        workspace_id: z.string().guid().nullable().optional(),
+        assignee_id: z.string().guid().nullable().optional(),
+        due_at: z.string().datetime().nullable().optional(),
         priority: z.enum(TASK_PRIORITIES).optional(),
         status: z.enum(TASK_STATUSES).optional(),
         response_format: responseFormat,
@@ -238,7 +238,7 @@ export function registerTaskTools(
           description: input.description,
           workspaceId: input.workspace_id,
           assigneeId: input.assignee_id,
-          dueAt: input.due_at,
+          dueAt: input.due_at == null ? input.due_at : new Date(input.due_at),
           priority: input.priority,
           status: input.status,
         });
@@ -372,7 +372,7 @@ export function registerTaskTools(
         "Verify that an uploaded task attachment has the exact expected size and MIME type, then mark it ready. The existing storage service rejects mismatches and failed verification.",
       inputSchema: z.object({
         task_id: taskId,
-        attachment_id: z.string().uuid(),
+        attachment_id: z.string().guid(),
         response_format: responseFormat,
       }),
       outputSchema: z.object({ result: z.unknown() }),

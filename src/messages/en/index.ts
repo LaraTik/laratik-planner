@@ -46,6 +46,7 @@ import users from "./users.json";
 import workspaceNew from "./workspaceNew.json";
 import workspaceOverview from "./workspaceOverview.json";
 import workspaceOverviewDashboard from "./workspaceOverviewDashboard.json";
+import workspaceAssistant from "./workspaceAssistant.json";
 import workspaces from "./workspaces.json";
 
 export default {
@@ -97,5 +98,6 @@ export default {
   workspaceNew,
   workspaceOverview,
   workspaceOverviewDashboard,
+  workspaceAssistant,
   workspaces,
 } as const;

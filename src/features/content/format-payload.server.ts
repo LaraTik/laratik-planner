@@ -16,7 +16,7 @@ import { applyResearchTeardownToPayload, ResearchTeardownSchema } from "@/lib/re
 
 /** Structured creative writes share one validation, permission, and audit path. */
 export const UpdateFormatPayloadSchema = z.object({
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
   format: z.enum([
     "static_post",
     "carousel",
@@ -113,9 +113,9 @@ export async function updateFormatPayload(actor: Actor, input: UpdateFormatPaylo
 }
 
 export const ApplyResearchTeardownSchema = z.object({
-  workspaceId: z.string().uuid(),
-  contentItemId: z.string().uuid(),
-  researchTeardownId: z.string().uuid(),
+  workspaceId: z.string().guid(),
+  contentItemId: z.string().guid(),
+  researchTeardownId: z.string().guid(),
 });
 export type ApplyResearchTeardownInput = z.infer<typeof ApplyResearchTeardownSchema>;
 

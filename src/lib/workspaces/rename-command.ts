@@ -23,7 +23,7 @@ export const WORKSPACE_NAME_MIN_LENGTH = 1;
 export const WORKSPACE_NAME_MAX_LENGTH = 80;
 
 export const workspaceRenameCommandSchema = z.object({
-  workspaceId: z.string().uuid(),
+  workspaceId: z.string().guid(),
   name: z
     .string()
     .trim()

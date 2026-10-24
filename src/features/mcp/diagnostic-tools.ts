@@ -198,7 +198,7 @@ export function registerDiagnosticTools(
         "Fetch a single error occurrence with its full diagnostic payload: scrubbed message, chained cause, truncated stack, the request's recent log lines, and its group's occurrence count and triage state. Identify the occurrence by exactly one of `id`, `fingerprint` (returns the most recent occurrence in that group), or `request_id` (joins to the log lines of one HTTP request). Requires the platform:diagnostics:read scope AND the platform.console.read permission.",
       inputSchema: z
         .object({
-          id: z.string().uuid().optional().describe("Exact error-occurrence UUID."),
+          id: z.string().guid().optional().describe("Exact error-occurrence UUID."),
           fingerprint: fingerprintArg.optional(),
           request_id: z
             .string()

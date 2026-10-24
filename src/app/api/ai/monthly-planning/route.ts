@@ -37,11 +37,11 @@ import { parseBatchDateTime } from "@/lib/content/batch";
 import { randomUUID } from "node:crypto";
 
 const Body = z.object({
-  workspaceId: z.string().uuid(),
-  sessionId: z.string().uuid(),
+  workspaceId: z.string().guid(),
+  sessionId: z.string().guid(),
   action: z.enum(["message", "generateProposal", "approve", "apply"]),
   message: z.string().trim().max(8000).optional(),
-  proposalId: z.string().uuid().optional(),
+  proposalId: z.string().guid().optional(),
 });
 
 function streamText(text: string, payload: Record<string, unknown> = {}) {

@@ -20,7 +20,7 @@ export const runtime = "nodejs";
 const PatchBody = z.object({
   title: z.string().trim().min(1).max(160).optional(),
   visibility: z.enum(["workspace", "agency"]).optional(),
-  folderId: z.string().uuid().nullable().optional(),
+  folderId: z.string().guid().nullable().optional(),
 });
 
 /** Issues a short-lived preview/download URL only after media authorization. */

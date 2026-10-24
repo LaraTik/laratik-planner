@@ -464,6 +464,18 @@ export function buildWorkspaceNavigation(input: {
       labelKey: "sidebar.produce",
       heading: true,
       items: [
+        ...(input.canCreateContent
+          ? [
+              {
+                kind: "link" as const,
+                key: "ai-assistant",
+                href: `${wsBase}/ai-assistant`,
+                label: "AI assistant",
+                labelKey: "sidebar.aiAssistant",
+                icon: Sparkles,
+              },
+            ]
+          : []),
         {
           kind: "link",
           key: "library",
@@ -868,6 +880,14 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
               label: "AI configuration",
               labelKey: "sidebar.settingsAiConfiguration",
               icon: Bot,
+            },
+            {
+              kind: "link",
+              key: "agency-settings-ai-skills",
+              href: "/app/agency-settings/ai/skills",
+              label: "Assistant skills",
+              labelKey: "sidebar.settingsAiSkills",
+              icon: Sparkles,
             },
             {
               kind: "link",

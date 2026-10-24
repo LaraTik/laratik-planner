@@ -118,9 +118,16 @@ export default async function AgencyAiSettingsPage() {
       <AiSettingsForm
         initialEnabled={feature?.enabled ?? false}
         initialModel={feature?.model ?? envModel}
+        initialPermittedModels={
+          feature?.permittedModels?.length
+            ? [...feature.permittedModels]
+            : [feature?.model ?? envModel]
+        }
         initialCapabilities={[...(feature?.enabledCapabilities ?? [])]}
+        initialToolCallingEnabled={feature?.toolCallingEnabled ?? false}
         envConfigured={envHasKey}
         envModel={envModel}
+        envBaseUrl={serverEnv.MINIMAX_BASE_URL}
         envHasKey={envHasKey}
         providerKeyAvailable={providerKeyAvailable}
         lastTestAt={

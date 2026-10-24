@@ -66,7 +66,7 @@ import { getEffectiveEntitlement, LimitExceededError } from "@/lib/entitlements"
  * counts by capability.
  */
 const Body = z.object({
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
   capability: z
     .enum([
       "caption_drafts",
@@ -132,7 +132,7 @@ const Body = z.object({
    */
   contentLanguage: z.string().min(2).max(10).optional(),
   /** Optional, validated link used by the explicit trend-angle action. */
-  trendSignalId: z.string().uuid().optional(),
+  trendSignalId: z.string().guid().optional(),
   // Per master prompt §15, the user selects which context to include
   // before generation. The basic fields (title / brief / format /
   // workspace_name) are always included; the toggles below are
@@ -153,7 +153,14 @@ const Body = z.object({
       approvedContent: z.boolean().optional().default(false),
     })
     .optional()
-    .default({}),
+    .default({
+      brandKit: false,
+      brandVisuals: false,
+      campaign: false,
+      pillars: false,
+      channels: false,
+      approvedContent: false,
+    }),
 });
 
 export async function POST(req: NextRequest) {

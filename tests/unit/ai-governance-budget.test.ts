@@ -172,6 +172,7 @@ const {
   enforceAiBudget,
   reconcileAiBudget,
   releaseAiBudgetReservation,
+  reserveAdditionalAiBudgetTokens,
   recordAiUsageEvent,
   loadEnabledCapabilities,
   getUserDailyBudgetSnapshot,
@@ -284,6 +285,14 @@ describe("enforceAiBudget", () => {
 });
 
 describe("reconcileAiBudget", () => {
+  it("reserves incremental provider-round tokens without incrementing request count", async () => {
+    await expect(
+      reserveAdditionalAiBudgetTokens({ agencyId, inputTokens: 900, outputTokens: 1_400 }),
+    ).resolves.toBeUndefined();
+    expect(dbMock.transaction).toHaveBeenCalled();
+    expect(recordUsageMock).not.toHaveBeenCalled();
+  });
+
   it("is a no-op when actual === estimated", async () => {
     await reconcileAiBudget({
       agencyId,
@@ -327,10 +336,7 @@ describe("reconcileAiBudget", () => {
     expect(recordUsageMock).toHaveBeenCalledWith(dbMock, agencyId, "ai_output_tokens_month", -75);
   });
 
-  it("top-up tokens when the provider uses more than estimated", async () => {
-    // The positive-delta path is exercised through the
-    // `db.transaction` → reserveCapacity (mocked). We just confirm
-    // it does NOT call `recordUsage` (the refund path).
+  it("records actual provider usage when it exceeds the preflight reservation", async () => {
     await reconcileAiBudget({
       agencyId,
       userId,
@@ -339,7 +345,9 @@ describe("reconcileAiBudget", () => {
       actualInputTokens: 200,
       actualOutputTokens: 100,
     });
-    expect(recordUsageMock).not.toHaveBeenCalled();
+    expect(recordUsageMock).toHaveBeenCalledTimes(2);
+    expect(recordUsageMock).toHaveBeenCalledWith(dbMock, agencyId, "ai_input_tokens_month", 150);
+    expect(recordUsageMock).toHaveBeenCalledWith(dbMock, agencyId, "ai_output_tokens_month", 75);
   });
 
   it("handles a mixed delta (one side over, one side under)", async () => {
@@ -351,8 +359,9 @@ describe("reconcileAiBudget", () => {
       actualInputTokens: 50, // refund 50
       actualOutputTokens: 150, // top-up 50
     });
-    expect(recordUsageMock).toHaveBeenCalledTimes(1);
+    expect(recordUsageMock).toHaveBeenCalledTimes(2);
     expect(recordUsageMock).toHaveBeenCalledWith(dbMock, agencyId, "ai_input_tokens_month", -50);
+    expect(recordUsageMock).toHaveBeenCalledWith(dbMock, agencyId, "ai_output_tokens_month", 50);
   });
 });
 

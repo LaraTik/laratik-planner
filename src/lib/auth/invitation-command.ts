@@ -21,11 +21,11 @@ export const workspaceRoleSchema = z.enum([
  */
 export const invitationWorkspaceRoleSchema = z.union([
   z.object({
-    workspaceId: z.string().uuid(),
+    workspaceId: z.string().guid(),
     role: workspaceRoleSchema,
   }),
   z.object({
-    workspaceId: z.string().uuid(),
+    workspaceId: z.string().guid(),
     roles: z.array(workspaceRoleSchema).min(1).max(workspaceRoleSchema.options.length),
   }),
 ]);

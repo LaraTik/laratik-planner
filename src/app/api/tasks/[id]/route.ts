@@ -18,8 +18,8 @@ export const runtime = "nodejs";
 const Body = z.object({
   title: z.string().trim().min(1).max(200).optional(),
   description: z.string().trim().max(10000).optional(),
-  workspaceId: z.string().uuid().nullable().optional(),
-  assigneeId: z.string().uuid().nullable().optional(),
+  workspaceId: z.string().guid().nullable().optional(),
+  assigneeId: z.string().guid().nullable().optional(),
   dueAt: z.string().datetime().nullable().optional(),
   priority: z.enum(TASK_PRIORITIES).optional(),
   status: z.enum(TASK_STATUSES).optional(),

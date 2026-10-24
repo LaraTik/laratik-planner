@@ -119,6 +119,8 @@ rollback on failure` without any manual Docker commands.
 From your **local** machine:
 
 ```bash
+# Before pushing code to main, complete and record the full local integration
+# suite for the exact SHA (the pre-push hook runs it automatically).
 git push origin main
 # No GitHub Actions workflow starts from this push.
 gh workflow run ci.yml --ref main
@@ -435,18 +437,20 @@ Use `pnpm test:area <domain>` when you want to check one domain deliberately.
 Its browser path runs Chromium and only adds affected accessibility or visual
 selectors. Shared or unknown changes escalate to full relevant coverage.
 
-Pre-push runs affected unit and integration checks for the pushed commit range,
-not the staging index, so a normal push after committing cannot silently skip
-those checks. It does not run E2E. Run `pnpm test:affected -- --layer browser`
-for normal local browser feedback or `pnpm test:e2e:release` for a release
-candidate. `SKIP_INTEGRATION=1` and `git push --no-verify` remain explicit
-escape hatches, and CI remains authoritative.
+Pre-push runs affected unit checks for the pushed commit range, then the full
+integration suite against the disposable database. It does not run E2E. The
+integration run is required locally and must be recorded at the exact SHA;
+GitHub CI does not run it (ADR 0020). Run
+`pnpm test:affected -- --layer browser` for normal local browser feedback or
+`pnpm test:e2e:release` for a release candidate.
 
 #### Local integration setup
 
-The pre-push hook selects affected integration tests on the pushed range.
-CI still runs the complete integration suite as the deploy-gate audit, so
-local selection is fast feedback and CI remains the authoritative result.
+The pre-push hook runs the complete integration suite on every code push.
+This local gate replaces the former GitHub integration step; CI still runs
+the migration drill and the other deploy gates. Record the exact clean SHA,
+command, and result in `docs/production-readiness/TEST_EVIDENCE.md` before
+merging.
 
 The integration runner requires a disposable Postgres database that
 contains the substring `test` or `ci` in the URL
@@ -550,8 +554,7 @@ other workflows do not start a run. The 5-browser matrix and the visual run
 are local or explicit release-candidate checks:
 
 ```yaml
-# .github/workflows/ci.yml  (deploy-gate, post 2026-08-26 plan)
-- run: pnpm test:integration
+# .github/workflows/ci.yml (GitHub deploy gates; full integration is local)
 - run: pnpm audit --prod
 - run: pnpm build
 - run: docker build ...
@@ -561,13 +564,17 @@ are local or explicit release-candidate checks:
 ```
 
 ```bash
-# Local pre-push (automatic, affected unit + integration only)
-pnpm test:affected -- --push --layer core
+# Local pre-push (automatic, affected unit checks + full integration suite)
+pnpm test:affected -- --push --layer unit
+pnpm test:integration
 
 # Local E2E feedback (explicit)
 pnpm test:affected -- --layer browser
 
-# Local release-candidate checklist (full five-browser + visual matrix)
+# Local normal-change check (affected Chromium contracts)
+pnpm test:affected -- --layer browser
+
+# For release candidates or broad shared-surface changes:
 pnpm test:e2e:release
 ```
 
@@ -1009,22 +1016,22 @@ The bell counter is the user's primary signal that something needs their attenti
 
 The deploy chain is gated in two places: the `ci.yml` workflow (which is code) and the GitHub repository's protection rules (which are configured in the GH UI, not in code). This section is the canonical reference so a new maintainer can reproduce the production posture from a fresh checkout + the runbook.
 
-| Surface                  | Setting                                                                                         | Where                                      |
-| ------------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| `main` branch            | Require CI green (`.github/workflows/ci.yml`) before merge; dispatch CI manually for the commit | Branch protection rules                    |
-| `main` branch            | Require 1 review from `@LaraTik/laratik-planner-maintainers`                                    | Branch protection rules                    |
-| `main` branch            | Require linear history (no merge commits)                                                       | Branch protection rules                    |
-| `main` branch            | No force-push                                                                                   | Branch protection rules                    |
-| `main` branch            | No branch deletion                                                                              | Branch protection rules                    |
-| `main` branch            | Require CODEOWNERS review on touched paths (via `.github/CODEOWNERS`)                           | Branch protection rules                    |
-| `production` environment | Require 1 approval from `@LaraTik/laratik-planner-maintainers`                                  | Environments → production                  |
-| `production` environment | No wait timer (deploys are time-bounded; the CI gate is the wait)                               | Environments → production                  |
-| `production` environment | Restrict to `main` branch only                                                                  | Environments → production                  |
-| Repository secrets       | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_PAT`, `GHCR_USER`                                  | Settings → Secrets and variables → Actions |
-| Secret rotation          | GHCR PAT, VPS SSH key: every 90 days (see `OPS-001` evidence)                                   | Calendar reminder                          |
-| Workflow file            | Top-level `permissions: contents: read` (default deny)                                          | All 3 workflows                            |
-| `deploy.yml` job         | `permissions: contents: read, packages: read`                                                   | `deploy.yml` deploy job                    |
-| `lint-meta` job          | Required for deploy (errors fail the gate)                                                      | `ci.yml` lint-meta job                     |
+| Surface                  | Setting                                                                                                                             | Where                                      |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `main` branch            | Require local exact-SHA release evidence and one independent maintainer review before merge; dispatch CI only after merge on `main` | Branch protection / release checklist      |
+| `main` branch            | Require 1 review from `@LaraTik/laratik-planner-maintainers`                                                                        | Branch protection rules                    |
+| `main` branch            | Require linear history (no merge commits)                                                                                           | Branch protection rules                    |
+| `main` branch            | No force-push                                                                                                                       | Branch protection rules                    |
+| `main` branch            | No branch deletion                                                                                                                  | Branch protection rules                    |
+| `main` branch            | Require CODEOWNERS review on touched paths (via `.github/CODEOWNERS`)                                                               | Branch protection rules                    |
+| `production` environment | Require 1 approval from `@LaraTik/laratik-planner-maintainers`                                                                      | Environments → production                  |
+| `production` environment | No wait timer (deploys are time-bounded; the CI gate is the wait)                                                                   | Environments → production                  |
+| `production` environment | Restrict to `main` branch only                                                                                                      | Environments → production                  |
+| Repository secrets       | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_PAT`, `GHCR_USER`                                                                      | Settings → Secrets and variables → Actions |
+| Secret rotation          | GHCR PAT, VPS SSH key: every 90 days (see `OPS-001` evidence)                                                                       | Calendar reminder                          |
+| Workflow file            | Top-level `permissions: contents: read` (default deny)                                                                              | All 3 workflows                            |
+| `deploy.yml` job         | `permissions: contents: read, packages: read`                                                                                       | `deploy.yml` deploy job                    |
+| `lint-meta` job          | Required for deploy (errors fail the gate)                                                                                          | `ci.yml` lint-meta job                     |
 
 These rules are set in the GH web UI; the in-repo artifacts (`CODEOWNERS`, `dependabot.yml`, `zizmor.yml`, top-level `permissions:` blocks) only enforce what they can. The branch-protection + environment-protection + secret-rotation rules must be configured manually on a fresh repo.
 

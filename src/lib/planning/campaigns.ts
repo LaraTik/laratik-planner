@@ -27,7 +27,7 @@ export const CreateCampaignSchema = z.object({
   description: z.string().trim().max(2000).optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
-  ownerId: z.string().uuid().optional(),
+  ownerId: z.string().guid().optional(),
   coverColor: z
     .string()
     .trim()

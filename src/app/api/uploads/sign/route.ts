@@ -26,7 +26,7 @@ import { workspaces } from "@/lib/db/schema";
  * "PUT", body })` to land the file.
  */
 const Body = z.object({
-  workspaceId: z.string().uuid(),
+  workspaceId: z.string().guid(),
   kind: z.enum(["logo", "color", "font", "image", "video", "document", "other"]),
   ext: z.string().min(1).max(8),
   fileSize: z

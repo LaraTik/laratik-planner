@@ -39,6 +39,7 @@ concurrency:
 
 jobs:
   release:
+    if: github.ref == 'refs/heads/main'
     name: Tag + GitHub release
     runs-on: ubuntu-latest
     timeout-minutes: 5

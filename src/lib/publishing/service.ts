@@ -30,7 +30,7 @@ import { derivePublicationAggregate } from "@/lib/publishing/aggregate";
  */
 
 export const RecordPublicationSchema = z.object({
-  contentItemChannelId: z.string().uuid(),
+  contentItemChannelId: z.string().guid(),
   status: z.enum(["published", "skipped", "failed"]),
   publishedUrl: z.string().url().optional(),
   /**

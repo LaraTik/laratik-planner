@@ -14,7 +14,7 @@ export const ResearchTeardownSourceSchema = z.discriminatedUnion("kind", [
   }),
   z.object({
     kind: z.literal("owned_asset"),
-    assetId: z.string().uuid(),
+    assetId: z.string().guid(),
     transcript: z.string().trim().min(1).max(20_000).optional(),
   }),
   z.object({

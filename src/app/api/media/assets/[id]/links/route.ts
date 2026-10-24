@@ -20,7 +20,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const actor = await currentActor();
   if (!actor) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   const { id } = await params;
-  const agencyId = z.string().uuid().safeParse(_req.nextUrl.searchParams.get("agencyId"));
+  const agencyId = z.string().guid().safeParse(_req.nextUrl.searchParams.get("agencyId"));
   if (!agencyId.success) {
     return NextResponse.json({ error: "agencyId is required" }, { status: 400 });
   }

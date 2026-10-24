@@ -107,7 +107,7 @@ vi.mock("@/lib/db", () => ({ db: dbMock }));
 
 const envMock = vi.hoisted(() => ({
   MINIMAX_API_KEY: "sk-test",
-  MINIMAX_BASE_URL: "https://api.example.com",
+  MINIMAX_BASE_URL: "https://api.minimax.io/anthropic",
   MINIMAX_MODEL: "MiniMax-M3",
   NODE_ENV: "test" as const,
   AUTH_SECRET: "x".repeat(32),
@@ -307,6 +307,90 @@ describe("updateAiFeatureSettings", () => {
     await expect(
       updateAiFeatureSettings(actor, { ...validInput, model: "gpt-99" }),
     ).rejects.toThrow(/not in the server allowlist/);
+  });
+
+  it("rejects MiniMax M2 because the configured Anthropic-compatible transport does not support it", async () => {
+    await expect(
+      updateAiFeatureSettings(actor, { ...validInput, model: "MiniMax-M2" }),
+    ).rejects.toThrow(/not in the server allowlist/);
+  });
+
+  it("accepts the documented MiniMax M3.1 Flash model", async () => {
+    envMock.MINIMAX_BASE_URL = "https://api.minimax.io/anthropic";
+    dbMock.state.selectResults.push([]);
+    dbMock.state.selectResults.push([
+      {
+        agencyId,
+        enabled: true,
+        model: "MiniMax-M3.1-Flash",
+        enabledCapabilities: ["campaign_ideas"],
+        keySource: "environment",
+      },
+    ]);
+    await expect(
+      updateAiFeatureSettings(actor, { ...validInput, model: "MiniMax-M3.1-Flash" }),
+    ).resolves.toMatchObject({ model: "MiniMax-M3.1-Flash" });
+  });
+
+  it("persists agency tool calling only for models that advertise the capability", async () => {
+    envMock.MINIMAX_BASE_URL = "https://api.minimax.io/anthropic";
+    await expect(
+      updateAiFeatureSettings(actor, { ...validInput, toolCallingEnabled: true }),
+    ).rejects.toThrow(/No permitted model supports/);
+
+    dbMock.state.selectResults.push([]);
+    dbMock.state.selectResults.push([
+      {
+        agencyId,
+        enabled: true,
+        model: "MiniMax-M3.1-Flash",
+        toolCallingEnabled: true,
+        enabledCapabilities: ["monthly_planning_copilot"],
+        keySource: "environment",
+      },
+    ]);
+    await expect(
+      updateAiFeatureSettings(actor, {
+        ...validInput,
+        model: "MiniMax-M3.1-Flash",
+        toolCallingEnabled: true,
+      }),
+    ).resolves.toMatchObject({ model: "MiniMax-M3.1-Flash", toolCallingEnabled: true });
+    expect(dbMock.state.insertCalls.at(-1)?.values).toMatchObject({ toolCallingEnabled: true });
+  });
+
+  it("persists an agency model allowlist and permits a supported non-default model", async () => {
+    envMock.MINIMAX_BASE_URL = "https://api.minimax.io/anthropic";
+    const permittedModels = ["MiniMax-M3", "MiniMax-M3.1-Flash"];
+    dbMock.state.selectResults.push([]);
+    dbMock.state.selectResults.push([
+      {
+        agencyId,
+        enabled: true,
+        model: "MiniMax-M3",
+        permittedModels,
+        enabledCapabilities: ["monthly_planning_copilot"],
+        toolCallingEnabled: true,
+      },
+    ]);
+
+    await expect(
+      updateAiFeatureSettings(actor, {
+        ...validInput,
+        permittedModels,
+        toolCallingEnabled: true,
+      }),
+    ).resolves.toMatchObject({ model: "MiniMax-M3", permittedModels, toolCallingEnabled: true });
+    expect(dbMock.state.insertCalls.at(-1)?.values).toMatchObject({ permittedModels });
+  });
+
+  it("requires the agency default model to remain in its allowlist", async () => {
+    await expect(
+      updateAiFeatureSettings(actor, {
+        ...validInput,
+        permittedModels: ["MiniMax-M3.1-Flash"],
+      }),
+    ).rejects.toThrow(/include the default/);
   });
 
   it("inserts a new row when none exists, and re-selects to return the persisted row", async () => {

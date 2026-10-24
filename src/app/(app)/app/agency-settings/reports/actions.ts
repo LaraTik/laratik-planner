@@ -14,8 +14,8 @@ import { resolveAgencyReportSelection } from "@/features/reports/server";
 
 const SubmitSchema = z.object({
   templateId: z.string().min(1),
-  workspaceIds: z.array(z.string().uuid()).min(1, "Pick at least one workspace."),
-  channelIds: z.array(z.string().uuid()).min(1, "Pick at least one channel."),
+  workspaceIds: z.array(z.string().guid()).min(1, "Pick at least one workspace."),
+  channelIds: z.array(z.string().guid()).min(1, "Pick at least one channel."),
   preset: z.enum(["7d", "30d", "90d", "custom"]),
   from: z.string().optional(),
   to: z.string().optional(),

@@ -6,7 +6,7 @@ import { findDuplicateMediaAssets, MediaPermissionError } from "@/features/media
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 const Body = z.object({
-  workspaceId: z.string().uuid(),
+  workspaceId: z.string().guid(),
   checksumSha256: z
     .string()
     .trim()

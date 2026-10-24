@@ -19,8 +19,8 @@ export const runtime = "nodejs";
 
 const querySchema = z
   .object({
-    accountId: z.string().uuid(),
-    workspaceId: z.string().uuid().nullable().optional(),
+    accountId: z.string().guid(),
+    workspaceId: z.string().guid().nullable().optional(),
     since: z.string().date(),
     until: z.string().date(),
     compare: z.enum(["previous", "previous_year", "custom"]).optional(),
