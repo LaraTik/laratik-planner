@@ -11,6 +11,11 @@ branches are reviewed and validated locally before merge. Dispatch `CI` on
 `Advisory quality` on `main` with `critical`
 for targeted checks or `release-candidate` for the full coverage and browser
 matrix. No successful workflow automatically starts another workflow.
+GitHub `main` protection requires a pull request and one approval from a
+reviewer other than the latest pusher, dismisses stale approvals, requires
+resolved conversations and linear history, and does not require PR status
+checks; local gates run before merge and authoritative CI runs on `main` after
+merge.
 See ADR 0013 for the browser/coverage split, ADR 0019 for the manual-trigger
 decision, and ADR 0020 for local integration validation.
 
