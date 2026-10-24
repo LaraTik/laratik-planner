@@ -32,8 +32,8 @@
 ./scripts/project.sh backup       # pg_dump → ./tmp/backups
 
 # Deploy to VPS
-./scripts/deploy.sh <full-sha>    # on the VPS, deploys the exact 40-char SHA after CI publishes it
-# See docs/operations/runbook.md#direct-deployment-from-the-vps for the safe manual procedure.
+./scripts/deploy.sh <full-sha>    # on the VPS, deploys the exact 40-char SHA built and published locally
+# See docs/operations/runbook.md#local-review-release-and-deployment for the procedure.
 
 # Daily ops report (read-only; see docs/operations/daily-report.md)
 PLANNER_TOKEN=<read-only token> python3 scripts/daily-report.py
@@ -118,7 +118,7 @@ it before re-capturing. Key reminders:
 | Email     | Nodemailer → Mailcow SMTP                       | No new vendor, free, `mail.laratik.com` already running                                   |
 | AI        | MiniMax (`MiniMax-M3`, Anthropic-compat)        | Goal 11 only; provider config is env-backed, agency enablement/capabilities are DB-backed |
 | Tests     | Vitest (unit) + Playwright (E2E + a11y)         | Per master prompt §4, §20                                                                 |
-| CI        | GitHub Actions → GHCR                           | Free, public-image-friendly                                                               |
+| Release   | Local checks + Docker Buildx → GHCR → VPS       | Operator-controlled; GitHub Actions retained only as legacy recovery tooling              |
 | Deploy    | GHCR → `docker compose pull` on VPS via Traefik | Matches `mavis-trader` / `laratik-social-platform` pattern                                |
 
 ## Repo layout
@@ -136,9 +136,9 @@ laratik-planner/
 ├── docker-compose.yml              # prod: app + postgres (Traefik labels)
 ├── docker-compose.dev.yml          # local: postgres only (app runs native)
 ├── .github/workflows/
-│   ├── ci.yml                      # deploy-gate: integration/audit/build/smoke/smtp-cert/lint-meta
+│   ├── ci.yml                      # legacy manual workflow; normal release gates run locally
 │   ├── advisory-quality.yml        # non-blocking coverage + browser quality checks
-│   └── deploy.yml                  # manual dispatch → verify CI + GHCR → ssh deploy
+│   └── deploy.yml                  # legacy manual deploy; normal deploy is locally initiated over SSH
 #                                    # Release-gate contract: docs/testing/strategy.md (Release gates)
 #                                    # Local E2E recipes: docs/operations/runbook.md (Local E2E)
 ├── src/
@@ -215,9 +215,9 @@ in one pass or extract code only to reduce file length.
 - ✅ Every migration must be registered in `src/lib/db/migrations/meta/_journal.json`, target the exact table names in the Drizzle schema, and include forward, compatibility, backup, rollback, from-zero, and upgrade evidence. A successful build does not prove that a migration runs.
 - ✅ Record verification against the exact clean commit SHA. If the branch advances or becomes dirty after verification, rerun the affected gates before calling the work complete.
 - ✅ Pre-commit hook catches lint/format/typecheck/unit-test issues early — keep it fast by keeping its scope tight (lint-staged on staged files, `vitest related` on staged sources, sentinel-driven `tsc --noEmit`). Skip with `git commit --no-verify` or `SKIP_TYPECHECK=1` for WIP / hotfixes.
-- ✅ Pre-push hook runs affected unit/integration checks for the pushed range; it does not run E2E. Use `pnpm test:affected -- --layer browser` for local affected E2E and `pnpm test:e2e:release` for the strict full browser + visual release-candidate check. All GitHub Actions workflows are manual-only; dispatch the required checks against the reviewed ref. Skip with `git push --no-verify`, `SKIP_PREPUSH=1`, or `SKIP_INTEGRATION=1` for trivial pushes.
-- ✅ Always merge finished work to `main` — review, commit, push after `pnpm verify`, the local pre-merge E2E checklist, and any required manually dispatched GitHub checks are complete. No half-finished work sits in the local working tree or on a stale local branch. Production deployment requires a separate manual dispatch of the deploy workflow.
-- ✅ CI is authoritative — local git hooks are optional and never replace CI
+- ✅ Pre-push hook runs affected unit and integration checks selected from the pushed commit range; it does not run the full integration suite or E2E. The full integration suite runs once for a release candidate against disposable `planner_test`. Use `pnpm test:affected -- --layer browser` for local affected E2E and `pnpm test:e2e:release` for the strict full browser + visual release-candidate check. GitHub Actions are not part of the normal feature or release path; do not dispatch them for branch checks or deployment. Skip hooks only for a documented reason.
+- ✅ Review and verify locally before merging: inspect the complete diff, obtain the independent review required by the production-readiness tracker, run `pnpm verify`, and complete the applicable local integration, migration, bilingual browser, accessibility, and visual gates. Record evidence against the exact clean SHA. GitHub hosts the source/PR and records the merge; its Actions results are not a release gate.
+- ✅ Always merge finished work to `main` after local review and required gates pass. Push the reviewed `main` SHA to `origin`; then build, publish the SHA-tagged app and migrator images, and invoke the VPS deployment from the local operator machine using the runbook. Do not use GitHub Actions to build, review, deploy, or publish a release. No finished work sits in a dirty tree or stale branch.
 - ✅ Keep the remote Planner MCP current on every change: update the implementation, `docs/api/mcp.md`, `docs/api/README.md`, `docs/api/mcp-evaluation.xml`, affected bilingual Account UI copy, tests, and production-readiness evidence together. Follow [`docs/operations/mcp-maintenance.md`](docs/operations/mcp-maintenance.md); never ship a new tool, scope, error, or transport behavior with stale client documentation.
 - ✅ Staging before production: not yet (single-environment for v1, see Goal 14)
 - ✅ Disk hygiene before deploy: ensure VPS `/` is < 70% (use the vps-ops `disk-cleanup.sh apply` if needed)
@@ -513,7 +513,7 @@ The independent reviewer (Task 13) flips the verdict to `READY` after the
 30-step §23 journey and the owner checks in
 `docs/production-readiness/EXTERNAL_SERVICES_UAT.md` are signed.
 
-> Workflow contract — see `docs/testing/strategy.md` (Release gates) and ADR 0019. All four GitHub Actions workflows are manual-only. `ci.yml` is the authoritative check (full unit/integration, audit, build, Docker smoke, SMTP-cert probe, workflow linters). `advisory-quality.yml` runs targeted or release-candidate checks only by dispatch. Local E2E is explicit via `pnpm test:affected -- --layer browser` or `pnpm test:e2e:release`; pre-push runs affected unit/integration only. `deploy.yml` deploys only after a separate operator dispatch.
+> Workflow contract — see `docs/testing/strategy.md` (Release gates), ADR 0019, and ADR 0021. GitHub Actions are disabled for the normal review/release process; local checks and the local operator deployment path are authoritative. The workflows are retained as legacy/manual recovery tooling and must not be dispatched for ordinary branches or releases. Local E2E uses `pnpm test:affected -- --layer browser` or `pnpm test:e2e:release`; pre-push runs affected unit and integration checks selected from the pushed range. The full integration suite is a release-candidate gate, not a per-push hook.
 
 ## Activity log rendering
 
@@ -566,9 +566,9 @@ diff shapes, and extension recipe.
 
 - **Commits:** `<type>(<scope>): <description>`. Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `upgrade`. Scopes: `db`, `auth`, `content`, `planning`, `workflow`, `discussions`, `deliveries`, `publishing`, `notifications`, `ai`, `infra`, `ci`, `deps`, `i18n`, `format-payload`.
 - **Branches:** `main` is production. `feat/*` for features, `fix/*` for hotfixes, `chore/*` for chores. Squash-merge.
-- **PRs:** must pass CI (`pnpm verify` + build + smoke e2e). Reference the goal number in the PR title.
+- **PRs:** local review and the applicable local release gates must be complete before merge. Reference the goal number in the PR title. Do not wait for or dispatch GitHub Actions.
 - **ADRs:** material deviations from the master prompt go in `docs/decisions/`. The first one (`docs/decisions/0001-vps-port.md`) records the choice to self-host on the LaraTik VPS instead of Supabase + Vercel.
-- **Merge on completion:** when a change is finished and `pnpm verify` is green, the local pre-merge E2E checklist (`pnpm test:e2e:isolated` + `pnpm test:visual`) is complete, and required GitHub checks have been manually dispatched and reviewed, commit it with a `<type>(<scope>): <description>` message and push to `main`. Production deploy is a separate manual dispatch. No finished work sits in the local working tree or on a stale local branch; feature branches (`feat/*`, `fix/*`, `chore/*`) are temporary scratch space.
+- **Merge on completion:** when independent local review, `pnpm verify`, and the applicable local integration/migration/browser/accessibility/visual gates are complete and recorded against the exact clean SHA, commit with a `<type>(<scope>): <description>` message, merge to `main`, and push. Build and publish immutable SHA-tagged app/migrator images locally, then start the VPS deploy from the local operator machine as documented in the runbook. No GitHub Actions run is required. No finished work sits in a dirty tree or stale branch; feature branches (`feat/*`, `fix/*`, `chore/*`) are temporary scratch space.
 
 ## Product UI/UX Engineering Rules
 
