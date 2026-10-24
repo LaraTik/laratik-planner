@@ -4222,3 +4222,11 @@ commit does not change application code. Full browser/device release coverage,
 independent review, live MiniMax model/tool and privacy UAT, separated-account
 human UAT, and production backup/rollback evidence remain open. The PR is not
 eligible for merge or production deployment until those gates are completed.
+
+The assistant's focused Chromium browser run passed 7/7 on the same application
+commit, covering model permissions, knowledge revision history, prompt
+creation, ambiguous references, streamed activity, and Arabic RTL. Its focused
+Arabic/RTL visual and accessibility case passed all five responsive viewports.
+The Firefox project did not complete: its browser process remained unresponsive
+for more than five minutes and the run was stopped. This does not count as a
+Firefox pass; complete browser/device release coverage remains open.
