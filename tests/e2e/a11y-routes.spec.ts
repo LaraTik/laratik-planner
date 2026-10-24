@@ -126,9 +126,9 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     await page.context().clearCookies({ name: "laratik_active_agency" });
 
     await page.goto("/app");
-    await expect(page).toHaveURL(/\/app\/platform(?:$|\?)/);
+    await expect(page).toHaveURL(/\/app\/platform\/overview(?:$|\?)/);
     await page.goto("/app/workspaces");
-    await expect(page).toHaveURL(/\/app\/platform(?:$|\?)/);
+    await expect(page).toHaveURL(/\/app\/platform\/overview(?:$|\?)/);
   });
 
   test("@a11y /app/media has no critical violations", async ({ page }) => {

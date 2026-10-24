@@ -1,5 +1,24 @@
 # Test and coverage evidence
 
+## Workspace AI Assistant release-gate follow-up — 2026-10-24
+
+Working-tree changes: corrected the platform-only redirect assertions to match
+`/app/platform/overview` and enlarged the sign-in remember checkbox to 24px so
+axe's WCAG 2.2 target-size check passes. These results are working-tree
+evidence; exact-clean-SHA CI and the full release matrix are still required.
+
+| Command / check                                                                                           | Result                                                                                                                                                                                                                                                             |
+| --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Focused Chromium: `tests/e2e/a11y-routes.spec.ts` and `tests/e2e/a11y.spec.ts`                            | Pass — 49/49 on disposable PostgreSQL 16 `planner_test`, one worker.                                                                                                                                                                                               |
+| `pnpm verify`                                                                                             | Pass — formatting, ESLint, strict TypeScript, 616 unit files / 5,295 tests, and production build.                                                                                                                                                                  |
+| `TEST_DATABASE_URL=… CI=1 NODE_OPTIONS=--max-old-space-size=4096 pnpm test:e2e:release`                   | Not pass — stopped during the Chromium project's 299-case run after `/app/w/[slug]/planning` timed out at `page.goto` while Next.js logged a memory-threshold restart. The remaining Chromium cases, other browser projects, and visual matrix were not completed. |
+| Independent review, MiniMax model/tool and privacy UAT, separated-account UAT, production backup/rollback | Open.                                                                                                                                                                                                                                                              |
+
+The two deterministic failures seen during the earlier full run are fixed and
+covered by the successful focused Chromium suite. The broader rerun still
+reproduced a planning-route timeout during a server restart; do not merge or
+deploy until the full matrix and all other required release gates pass.
+
 ## Workspace AI Assistant full browser attempt — 2026-10-24
 
 Code SHA under test: `149b5d643d18ca617aa7d4e197dfe9ed6c9fc0c4` (the current
