@@ -51,7 +51,9 @@ evidence against the exact clean SHA.
 
 1. **Keep the fast path.** Maintain the affected-test manifest and module
    ownership map so a code change selects its unit and relevant integration
-   coverage. Unknown or shared changes must conservatively select more tests.
+   coverage. Directly changed test files must also appear in an area's
+   `unitFiles`; an unowned test intentionally escalates to the full unit suite.
+   Unknown or shared changes must conservatively select more tests.
 2. **Measure the slow files.** Add per-file duration summaries to the runner and
    identify slow fixture setup, redundant migration work, and avoidable
    subprocess startup. Optimize the slowest measured costs first.

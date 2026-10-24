@@ -72,6 +72,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
         "tests/unit/architecture/module-ownership.test.ts",
         "tests/unit/testing/test-affected-core.test.ts",
         "tests/unit/testing/run-e2e-tests-core.test.ts",
+        "tests/unit/pre-push-env.test.ts",
       ],
       integrationFiles: [],
       browser: [],
