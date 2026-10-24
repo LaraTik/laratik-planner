@@ -1,5 +1,22 @@
 # Test and coverage evidence
 
+## Workspace AI Assistant — incremental usage accounting and local test loop — 2026-10-24
+
+Exact clean code SHA: `c2ef7c4cb9cfde142b9868b9acf238347c2c53ee`.
+The local pre-push hook passed for this pushed range. It now runs affected
+core checks (unit and integration) and does not launch the full integration
+suite for each code push. The full suite remains a local release-candidate
+gate. The speed plan is documented in
+[`../operations/local-test-speed-plan.md`](../operations/local-test-speed-plan.md).
+
+| Check                                                           | Result                                                                                                                                                                                                                                                 |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Affected unit selection                                         | Pass: 27 files / 280 tests.                                                                                                                                                                                                                            |
+| Direct AI budget, tool orchestration, and Assistant route tests | Pass: 3 files / 47 tests.                                                                                                                                                                                                                              |
+| Affected PostgreSQL integration selection                       | Pass: 7 files / 38 tests, including incremental tool-round reservations.                                                                                                                                                                               |
+| Formatting and whitespace                                       | Pass: Prettier on changed source/docs/tests; `git diff --check` clean.                                                                                                                                                                                 |
+| Release state                                                   | PR #44 remains open and requires independent approval. Full cross-browser release matrix, MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback evidence remain open. Do not merge or deploy on this checkpoint alone. |
+
 ## Workspace AI Assistant — local release policy and focused exact-code checks — 2026-10-24
 
 The release workflow policy is now explicit: feature-branch review and
