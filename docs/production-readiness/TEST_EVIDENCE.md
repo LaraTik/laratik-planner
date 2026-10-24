@@ -1,5 +1,33 @@
 # Test and coverage evidence
 
+## Workspace AI Assistant — local release policy and focused exact-code checks — 2026-10-24
+
+The release workflow policy is now explicit: feature-branch review and
+validation happen locally; all GitHub workflow jobs run only when manually
+dispatched from `main`. Normal changes use affected browser checks and require
+bilingual accessibility and visual evidence for touched screens. The full
+five-browser and visual matrix remains the release-candidate gate and applies
+to broad shared-surface changes. Database integration checks must not run
+concurrently with browser suites against the same disposable database.
+
+The application code tested below is commit
+`2aa393fa978f5faaceeb3d1b7b65df132b550107`. The current branch evidence head
+`75112e822ccadc2096b727fa4403175b2506680b` adds documentation only.
+
+| Command / check                   | Result                                                                                                                                                                                                                                             |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Commit hook unit suite            | Pass on `2aa393fa`: 617 files / 5,296 tests.                                                                                                                                                                                                       |
+| Pre-push unit + integration gates | Pass on `2aa393fa`: full local PostgreSQL `planner_test` integration suite completed before push; Workspace Assistant integration 12/12.                                                                                                           |
+| `actionlint` and Prettier checks  | Pass on workflow and documentation changes; `git diff --check` clean.                                                                                                                                                                              |
+| Focused Assistant browser checks  | Pass 8/8 on the isolated disposable database: Arabic RTL settings, skill governance/mobile, model preference, knowledge revisions, prompt library, reference resolution, streaming, and Arabic assistant controls.                                 |
+| Assistant visual checks           | Pass 3/3 suites: workspace AI settings Arabic RTL, agency AI settings Arabic RTL, and Workspace Assistant Arabic RTL; each covered five responsive viewports with snapshot and accessibility assertions.                                           |
+| Full browser release attempt      | Incomplete: 172 Chromium cases passed before the Next.js process exhausted its 16 GB heap; 42 planned cases did not run. Locale assertions observed during concurrent database use passed when rerun in isolation. No full-matrix pass is claimed. |
+| PR / release state                | PR #44 is open with no independent review. Main-only CI, MiniMax account/model/tool and privacy verification, separated-account UAT, production backup/rollback, and deployment are outstanding.                                                   |
+
+The focused checks demonstrate the changed Assistant experience. They do not
+replace the full release-candidate matrix or independent and external
+production-readiness gates. Do not merge or deploy on this evidence alone.
+
 ## Local integration validation policy — 2026-10-24
 
 Policy change commit: `d8d5ecd8e8129ec2a3ae4ff0586ba63627748d88`.
