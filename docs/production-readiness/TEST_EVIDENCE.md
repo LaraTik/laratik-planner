@@ -1,5 +1,26 @@
 # Test and coverage evidence
 
+## Local integration validation policy — 2026-10-24
+
+Policy change commit: `d8d5ecd8e8129ec2a3ae4ff0586ba63627748d88`.
+The GitHub deploy-gate workflow no longer runs the full integration suite.
+Code pushes run the full suite locally in the pre-push hook against the
+disposable PostgreSQL `planner_test` database; docs-only pushes do not need a
+database. The local suite remains a required release gate and has no
+`SKIP_INTEGRATION` bypass. GitHub CI still runs the migration drill, unit and
+static checks, security audit, and build/smoke gates.
+
+| Command / check               | Result                                                                                                                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                 | Pass on clean exact SHA `d8d5ecd8e8129ec2a3ae4ff0586ba63627748d88`: formatting, ESLint, strict TypeScript, 616 unit files / 5,295 tests, and production build.            |
+| Code-push pre-push validation | Pass on exact SHA `d8d5ecd8e8129ec2a3ae4ff0586ba63627748d88`: full unit selection and the full disposable-Postgres integration suite completed before the push succeeded. |
+| Workflow syntax / hook        | Pass: `actionlint` on CI/deploy workflows; `sh -n .husky/pre-push`.                                                                                                       |
+| GitHub deploy-gate run        | Pending dispatch on the final evidence commit. Integration is intentionally absent from this workflow.                                                                    |
+
+This changes where the full integration suite runs, not whether it is required.
+Do not merge or deploy without recorded local exact-SHA integration evidence
+and all other release gates below.
+
 ## Workspace AI Assistant release-gate follow-up — 2026-10-24
 
 Working-tree changes: corrected the platform-only redirect assertions to match
