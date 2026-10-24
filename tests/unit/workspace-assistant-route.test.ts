@@ -945,6 +945,48 @@ describe("POST /api/ai/workspace-assistant", () => {
     );
   });
 
+  it("keeps the full reservation when failed tool rounds report partial usage", async () => {
+    mocks.select
+      .mockReset()
+      .mockReturnValueOnce(query({ id: "workspace-1", timezone: "UTC", agencyId: "agency-1" }))
+      .mockReturnValueOnce(
+        query({
+          enabled: true,
+          enabledCapabilities: ["monthly_planning_copilot"],
+          model: "MiniMax-M3.1-Flash",
+          toolCallingEnabled: true,
+        }),
+      );
+    mocks.runAgentToolConversation.mockImplementationOnce(async (input) => {
+      await input.onBeforeProviderCall({
+        round: 1,
+        system: "workspace policy",
+        messages: [{ role: "user", content: "review plan" }],
+      });
+      input.onUsage?.({ inputTokens: 90, outputTokens: null });
+      input.onUsage?.({ inputTokens: null, outputTokens: 3 });
+      throw new Error("provider_disconnected");
+    });
+
+    const response = await POST(request({ month: "2026-11" }));
+    const reservation = mocks.enforceAiBudget.mock.calls[0]?.[0];
+    const reconciliation = mocks.reconcileAiBudget.mock.calls[0]?.[0];
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ error: "ai_provider_failed" });
+    expect(reconciliation).toMatchObject({
+      estimatedInputTokens: expect.any(Number),
+      estimatedOutputTokens: expect.any(Number),
+      actualInputTokens: expect.any(Number),
+      actualOutputTokens: expect.any(Number),
+    });
+    expect(reconciliation?.estimatedInputTokens).toBeGreaterThan(
+      reservation?.estimatedInputTokens ?? 0,
+    );
+    expect(reconciliation?.actualInputTokens).toBe(reconciliation?.estimatedInputTokens);
+    expect(reconciliation?.actualOutputTokens).toBe(reconciliation?.estimatedOutputTokens);
+  });
+
   it("records completed provider usage when quota reconciliation rejects the request", async () => {
     mocks.reconcileAiBudget.mockRejectedValue(
       new LimitExceededError({

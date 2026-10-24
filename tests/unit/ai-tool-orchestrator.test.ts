@@ -86,6 +86,32 @@ describe("bounded AI tool orchestration", () => {
     expect(onUsage).toHaveBeenCalledTimes(2);
   });
 
+  it("marks aggregate token usage unavailable when any provider round omits a count", async () => {
+    const toolProvider = provider([
+      response({
+        content: [{ type: "tool_use", id: "call-1", name: echoTool.name, input: {} }],
+        stopReason: "tool_use",
+        inputTokens: 5,
+        outputTokens: null,
+      }),
+      response({
+        content: [{ type: "text", text: "The plan has four items." }],
+        inputTokens: null,
+        outputTokens: 2,
+      }),
+    ]);
+
+    const result = await runAgentToolConversation({
+      provider: toolProvider,
+      system: "Follow Planner policy.",
+      userMessage: "Summarize the plan.",
+      tools: [echoTool],
+    });
+
+    expect(result.inputTokens).toBeNull();
+    expect(result.outputTokens).toBeNull();
+  });
+
   it("returns a recoverable error for unknown tools without executing arbitrary names", async () => {
     const toolProvider = provider([
       response({

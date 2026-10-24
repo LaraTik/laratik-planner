@@ -381,6 +381,8 @@ async function processAssistantRequest(
     outputTokens: 0,
     hasInput: false,
     hasOutput: false,
+    inputComplete: true,
+    outputComplete: true,
   };
   let estimatedInputTokens = 0;
 
@@ -711,10 +713,14 @@ async function processAssistantRequest(
             if (roundUsage.inputTokens !== null) {
               observedProviderUsage.inputTokens += roundUsage.inputTokens;
               observedProviderUsage.hasInput = true;
+            } else {
+              observedProviderUsage.inputComplete = false;
             }
             if (roundUsage.outputTokens !== null) {
               observedProviderUsage.outputTokens += roundUsage.outputTokens;
               observedProviderUsage.hasOutput = true;
+            } else {
+              observedProviderUsage.outputComplete = false;
             }
           },
           onActivity: ({ name, status }) => {
@@ -867,12 +873,14 @@ async function processAssistantRequest(
           userId: actor.id,
           estimatedInputTokens: reservedInputTokens,
           estimatedOutputTokens: reservedOutputTokens,
-          actualInputTokens: observedProviderUsage.hasInput
-            ? observedProviderUsage.inputTokens
-            : reservedInputTokens,
-          actualOutputTokens: observedProviderUsage.hasOutput
-            ? observedProviderUsage.outputTokens
-            : reservedOutputTokens,
+          actualInputTokens:
+            observedProviderUsage.hasInput && observedProviderUsage.inputComplete
+              ? observedProviderUsage.inputTokens
+              : reservedInputTokens,
+          actualOutputTokens:
+            observedProviderUsage.hasOutput && observedProviderUsage.outputComplete
+              ? observedProviderUsage.outputTokens
+              : reservedOutputTokens,
         }).catch(() => undefined);
       } else {
         await releaseAiBudgetReservation({

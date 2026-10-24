@@ -108,6 +108,8 @@ export async function runAgentToolConversation(input: {
   let outputTokens = 0;
   let hasInputUsage = false;
   let hasOutputUsage = false;
+  let inputUsageComplete = true;
+  let outputUsageComplete = true;
   let model = "";
   let callCount = 0;
   const usedTools: string[] = [];
@@ -126,10 +128,14 @@ export async function runAgentToolConversation(input: {
     if (response.inputTokens !== null) {
       inputTokens += response.inputTokens;
       hasInputUsage = true;
+    } else {
+      inputUsageComplete = false;
     }
     if (response.outputTokens !== null) {
       outputTokens += response.outputTokens;
       hasOutputUsage = true;
+    } else {
+      outputUsageComplete = false;
     }
     input.onUsage?.({
       inputTokens: response.inputTokens,
@@ -151,8 +157,8 @@ export async function runAgentToolConversation(input: {
       if (!content) throw new Error("empty_agent_response");
       return {
         content,
-        inputTokens: hasInputUsage ? inputTokens : null,
-        outputTokens: hasOutputUsage ? outputTokens : null,
+        inputTokens: hasInputUsage && inputUsageComplete ? inputTokens : null,
+        outputTokens: hasOutputUsage && outputUsageComplete ? outputTokens : null,
         model,
         toolNames: usedTools,
         evidenceIds: [...evidenceIds],
