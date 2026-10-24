@@ -10,16 +10,30 @@ database. The local suite remains a required release gate and has no
 `SKIP_INTEGRATION` bypass. GitHub CI still runs the migration drill, unit and
 static checks, security audit, and build/smoke gates.
 
-| Command / check               | Result                                                                                                                                                                    |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm verify`                 | Pass on clean exact SHA `d8d5ecd8e8129ec2a3ae4ff0586ba63627748d88`: formatting, ESLint, strict TypeScript, 616 unit files / 5,295 tests, and production build.            |
-| Code-push pre-push validation | Pass on exact SHA `d8d5ecd8e8129ec2a3ae4ff0586ba63627748d88`: full unit selection and the full disposable-Postgres integration suite completed before the push succeeded. |
-| Workflow syntax / hook        | Pass: `actionlint` on CI/deploy workflows; `sh -n .husky/pre-push`.                                                                                                       |
-| GitHub deploy-gate run        | Pending dispatch on the final evidence commit. Integration is intentionally absent from this workflow.                                                                    |
+| Command / check                                                                                             | Result                                                                                                                                                                                                                                                                     |
+| ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                                                               | Pass on clean exact SHA `d8d5ecd8e8129ec2a3ae4ff0586ba63627748d88`: formatting, ESLint, strict TypeScript, 616 unit files / 5,295 tests, and production build.                                                                                                             |
+| Code-push pre-push validation                                                                               | Pass on exact SHA `d8d5ecd8e8129ec2a3ae4ff0586ba63627748d88`: full unit selection and the full disposable-Postgres integration suite completed before the push succeeded.                                                                                                  |
+| Workflow syntax / hook                                                                                      | Pass: `actionlint` on CI/deploy workflows; `sh -n .husky/pre-push`.                                                                                                                                                                                                        |
+| GitHub deploy-gate run — [40075013221](https://github.com/LaraTik/laratik-planner/actions/runs/40075013221) | Pass on exact SHA `339933a0cad10562e6f4c7ad5d171f09b1d58e6f`: unit, migration drill, audit, Docker app/migrator builds, health smoke, Trend sidecar, SMTP, and workflow linters. No full integration-test job or step ran. GHCR publication was skipped for the PR branch. |
 
 This changes where the full integration suite runs, not whether it is required.
 Do not merge or deploy without recorded local exact-SHA integration evidence
 and all other release gates below.
+
+## Workspace Assistant and remote MCP separation — 2026-10-24
+
+The in-app Assistant remains a separate, authenticated application feature.
+This change documents its conversation, prompt, knowledge, run, and proposal
+API surface in `docs/api/README.md`; it does not add a remote MCP tool, token
+scope, credential, or transport behavior. The remote MCP reference and
+evaluation catalog now state this boundary explicitly.
+
+| Command / check                                                                                                             | Result                                                                                                                                               |
+| --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm exec vitest run tests/unit/workspace-assistant-mcp-boundary.test.ts tests/unit/community-production-contract.test.ts` | Pass — 5/5.                                                                                                                                          |
+| `TEST_DATABASE_URL=… NODE_ENV=test pnpm test:integration tests/integration/mcp-http-smoke.test.ts`                          | Pass — authenticated initialize, tools/list, scoped tools/call, token revocation, and no Assistant-specific tool in the actual remote catalog (1/1). |
+| Current PR-head full integration run                                                                                        | Required on the next code push by `.husky/pre-push`; the prior exact-SHA full integration pass remains recorded above for `d8d5ecd8`.                |
 
 ## Workspace AI Assistant release-gate follow-up — 2026-10-24
 

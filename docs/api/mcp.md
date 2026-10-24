@@ -4,6 +4,13 @@ The planner exposes a production remote MCP endpoint at:
 
 `https://planner.laratik.com/api/mcp`
 
+The in-app **Workspace AI Assistant** is a separate Planner feature under
+Produce. Its conversation, prompt, skills, knowledge, run, and proposal APIs
+are authenticated application routes; they are not remote MCP tools. The
+Planner MCP tool catalog, bearer-token scopes, and stateless transport remain
+unchanged by the in-app assistant. MCP clients continue to receive only the
+tools documented below and may not use assistant sessions or proposals.
+
 The endpoint uses the MCP Streamable HTTP transport in stateless JSON mode.
 Each request is authenticated with a LaraTik personal MCP access token:
 
