@@ -48,6 +48,8 @@ describe("bounded AI tool orchestration", () => {
       response({ content: [{ type: "text", text: "The plan has four items." }], inputTokens: 7 }),
     ]);
     const activity = vi.fn();
+    const beforeProviderCall = vi.fn();
+    const onUsage = vi.fn();
 
     const result = await runAgentToolConversation({
       provider: toolProvider,
@@ -55,6 +57,8 @@ describe("bounded AI tool orchestration", () => {
       userMessage: "Summarize the plan.",
       tools: [echoTool],
       onActivity: activity,
+      onBeforeProviderCall: beforeProviderCall,
+      onUsage,
     });
 
     expect(result).toMatchObject({
@@ -78,6 +82,8 @@ describe("bounded AI tool orchestration", () => {
       ],
     });
     expect(activity.mock.calls.map(([event]) => event.status)).toEqual(["started", "completed"]);
+    expect(beforeProviderCall.mock.calls.map(([call]) => call.round)).toEqual([0, 1]);
+    expect(onUsage).toHaveBeenCalledTimes(2);
   });
 
   it("returns a recoverable error for unknown tools without executing arbitrary names", async () => {

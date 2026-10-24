@@ -53,6 +53,11 @@ export type AgentToolActivity = (activity: {
   status: "started" | "completed" | "failed";
 }) => void;
 
+export type AgentToolUsage = (usage: {
+  inputTokens: number | null;
+  outputTokens: number | null;
+}) => void;
+
 export type AgentToolConversationResult = {
   content: string;
   inputTokens: number | null;
@@ -80,6 +85,12 @@ export async function runAgentToolConversation(input: {
   tools: readonly AgentTool[];
   signal?: AbortSignal;
   onActivity?: AgentToolActivity;
+  onBeforeProviderCall?: (input: {
+    round: number;
+    system: string;
+    messages: readonly AgentMessage[];
+  }) => Promise<void> | void;
+  onUsage?: AgentToolUsage;
   maxToolRounds?: number;
   maxToolCalls?: number;
 }): Promise<AgentToolConversationResult> {
@@ -104,6 +115,7 @@ export async function runAgentToolConversation(input: {
 
   for (let round = 0; round <= maxToolRounds; round += 1) {
     if (input.signal?.aborted) throw new DOMException("Request cancelled", "AbortError");
+    await input.onBeforeProviderCall?.({ round, system: input.system, messages });
     const response = await input.provider.complete({
       system: input.system,
       messages,
@@ -119,6 +131,10 @@ export async function runAgentToolConversation(input: {
       outputTokens += response.outputTokens;
       hasOutputUsage = true;
     }
+    input.onUsage?.({
+      inputTokens: response.inputTokens,
+      outputTokens: response.outputTokens,
+    });
 
     const toolCalls = response.content.filter(
       (block): block is Extract<AgentContentBlock, { type: "tool_use" }> =>

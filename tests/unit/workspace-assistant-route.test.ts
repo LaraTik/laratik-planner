@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   getActiveApiKey: vi.fn(),
   loadEnabledCapabilities: vi.fn(),
   enforceAiBudget: vi.fn(),
+  reserveAdditionalAiBudgetTokens: vi.fn(),
   reconcileAiBudget: vi.fn(),
   releaseAiBudgetReservation: vi.fn(),
   recordAiUsageEvent: vi.fn(),
@@ -87,6 +88,7 @@ vi.mock("@/features/workspace-assistant/skill-governance.server", () => ({
 vi.mock("@/lib/ai/governance", () => ({
   loadEnabledCapabilities: mocks.loadEnabledCapabilities,
   enforceAiBudget: mocks.enforceAiBudget,
+  reserveAdditionalAiBudgetTokens: mocks.reserveAdditionalAiBudgetTokens,
   reconcileAiBudget: mocks.reconcileAiBudget,
   releaseAiBudgetReservation: mocks.releaseAiBudgetReservation,
   recordAiUsageEvent: mocks.recordAiUsageEvent,
@@ -214,11 +216,14 @@ beforeEach(() => {
   });
   mocks.getActiveApiKey.mockResolvedValue("managed-key");
   mocks.loadEnabledCapabilities.mockResolvedValue(new Set(["monthly_planning_copilot"]));
-  mocks.enforceAiBudget.mockResolvedValue({
-    estimatedInputTokens: 8_000,
-    estimatedOutputTokens: 1_400,
-  });
+  mocks.enforceAiBudget.mockImplementation(
+    async ({ estimatedInputTokens, estimatedOutputTokens }) => ({
+      estimatedInputTokens,
+      estimatedOutputTokens,
+    }),
+  );
   mocks.reconcileAiBudget.mockResolvedValue(undefined);
+  mocks.reserveAdditionalAiBudgetTokens.mockResolvedValue(undefined);
   mocks.releaseAiBudgetReservation.mockResolvedValue(true);
   mocks.recordAiUsageEvent.mockResolvedValue(undefined);
   mocks.enforceRateLimit.mockResolvedValue({ allowed: true });
@@ -296,12 +301,36 @@ describe("POST /api/ai/workspace-assistant", () => {
     expect(mocks.chat.mock.calls[0]?.[0].messages[1].content).toContain("Earlier question");
     expect(mocks.createAssistantConversation).not.toHaveBeenCalled();
     expect(mocks.reconcileAiBudget).toHaveBeenCalledOnce();
+    const reservedTokens = mocks.enforceAiBudget.mock.calls[0]?.[0].estimatedInputTokens;
+    expect(reservedTokens).toBeGreaterThan(256);
+    expect(mocks.reconcileAiBudget).toHaveBeenCalledWith(
+      expect.objectContaining({ estimatedInputTokens: reservedTokens }),
+    );
+    expect(mocks.enforceAiBudget.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.chat.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
+    );
     expect(mocks.recordAiUsageEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         capability: "monthly_planning_copilot",
         succeeded: true,
         contextCategories: ["workspace_plan_summary", "calendar_distribution", "content_mix"],
       }),
+    );
+  });
+
+  it("reserves more input tokens for a long in-memory conversation before provider use", async () => {
+    const history = Array.from({ length: 8 }, (_, index) => ({
+      role: index % 2 === 0 ? ("user" as const) : ("assistant" as const),
+      content: `Turn ${index} ${"x".repeat(3_900)}`,
+    }));
+
+    const response = await POST(request({ history }));
+
+    expect(response.status).toBe(200);
+    const reservation = mocks.enforceAiBudget.mock.calls[0]?.[0];
+    expect(reservation.estimatedInputTokens).toBeGreaterThan(8_000);
+    expect(mocks.enforceAiBudget.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.chat.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
     );
   });
 
@@ -662,9 +691,10 @@ describe("POST /api/ai/workspace-assistant", () => {
 
     expect(response.status).toBe(502);
     await expect(response.json()).resolves.toEqual({ error: "ai_provider_failed" });
+    const reservation = mocks.enforceAiBudget.mock.calls[0]?.[0];
     expect(mocks.releaseAiBudgetReservation).toHaveBeenCalledWith({
       agencyId: "agency-1",
-      inputTokens: 8_000,
+      inputTokens: reservation.estimatedInputTokens,
       outputTokens: 1_400,
     });
     expect(mocks.recordAiUsageEvent).toHaveBeenCalledWith(
@@ -851,6 +881,36 @@ describe("POST /api/ai/workspace-assistant", () => {
       toolNames: ["planner_get_plan_summary"],
       rounds: 2,
     });
+    mocks.runAgentToolConversation.mockImplementationOnce(async (input) => {
+      await input.onBeforeProviderCall({
+        round: 1,
+        system: "workspace policy",
+        messages: [
+          { role: "user", content: "review plan" },
+          {
+            role: "assistant",
+            content: [{ type: "text", text: "bounded context" }],
+          },
+          {
+            role: "user",
+            content: [{ type: "tool_result", tool_use_id: "call-1", content: "plan data" }],
+          },
+        ],
+      });
+      return {
+        content: JSON.stringify({
+          answer: "The selected plan has one item.",
+          findings: [],
+          recommendations: [],
+          limitations: [],
+        }),
+        inputTokens: 90,
+        outputTokens: 18,
+        model: "MiniMax-M3.1-Flash",
+        toolNames: ["planner_get_plan_summary"],
+        rounds: 2,
+      };
+    });
 
     const response = await POST(request({ month: "2026-11" }));
     const body = await response.json();
@@ -870,8 +930,18 @@ describe("POST /api/ai/workspace-assistant", () => {
     expect(initialPrompt).not.toHaveProperty("workspaceBrandContext");
     expect(body.answer.answer).toBe("The selected plan has one item.");
     expect(body.evidence).toHaveLength(1);
+    expect(mocks.reserveAdditionalAiBudgetTokens).toHaveBeenCalledWith(
+      expect.objectContaining({ agencyId: "agency-1", inputTokens: expect.any(Number) }),
+    );
     expect(mocks.reconcileAiBudget).toHaveBeenCalledWith(
-      expect.objectContaining({ actualInputTokens: 90, actualOutputTokens: 18 }),
+      expect.objectContaining({
+        actualInputTokens: 90,
+        actualOutputTokens: 18,
+        estimatedInputTokens: expect.any(Number),
+      }),
+    );
+    expect(mocks.reconcileAiBudget.mock.calls[0]?.[0].estimatedInputTokens).toBeGreaterThan(
+      mocks.enforceAiBudget.mock.calls[0]?.[0].estimatedInputTokens ?? 0,
     );
   });
 

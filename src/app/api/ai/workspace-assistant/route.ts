@@ -33,6 +33,7 @@ import {
   resolveAssistantPromptParameters,
   createWorkspaceAssistantTools,
   discoverWorkspaceAssistantSkills,
+  estimateWorkspaceAssistantInputTokens,
 } from "@/features/workspace-assistant";
 import type { ResolvedWorkspaceContent } from "@/features/workspace-assistant/server";
 import {
@@ -40,6 +41,7 @@ import {
   loadEnabledCapabilities,
   recordAiUsageEvent,
   reconcileAiBudget,
+  reserveAdditionalAiBudgetTokens,
   releaseAiBudgetReservation,
 } from "@/lib/ai/governance";
 import { aiFeatureSettings, workspaces } from "@/lib/db/schema";
@@ -103,7 +105,6 @@ const requestSchema = z.object({
   model: z.string().trim().min(1).max(120).optional(),
 });
 
-const estimatedInputTokens = 8_000;
 const estimatedOutputTokens = 1_400;
 
 function errorResponse(error: string, status: number) {
@@ -373,6 +374,15 @@ async function processAssistantRequest(
   let reservationHeld = false;
   let providerCompleted = false;
   let usage = { inputTokens: 0, outputTokens: 0 };
+  let reservedInputTokens = 0;
+  let reservedOutputTokens = 0;
+  const observedProviderUsage = {
+    inputTokens: 0,
+    outputTokens: 0,
+    hasInput: false,
+    hasOutput: false,
+  };
+  let estimatedInputTokens = 0;
 
   try {
     const activeConversationId =
@@ -399,19 +409,6 @@ async function processAssistantRequest(
         })
         .catch(() => undefined);
     }, 750);
-
-    const reservation = await db.transaction((tx) =>
-      enforceAiBudget({
-        tx,
-        agencyId: agency.agencyId,
-        userId: actor.id,
-        capability: "monthly_planning_copilot",
-        estimatedInputTokens,
-        estimatedOutputTokens,
-        requestId,
-      }),
-    );
-    reservationHeld = true;
 
     // Read through the existing content feature API. Only the fields needed by
     // the deterministic analysis are carried into the assistant context.
@@ -654,6 +651,26 @@ async function processAssistantRequest(
       signal: runRequestSignal(abortSignal, runAbortController.signal),
       messages,
     };
+    estimatedInputTokens = toolCallingActive
+      ? estimateWorkspaceAssistantInputTokens([
+          { content: messages[0]?.content ?? "" },
+          { content: messages[1]?.content ?? "" },
+        ])
+      : estimateWorkspaceAssistantInputTokens(messages);
+    const reservation = await db.transaction((tx) =>
+      enforceAiBudget({
+        tx,
+        agencyId: agency.agencyId,
+        userId: actor.id,
+        capability: "monthly_planning_copilot",
+        estimatedInputTokens,
+        estimatedOutputTokens,
+        requestId,
+      }),
+    );
+    reservationHeld = true;
+    reservedInputTokens = reservation.estimatedInputTokens;
+    reservedOutputTokens = reservation.estimatedOutputTokens;
     reportActivity("provider_started", { model: selectedModelId });
     let streamedProviderText = "";
     let emittedAnswerText = "";
@@ -671,6 +688,35 @@ async function processAssistantRequest(
           userMessage: messages[1]?.content ?? "",
           tools: assistantTools,
           signal: runRequestSignal(abortSignal, runAbortController.signal),
+          onBeforeProviderCall: async ({ round, system, messages: providerMessages }) => {
+            if (round === 0) return;
+            const roundInputTokens = estimateWorkspaceAssistantInputTokens([
+              { content: system },
+              ...providerMessages.map((message) => ({
+                content:
+                  typeof message.content === "string"
+                    ? `${message.role}: ${message.content}`
+                    : `${message.role}: ${JSON.stringify(message.content)}`,
+              })),
+            ]);
+            await reserveAdditionalAiBudgetTokens({
+              agencyId: agency.agencyId,
+              inputTokens: roundInputTokens,
+              outputTokens: estimatedOutputTokens,
+            });
+            reservedInputTokens += roundInputTokens;
+            reservedOutputTokens += estimatedOutputTokens;
+          },
+          onUsage: (roundUsage) => {
+            if (roundUsage.inputTokens !== null) {
+              observedProviderUsage.inputTokens += roundUsage.inputTokens;
+              observedProviderUsage.hasInput = true;
+            }
+            if (roundUsage.outputTokens !== null) {
+              observedProviderUsage.outputTokens += roundUsage.outputTokens;
+              observedProviderUsage.hasOutput = true;
+            }
+          },
           onActivity: ({ name, status }) => {
             const eventType: AssistantRunEventType =
               status === "started"
@@ -696,14 +742,14 @@ async function processAssistantRequest(
     if (!result?.content.trim()) throw new Error("empty_provider_response");
     providerCompleted = true;
     usage = {
-      inputTokens: result.inputTokens ?? estimatedInputTokens,
-      outputTokens: result.outputTokens ?? estimatedOutputTokens,
+      inputTokens: result.inputTokens ?? reservedInputTokens,
+      outputTokens: result.outputTokens ?? reservedOutputTokens,
     };
     await reconcileAiBudget({
       agencyId: agency.agencyId,
       userId: actor.id,
-      estimatedInputTokens: reservation.estimatedInputTokens,
-      estimatedOutputTokens: reservation.estimatedOutputTokens,
+      estimatedInputTokens: reservedInputTokens,
+      estimatedOutputTokens: reservedOutputTokens,
       actualInputTokens: usage.inputTokens,
       actualOutputTokens: usage.outputTokens,
     });
@@ -815,11 +861,26 @@ async function processAssistantRequest(
   } catch (error) {
     if (cancellationTimer) clearInterval(cancellationTimer);
     if (reservationHeld && !providerCompleted) {
-      await releaseAiBudgetReservation({
-        agencyId: agency.agencyId,
-        inputTokens: estimatedInputTokens,
-        outputTokens: estimatedOutputTokens,
-      }).catch(() => false);
+      if (observedProviderUsage.hasInput || observedProviderUsage.hasOutput) {
+        await reconcileAiBudget({
+          agencyId: agency.agencyId,
+          userId: actor.id,
+          estimatedInputTokens: reservedInputTokens,
+          estimatedOutputTokens: reservedOutputTokens,
+          actualInputTokens: observedProviderUsage.hasInput
+            ? observedProviderUsage.inputTokens
+            : reservedInputTokens,
+          actualOutputTokens: observedProviderUsage.hasOutput
+            ? observedProviderUsage.outputTokens
+            : reservedOutputTokens,
+        }).catch(() => undefined);
+      } else {
+        await releaseAiBudgetReservation({
+          agencyId: agency.agencyId,
+          inputTokens: reservedInputTokens,
+          outputTokens: reservedOutputTokens,
+        }).catch(() => false);
+      }
     }
     if (runId) {
       await eventWriteTail;

@@ -8,3 +8,4 @@ export {
 } from "./parameters";
 export type { AssistantPromptParameter } from "./parameters";
 export { createWorkspaceAssistantTools } from "./tools";
+export { estimateWorkspaceAssistantInputTokens } from "./usage";

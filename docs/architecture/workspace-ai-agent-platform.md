@@ -36,6 +36,15 @@ session only. Raw provider reasoning, API keys, hidden provider payloads, and
 chat turns are not saved by Planner. Short-lived proposals and session metadata
 remain server-side so a user can review a pending change after navigation.
 
+The assistant estimates input tokens from the complete bounded provider request
+before reserving budget, including browser-memory history. Tool-enabled runs
+reserve additional input and output capacity before every follow-up provider
+round, without counting another user request. Reconciliation uses the sum of
+reported usage across rounds; if a later round fails, usage already reported is
+still reconciled and unused reservation is returned. Positive reconciliation
+deltas are recorded even when actual use crosses the plan cap, so the next
+request is blocked without losing the completed provider usage from accounting.
+
 The UI now includes bilingual built-in monthly planning prompts, private,
 workspace, and agency-scoped prompt records with immutable revisions and the
 workspace-manager/agency-admin publication gates, plus 30 first-party skills

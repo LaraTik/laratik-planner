@@ -65,9 +65,11 @@ export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5432/pl
 psql "$TEST_DATABASE_URL" -tAc 'select current_database()'
 ```
 
-Run `NODE_ENV=test pnpm migration-drill` and `pnpm test:integration` locally
-before pushing code. The full integration suite is a local release gate and
-is not run in GitHub Actions (ADR 0020). The `test:e2e:isolated`,
+Run focused tests during development and affected unit/integration checks
+before pushing. Run the full `pnpm test:integration` suite once for a release
+candidate, locally against disposable PostgreSQL; never run it in GitHub
+Actions (ADR 0020). See `docs/operations/local-test-speed-plan.md` for the
+fast local loop and staged suite optimization. The `test:e2e:isolated`,
 `test:e2e:critical`, and `test:visual`
 scripts all use `scripts/run-e2e-tests.ts`; it refuses non-test URLs, applies
 migrations, and injects deterministic test-only Auth.js secrets. Never point
@@ -217,10 +219,10 @@ in one pass or extract code only to reduce file length.
 - ✅ Every migration must be registered in `src/lib/db/migrations/meta/_journal.json`, target the exact table names in the Drizzle schema, and include forward, compatibility, backup, rollback, from-zero, and upgrade evidence. A successful build does not prove that a migration runs.
 - ✅ Record verification against the exact clean commit SHA. If the branch advances or becomes dirty after verification, rerun the affected gates before calling the work complete.
 - ✅ Pre-commit hook catches lint/format/typecheck/unit-test issues early — keep it fast by keeping its scope tight (lint-staged on staged files, `vitest related` on staged sources, sentinel-driven `tsc --noEmit`). Skip with `git commit --no-verify` or `SKIP_TYPECHECK=1` for WIP / hotfixes.
-- ✅ Pre-push hook runs affected unit checks and the full `pnpm test:integration` suite locally for code pushes; docs-only changes do not need database tests. It does not run E2E. For normal changes, use `pnpm test:affected -- --layer browser` and run bilingual, accessibility, and visual checks for every touched screen. Use `pnpm test:e2e:release` for release candidates and changes to shared app-shell, auth, localization, or other broad surfaces. All GitHub Actions workflows are manual-only and their jobs are guarded to run only from `main`; feature-branch review and validation happen locally before merge. Dispatch the authoritative CI/image build against `main`, then dispatch deployment separately. Integration validation must be recorded locally at the exact clean SHA; GitHub CI does not run it. See ADR 0020.
-- ✅ Always merge finished work to `main` after local independent review, `pnpm verify`, local integration/migration gates, and the relevant bilingual E2E/accessibility/visual evidence pass on the exact clean SHA. Do not dispatch GitHub workflows on feature branches: every GitHub workflow job is guarded to run only from `main`. After merge, dispatch the authoritative CI/image build against `main`, verify it succeeds, then separately dispatch the main-only production deploy. No half-finished work sits in the local working tree or on a stale local branch.
+- ✅ Pre-push hook runs affected unit and integration checks for the pushed range; it does not run the full integration suite or E2E. Use `pnpm test:affected -- --layer browser` for normal UI changes and `pnpm test:e2e:release` for release candidates and broad shared-surface changes. Run the full integration suite once for a release candidate, locally before merge. GitHub Actions are not part of normal review or release; do not dispatch them for branch checks or routine releases. See ADR 0020 and `docs/operations/local-test-speed-plan.md`.
+- ✅ Review and verify locally before merging: inspect the complete diff, obtain independent approval, run `pnpm verify`, and complete applicable local integration, migration, bilingual browser, accessibility, and visual gates on the exact clean SHA. Merge finished work to `main` and push it to `origin`; build and publish the exact SHA-tagged app/migrator images locally, then invoke VPS deployment from the operator machine using the runbook. Do not use GitHub Actions to test, build, publish, review, or deploy a release. No finished work sits in a dirty tree or stale branch.
 - ✅ GitHub `main` protection requires a pull request, one approval from someone other than the latest pusher, dismissal of stale approvals, resolved review conversations, and linear history. There are no PR status-check requirements because checks are dispatched on `main` after merge; local release evidence and independent review are required before merge.
-- ✅ CI is authoritative for GitHub-run gates; the full PostgreSQL integration suite is a required local pre-push gate and must be recorded at the exact clean SHA. Neither replaces the other.
+- ✅ Local evidence is the release authority. GitHub stores the source, PR discussion, independent approval, and merge record; workflow results are not release gates. Keep the disposable-database guard and record full integration evidence at the release candidate SHA.
 - ✅ Keep the remote Planner MCP current on every change: update the implementation, `docs/api/mcp.md`, `docs/api/README.md`, `docs/api/mcp-evaluation.xml`, affected bilingual Account UI copy, tests, and production-readiness evidence together. Follow [`docs/operations/mcp-maintenance.md`](docs/operations/mcp-maintenance.md); never ship a new tool, scope, error, or transport behavior with stale client documentation.
 - ✅ Staging before production: not yet (single-environment for v1, see Goal 14)
 - ✅ Disk hygiene before deploy: ensure VPS `/` is < 70% (use the vps-ops `disk-cleanup.sh apply` if needed)
@@ -516,7 +518,7 @@ The independent reviewer (Task 13) flips the verdict to `READY` after the
 30-step §23 journey and the owner checks in
 `docs/production-readiness/EXTERNAL_SERVICES_UAT.md` are signed.
 
-> Workflow contract — see `docs/testing/strategy.md` (Release gates) and ADR 0019. All four GitHub Actions workflows are manual-only, and every job is guarded to run only from `main`. Feature branches receive local review and validation. `ci.yml` is the authoritative post-merge main check (unit tests, migration drill, audit, build, Docker smoke, SMTP-cert probe, workflow linters); the full database integration suite is local-only. `advisory-quality.yml` runs targeted or release-candidate checks only by dispatch on `main`. Local E2E is explicit via `pnpm test:affected -- --layer browser` or `pnpm test:e2e:release`; pre-push runs affected unit checks and full local integration validation. `deploy.yml` deploys only after a separate operator dispatch from `main`.
+> Workflow contract — see `docs/testing/strategy.md`, ADR 0019/0020/0021, and `docs/operations/local-test-speed-plan.md`. GitHub Actions are legacy recovery tooling and are not dispatched for normal branch checks or releases. Review, verification, build, image publication, and deployment are locally operated. The pre-push hook runs affected unit/integration checks only; the full integration suite is a local release-candidate gate. E2E is explicit through `pnpm test:affected -- --layer browser` and the release matrix through `pnpm test:e2e:release`.
 
 ## Activity log rendering
 

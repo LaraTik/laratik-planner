@@ -193,6 +193,48 @@ describe("M3.6 — AI governance (integration)", () => {
     expect(snapshot.requestCount).toBe(1);
   });
 
+  it("reserves additional tool-round tokens without counting another request", async () => {
+    const { agencyId, userId } = await seedAgencyAndAdmin();
+    const schema = await import("@/lib/db/schema");
+    await db.transaction((tx) =>
+      governance.enforceAiBudget({
+        tx,
+        agencyId,
+        userId,
+        capability: "caption_drafts",
+        estimatedInputTokens: 100,
+        estimatedOutputTokens: 200,
+        requestId: "tool-rounds",
+      }),
+    );
+
+    await governance.reserveAdditionalAiBudgetTokens({
+      agencyId,
+      inputTokens: 900,
+      outputTokens: 300,
+    });
+
+    const counters = await db
+      .select({
+        resourceKey: schema.agencyUsageCounters.resourceKey,
+        value: schema.agencyUsageCounters.currentValue,
+      })
+      .from(schema.agencyUsageCounters)
+      .where(eq(schema.agencyUsageCounters.agencyId, agencyId));
+    expect(
+      Object.fromEntries(counters.map((counter) => [counter.resourceKey, Number(counter.value)])),
+    ).toMatchObject({
+      ai_requests_month: 1,
+      ai_input_tokens_month: 1_000,
+      ai_output_tokens_month: 500,
+    });
+    await expect(
+      governance.getUserDailyBudgetSnapshot({ agencyId, userId }),
+    ).resolves.toMatchObject({
+      requestCount: 1,
+    });
+  });
+
   it("enforceAiBudget respects the daily cap (LimitExceededError when exceeded)", async () => {
     const { agencyId, userId } = await seedAgencyAndAdminWithLowCap();
     // The seeded plan has daily_ai_requests_per_user = 1. The

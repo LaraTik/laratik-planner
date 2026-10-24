@@ -1,4 +1,4 @@
-# ADR 0020 — Run the complete integration suite locally
+# ADR 0020 — Local review and integration validation
 
 ## Status
 
@@ -6,53 +6,41 @@ Accepted — 2026-10-24
 
 ## Context
 
-The full PostgreSQL integration suite takes several minutes in GitHub Actions
-and delays the feedback needed to fix failures. The repository already uses a
-disposable `planner_test` database, has a guarded integration runner, and runs
-pre-push hooks on the exact commit range. The manual CI workflow remains
-necessary for checks that depend on GitHub runners, registry publishing, or
-production-facing infrastructure.
+The PostgreSQL integration suite protects database constraints, tenant
+isolation, transactions, and concurrency. Running it on every small push delays
+feedback, while GitHub Actions are no longer part of normal review or release.
+The repository has a disposable `planner_test` database, a guarded integration
+runner, and affected-test selection from changed files and pushed commit ranges.
 
 ## Decision
 
-Run `pnpm test:integration` locally as a required pre-push gate for every
-non-documentation code push. The pre-push hook runs affected unit tests and
-then the full integration suite against `TEST_DATABASE_URL`; the runner must
-continue to reject URLs that are not clearly disposable (`test` or `ci`).
-Record the command, result, and exact clean SHA in
-`docs/production-readiness/TEST_EVIDENCE.md` before merge.
-
-Do not run `pnpm test:integration` in `.github/workflows/ci.yml`. Keep the
-GitHub migration drill, unit tests, format/lint/typecheck, dependency audit,
-build, Docker health smoke, Trend sidecar, SMTP certificate check, and
-workflow/container/shell linters as deploy gates. A CI pass does not replace
-the local integration evidence, and the local integration pass does not
-replace the remaining CI gates.
-
-This changes where the required suite runs, not whether it runs. The suite
-still covers database constraints, authorization, transactions, and
-concurrency. Its disposable database guard remains unchanged; no production
-database or credentials are introduced. Reviewers must verify the local
-exact-SHA integration evidence before approving a merge because GitHub can no
-longer enforce that particular result.
-
-Docs-only pushes may omit database tests. Do not skip the integration suite
-for code changes to save time or to obtain a passing release result. If the
-local hook is bypassed, the same full integration command and evidence are
-still required before merge.
+- Run focused unit/integration checks during implementation and affected
+  unit/integration checks before pushing. The pre-push hook must use the
+  pushed commit range and must not invoke the full integration suite.
+- Run the full `pnpm test:integration` suite locally once for a release
+  candidate before merge. Use only a disposable database selected by
+  `TEST_DATABASE_URL`; the runner rejects unsafe database URLs.
+- Run `pnpm migration-drill` locally for database changes. Record full test,
+  migration, review, and release evidence against the exact clean SHA.
+- Do not run integration checks in GitHub Actions. Do not dispatch workflows
+  for branch checks or routine releases; review, verify, build, publish, and
+  deploy locally. GitHub remains the remote source, PR, and merge record.
+- Speed up local feedback through affected-test selection. Do not skip test
+  cases. The staged runner optimization plan is in
+  `docs/operations/local-test-speed-plan.md`; parallel runs require isolated
+  databases and deterministic evidence first.
 
 ## Consequences
 
-- Integration failures surface on the developer machine without waiting for
-  the GitHub workflow.
-- Release evidence depends on a disposable local PostgreSQL setup and must be
-  recorded against the exact commit SHA.
-- GitHub CI is faster and continues to validate the migration pipeline and
-  all other deploy-gate concerns independently.
-- The CI integration step must not be restored without revisiting this ADR.
+- Small fixes get relevant local feedback without waiting for the full suite.
+- Release candidates still run the complete integration suite locally, so
+  database, authorization, transaction, and concurrency coverage is retained.
+- The review record must include exact SHA and local test results because
+  GitHub does not enforce hosted status checks.
+- Integration tests continue to use the disposable-database safety guard.
 
 ## Rollback
 
-To restore GitHub integration validation, add the full suite back to CI and
-update this ADR, `AGENTS.md`, `docs/testing/strategy.md`, and the operations
-runbook together. Keep local disposable-database guards in place.
+Revisit this decision together with `AGENTS.md`, the local-test-speed plan,
+testing strategy, and operations runbook. Do not restore hosted integration
+gates or full-suite pre-push behavior in isolation.
