@@ -1,5 +1,22 @@
 # Test and coverage evidence
 
+## Planning XLSX creative export enhancement — exact-code verification — 2026-10-24
+
+Exact clean application code SHA: `3086ae8fd98cf3b81ac78a8724ef1d1f96379457`.
+This change adds creative handoff and channel-specific copy worksheets to the
+existing planning XLSX export. It changes no database schema or migration.
+Checks were run from a clean worktree at this exact code SHA:
+
+| Check                                                                                                                                         | Result                                                                                                                                                                   |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm verify`                                                                                                                                 | Pass, exit code 0: Prettier, ESLint, TypeScript, 624 unit files / 5,333 tests, and production build.                                                                     |
+| `TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test pnpm test:integration tests/integration/planning-xlsx-export.test.ts` | Pass, exit code 0: 1 integration test verifies Arabic creative fields, required media metadata, and workspace isolation for linked channels.                             |
+| Focused export and architecture tests                                                                                                         | Pass, exit code 0: 3 unit files / 8 tests.                                                                                                                               |
+| Release state                                                                                                                                 | Not approved. Independent review and the existing production-readiness release gates remain open. No GitHub Actions were dispatched; no image was published or deployed. |
+
+The documentation-only commit that follows retains this application SHA as
+the verified code. No application code or migration changes in that commit.
+
 ## Workspace AI Assistant — exact-code local release verification — 2026-10-24
 
 Exact clean application code SHA: `68a63d5a43773deb43e4e7773b3f543bd51fc923`.
