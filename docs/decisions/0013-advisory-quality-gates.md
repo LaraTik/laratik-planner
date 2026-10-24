@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — 2026-09-09
+Superseded for release execution by ADR 0021 — 2026-10-24
 
 ## Context
 

@@ -2,55 +2,40 @@
 
 ## Release gates
 
-All GitHub Actions workflows are manual-only: push, pull request, schedule,
-and workflow-completion events do not start runs. Dispatch `CI` for the
-authoritative release gates, then dispatch `Deploy` separately when the
-operator is ready to deploy. Dispatch `Advisory quality` with `critical`
-for targeted checks or `release-candidate` for the full coverage and browser
-matrix. No successful workflow automatically starts another workflow.
-See ADR 0013 for the gate split and ADR 0019 for the manual-trigger decision.
+Review and release verification happen locally. GitHub hosts source, PR
+discussion, and the merge to `main`; GitHub Actions are not a required or
+normal step. Do not dispatch Actions for branch checks or routine releases.
+Run the applicable gates on the exact candidate SHA, record the results in
+the production-readiness evidence, obtain the independent review, then merge
+and push. Build and publish the immutable production images locally and
+invoke the VPS deployment from the local operator machine. See ADR 0019 for
+the no-automatic-workflow decision and ADR 0021 for the local release
+contract. See [`../operations/local-test-speed-plan.md`](../operations/local-test-speed-plan.md)
+for focused local checks on each change and the staged plan for safely
+speeding up the full integration suite.
 
-| Gate                                                        | Where                                                                                          | Required for deploy     | Release-candidate |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------- | ----------------- |
-| Format (`pnpm format:check`)                                | `.github/workflows/ci.yml` + `.husky/pre-commit` (lint-staged → prettier --write)              | ✅ (CI + pre-commit)    | ✅                |
-| Lint (`pnpm lint`)                                          | `.github/workflows/ci.yml` + `.husky/pre-commit` (lint-staged → eslint --fix)                  | ✅ (CI + pre-commit)    | ✅                |
-| Typecheck (`pnpm typecheck`)                                | `.github/workflows/ci.yml` + `.husky/pre-commit` (sentinel-driven)                             | ✅ (CI + pre-commit)    | ✅                |
-| Full unit suite (`pnpm test:unit`)                          | `.github/workflows/ci.yml`                                                                     | ✅ (CI)                 | ✅                |
-| Affected unit selection on staged changes                   | `.husky/pre-commit`                                                                            | ✅ (pre-commit)         | ✅                |
-| Affected unit/integration selection on pushed changes       | `.husky/pre-push` → `pnpm test:affected -- --push --layer core`                                | ✅ (local feedback)     | ✅                |
-| Integration + migration drill (`pnpm test:integration`)     | `ci.yml` `unit-quality` `Integration tests` (authoritative full run)                           | ✅ (CI)                 | ✅                |
-| Migration drill (`pnpm migration-drill`)                    | `ci.yml` `unit-quality` `Migration drill` + release checklist                                  | ✅                      | ✅                |
-| Targeted E2E (Chromium functional)                          | `advisory-quality.yml` on explicit critical dispatch + `pnpm test:affected -- --layer browser` | ❌ (advisory)           | ✅                |
-| Full 5-browser matrix (`pnpm test:e2e:isolated`)            | `advisory-quality.yml` release-candidate dispatch + `pnpm test:e2e:release`                    | ❌ (advisory)           | ✅                |
-| Visual matrix (`pnpm test:visual`)                          | `advisory-quality.yml` release-candidate dispatch + `pnpm test:e2e:release`                    | ❌ (advisory)           | ✅                |
-| Changed-line coverage (`pnpm test:coverage:advisory`)       | `advisory-quality.yml` explicit critical dispatch                                              | ❌ (advisory)           | ❌                |
-| Absolute coverage (`pnpm test:coverage`)                    | `advisory-quality.yml` release-candidate dispatch                                              | ❌ (advisory)           | ✅                |
-| Production audit (`pnpm audit --prod`)                      | `ci.yml` → `unit-quality` → `Dependency audit`                                                 | ✅ (zero critical/high) | ✅                |
-| Production build (`pnpm build`)                             | `ci.yml` → `build-smoke` → `Build`                                                             | ✅                      | ✅                |
-| Docker image build + `/api/health` smoke                    | `ci.yml` → `build-smoke` → `Smoke e2e (health)`                                                | ✅                      | ✅                |
-| GHCR push (app + migrator, `<sha>` + `latest`)              | `ci.yml` → `build-smoke` → `Push to GHCR` (post-smoke, only on green)                          | ✅                      | ✅                |
-| Image tag exists in GHCR (verify)                           | `deploy.yml` → `deploy` → `Verify image exists`                                                | ✅                      | ✅                |
-| SSH to VPS, pull, migrate, recreate, health check, rollback | `deploy.yml` → `deploy` → `SSH + deploy`                                                       | ✅                      | ✅                |
-| SMTP cert probe (deploy-blocker)                            | `ci.yml` → `check-smtp-cert`                                                                   | ✅                      | ✅                |
-| Workflow / Dockerfile / shell linters                       | `ci.yml` → `lint-meta`                                                                         | ✅                      | ✅                |
+| Gate                                                     | Local command / evidence                                                     | Required for deploy      | Release-candidate |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------ | ----------------- |
+| Format, lint, typecheck, unit, production build          | `pnpm verify`                                                                | ✅                       | ✅                |
+| Affected unit/integration checks                         | Local pre-commit/pre-push hooks                                              | ✅ (feedback)            | ✅                |
+| Full integration suite                                   | `TEST_DATABASE_URL=... pnpm test:integration` against disposable PostgreSQL  | ✅                       | ✅                |
+| Migration drill                                          | `pnpm migration-drill` against disposable PostgreSQL                         | ✅ when DB changes       | ✅                |
+| Targeted browser E2E                                     | `pnpm test:affected -- --layer browser`                                      | ✅ for affected UI       | ✅                |
+| Full browser and visual matrix                           | `pnpm test:e2e:release`                                                      | ✅ for release candidate | ✅                |
+| Accessibility and bilingual UI evidence                  | Local EN/AR, LTR/RTL a11y and viewport checks from this strategy and tracker | ✅ for affected UI       | ✅                |
+| Production dependency audit                              | `pnpm audit --prod --audit-level high`                                       | ✅                       | ✅                |
+| Docker build and liveness smoke                          | Local Docker build + `/api/health/live` smoke                                | ✅                       | ✅                |
+| GHCR app and migrator images                             | Local Docker Buildx push tagged with the full commit SHA                     | ✅                       | ✅                |
+| VPS backup, migration, deploy, health check and rollback | Local operator invokes `scripts/deploy.sh` over SSH; follow the runbook      | ✅                       | ✅                |
+| SMTP certificate and workflow/container/shell checks     | Run locally; see the runbook and tracker                                     | ✅                       | ✅                |
 
-`CI` enforces the authoritative deploy-critical subset: full unit and
-integration tests, production build + Docker image + GHCR push
-(platform-specific + the single source of the production image as of
-2026-08-28), audit (needs the full dep graph), SMTP cert probe (talks to a
-real production endpoint), and the workflow + Dockerfile + shell linters.
-
-Format, lint, typecheck, and affected unit/integration checks provide local
-feedback; CI repeats the complete unit and integration gates authoritatively.
-Local E2E is explicit: `pnpm test:affected -- --layer browser` is the normal
-development loop and `pnpm test:e2e:release` is the release-candidate check.
-An explicit critical advisory dispatch runs targeted Chromium against the
-selected ref; the full browser and visual matrices run only by
-release-candidate dispatch.
-
-`advisory-quality.yml` uploads coverage, Playwright, visual-diff, and
-structured JSON result artifacts. Persistent failures update one deduplicated
-GitHub issue per check; a later passing SHA closes that issue.
+`pnpm verify` is the baseline, not the complete release evidence. Database
+changes also require the migration drill. User-facing or localized changes
+require affected browser, accessibility, and visual checks. Release
+candidates require the full browser and visual matrix. Record command, date,
+exact clean SHA, exit code, and result summary in the evidence bundle. The
+Actions workflows remain available only for exceptional maintenance or
+recovery; their output is neither required nor a substitute for local gates.
 
 ## Test layers
 

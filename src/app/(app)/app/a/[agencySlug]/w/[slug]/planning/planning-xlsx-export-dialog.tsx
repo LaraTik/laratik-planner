@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Download } from "lucide-react";
+import { Download, LoaderCircle } from "lucide-react";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,8 +38,67 @@ export function PlanningXlsxExportDialog({
   const [preset, setPreset] = React.useState<RangePreset>("view_month");
   const [startDate, setStartDate] = React.useState(`${month}-01`);
   const [endDate, setEndDate] = React.useState(lastDayOfMonth(month));
+  const [pending, setPending] = React.useState(false);
+  const [downloadError, setDownloadError] = React.useState<string | null>(null);
   const isCustom = preset === "custom";
   const rangeIsValid = !isCustom || Boolean(startDate && endDate && startDate <= endDate);
+
+  async function downloadWorkbook(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (pending || !rangeIsValid) return;
+
+    const form = event.currentTarget;
+    const params = new URLSearchParams();
+    for (const [name, value] of new FormData(form).entries()) {
+      if (typeof value === "string") params.append(name, value);
+    }
+
+    setPending(true);
+    setDownloadError(null);
+    try {
+      const response = await fetch(`${form.action}?${params.toString()}`, {
+        method: "GET",
+        headers: { Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+      });
+      if (!response.ok) {
+        setDownloadError(
+          response.status === 413
+            ? t("planning.exportTooManyItems")
+            : t("planning.exportDownloadFailed"),
+        );
+        return;
+      }
+
+      const contentType = response.headers.get("content-type")?.split(";")[0];
+      if (contentType !== "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
+        setDownloadError(t("planning.exportDownloadFailed"));
+        return;
+      }
+
+      const blob = await response.blob();
+      if (blob.size === 0) {
+        setDownloadError(t("planning.exportDownloadFailed"));
+        return;
+      }
+
+      const disposition = response.headers.get("content-disposition") ?? "";
+      const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1];
+      const safeFilename = filename?.replace(/[^a-zA-Z0-9._-]/g, "") || "planning-export.xlsx";
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = safeFilename;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1_000);
+      setOpen(false);
+    } catch {
+      setDownloadError(t("planning.exportDownloadFailed"));
+    } finally {
+      setPending(false);
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -60,10 +119,9 @@ export function PlanningXlsxExportDialog({
         </DialogHeader>
 
         <form
-          method="get"
           action="/api/export/planning-xlsx"
           className="space-y-5"
-          onSubmit={() => setOpen(false)}
+          onSubmit={downloadWorkbook}
           data-testid="planning-export-xlsx-form"
         >
           <input type="hidden" name="agency" value={agencySlug} />
@@ -180,13 +238,26 @@ export function PlanningXlsxExportDialog({
             </DialogClose>
             <Button
               type="submit"
-              disabled={!rangeIsValid}
+              disabled={!rangeIsValid || pending}
               data-testid="planning-export-xlsx-submit"
             >
-              <Download className="h-4 w-4" aria-hidden="true" />
-              {t("planning.exportDownloadXlsx")}
+              {pending ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Download className="h-4 w-4" aria-hidden="true" />
+              )}
+              {pending ? t("planning.exportDownloading") : t("planning.exportDownloadXlsx")}
             </Button>
           </DialogFooter>
+          {downloadError ? (
+            <p
+              className="text-label text-danger"
+              role="alert"
+              data-testid="planning-export-xlsx-error"
+            >
+              {downloadError}
+            </p>
+          ) : null}
         </form>
       </DialogContent>
     </Dialog>

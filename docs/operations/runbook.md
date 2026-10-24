@@ -91,7 +91,7 @@ When a section header in this runbook carries an M-tag, that tag is the contract
 
 11. Set up Google OAuth: in Google Cloud Console, add `https://planner.laratik.com/api/auth/callback/google` as an authorized redirect URI, then set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env` and `docker compose up -d app`.
 12. Set up Mailcow mailbox `no-reply@planner.laratik.com` (Mailcow admin → Mailboxes → Add), then set `SMTP_PASSWORD` in `.env` and `docker compose up -d app`.
-13. **GHCR credential for the deploy workflow**: the `ghcr.io/laratik/laratik-planner{-migrator}` images are private. The VPS-side `scripts/deploy.sh` does `echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USER" --password-stdin` before pulling, but the credential comes from the GitHub repo secrets, not from the VPS filesystem. Set them once:
+13. **Optional legacy workflow credentials**: the `ghcr.io/laratik/laratik-planner{-migrator}` images are private. The normal release path authenticates to GHCR locally and the VPS deploy account uses its read-only GHCR login. `GHCR_PAT` and `GHCR_USER` repository secrets are only needed if an operator intentionally uses the legacy GitHub Deploy workflow:
     ```bash
     # 1. https://github.com/settings/tokens?type=beta → Generate new token
     #    • Resource owner: LaraTik
@@ -105,68 +105,72 @@ When a section header in this runbook carries an M-tag, that tag is the contract
     The PAT must be kept secret — it grants read:packages on the LaraTik org. Rotate on the same cadence as the deploy SSH key (see Rotation).
 14. First sign-in: visit `https://planner.laratik.com/signin`, sign in with Google, then go to `/setup` and enter the agency name + slug + `BOOTSTRAP_SETUP_TOKEN`.
 
-## Deploying a new version
+## Local review, release, and deployment
 
-Deployment is operator-controlled. Manually dispatch CI to build the
-`laratik-planner` (app) and `laratik-planner-migrator` (migrator)
-images, tags each by the exact commit SHA, and pushes them to GHCR. Then
-manually dispatch the `deploy` workflow with the exact same ref. It verifies
-CI succeeded for that commit and checks the published image before SSHing to
-the VPS to run `scripts/deploy.sh`,
-which performs `backup → migrate → recreate app → health check →
-rollback on failure` without any manual Docker commands.
+The release is reviewed and verified on the developer/operator machine.
+GitHub is the remote source and PR/merge record; do not dispatch GitHub Actions
+for routine branch checks, builds, or deployments. Keep the independent review
+and every required production-readiness gate. Record evidence against the exact
+clean commit SHA before merging. For code changes run `pnpm verify`; run the
+disposable-database integration and migration checks when required; run the
+affected browser, EN/AR accessibility, and visual checks for touched UI. A
+release candidate also runs `pnpm test:e2e:release` and the exact tracker gates.
 
-From your **local** machine:
+After local review passes, merge the change into `main` and push `main`. Build
+and publish immutable app and migrator images from that exact SHA using local
+Docker Buildx, then invoke the existing transactional deployment script over
+SSH. Never deploy `latest`, a branch name, or a short SHA.
+
+From the **local** machine, confirm the tree is clean and select the full SHA:
 
 ```bash
-git push origin main
-# No GitHub Actions workflow starts from this push.
-gh workflow run ci.yml --ref main
-# Wait until this exact commit's CI run succeeds and publishes both images.
-# Copy its full 40-character SHA, then manually deploy that same SHA:
-gh workflow run deploy.yml --ref main -f ref="<full-40-character-sha>"
-# CI, advisory, deployment, and release workflows each require explicit dispatch.
+git status --short
+DEPLOY_SHA="$(git rev-parse HEAD)"
+git show -s --format='%H %s' "$DEPLOY_SHA"
 ```
 
-### Direct deployment from the VPS
+Log in to GHCR locally with an account that can publish the two LaraTik
+packages. Build and push both images for the VPS platform. Build timestamps are
+metadata; the commit SHA is the immutable deployment identity.
 
-Use the GitHub `Deploy` workflow as the standard path. Direct VPS deployment is
-the operator-run fallback when you specifically need to invoke the release
-script yourself. It does **not** check GitHub CI status or image provenance, so
-first confirm in Actions that the manually dispatched CI run succeeded for the
-exact full commit SHA and published both `laratik-planner` and
-`laratik-planner-migrator` tags. Never deploy `latest` or a short SHA.
+```bash
+docker login ghcr.io
+APP_BUILD_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+docker buildx build --platform linux/amd64 \
+  --build-arg "APP_VERSION=$DEPLOY_SHA" \
+  --build-arg "APP_BUILD_AT=$APP_BUILD_AT" \
+  --tag "ghcr.io/laratik/laratik-planner:$DEPLOY_SHA" \
+  --push .
+docker buildx build --platform linux/amd64 \
+  --build-arg "APP_VERSION=$DEPLOY_SHA" \
+  --build-arg "APP_BUILD_AT=$APP_BUILD_AT" \
+  --target migrator \
+  --tag "ghcr.io/laratik/laratik-planner-migrator:$DEPLOY_SHA" \
+  --push .
+docker buildx imagetools inspect "ghcr.io/laratik/laratik-planner:$DEPLOY_SHA"
+docker buildx imagetools inspect "ghcr.io/laratik/laratik-planner-migrator:$DEPLOY_SHA"
+```
 
-Connect to the VPS and select that exact commit. The repository checkout must
-be clean before switching commits:
+The VPS deploy account also needs read access to GHCR. Authenticate that
+account with the read-only package token using an interactive `docker login`
+before deployment; do not put the token in a command argument, source file, or
+shell history. The local operator machine then selects the exact source SHA on
+the VPS and runs its transactional deployment script:
 
 ```bash
 ssh laratik-vps
 cd /opt/laratik-planner
 git status --short
-# Stop if the command above prints tracked changes that need to be preserved.
-DEPLOY_SHA="<full-40-character-sha-from-the-successful-ci-run>"
+# Stop if the checkout has changes that need to be preserved.
+DEPLOY_SHA="<paste the full SHA printed on your local machine>"
 git fetch origin "$DEPLOY_SHA"
 git checkout --detach "$DEPLOY_SHA"
-```
-
-The images are private. Run as the VPS deploy account that owns the Docker
-login (the same account used by the GitHub deploy workflow). If the account is
-not already authenticated, enter a GitHub token with `read:packages` into the
-hidden prompt below. The script logs Docker out on exit when it logs in with
-these temporary credentials; it does not write the token to `.env` or shell
-history.
-
-```bash
-read -rp 'GHCR username: ' GHCR_USER
-read -rsp 'GHCR read:packages token: ' GHCR_PAT; printf '\n'
-export GHCR_USER GHCR_PAT
 ./scripts/deploy.sh "$DEPLOY_SHA"
-unset GHCR_USER GHCR_PAT DEPLOY_SHA
+exit
 ```
 
 The script refuses a missing, short, or non-SHA tag. It runs the provider
-preflight, pulls both SHA-tagged images, creates a verified pre-migration
+preflight, pulls both SHA-tagged images, creates and verifies a pre-migration
 backup, runs migrations, recreates the app, and checks readiness. If readiness
 fails, it restores the previous application image; database migrations are
 forward-only, so investigate the migration result and deploy a forward fix if
@@ -210,10 +214,10 @@ rollback. The migrator runs in a separate container and aborts the
 deploy on any non-zero exit; it never suppresses migration errors.
 
 For a manual rollback of a bad release that passed health but is otherwise
-broken, select the last known-good full SHA and manually dispatch CI for it,
-then manually dispatch Deploy for that same SHA. A direct VPS rollback can
-also invoke `./scripts/deploy.sh <last-known-good-full-sha>` after confirming
-that both images exist. The Postgres schema is forward-only — Drizzle
+broken, select the last known-good full SHA and invoke
+`./scripts/deploy.sh <last-known-good-full-sha>` from the VPS after confirming
+that both images exist. No workflow dispatch is needed. The Postgres schema is
+forward-only — Drizzle
 migrations are append-only, so reverting application code is safe only when
 the older binary is compatible with the migrations already applied.
 
@@ -345,34 +349,17 @@ pnpm test:affected -- --since origin/main --layer browser
 PLAYWRIGHT_BASE_URL=http://localhost:3100 pnpm test:e2e:smoke
 ```
 
-### CI vs. local E2E
+### Local release verification
 
-The authoritative deploy-gate workflow is `.github/workflows/ci.yml`.
-It runs the complete unit/integration and release contract:
-
-- full unit, migration-drill, and integration suites — local hooks select
-  only the affected unit/integration checks for faster feedback;
-- `pnpm audit --prod` (zero critical/high production findings);
-- production build, Docker image build, a `/api/health` smoke
-  against the built image, **and the GHCR push** (app + migrator
-  with the `<sha>` and `latest` tags) — the single source of
-  the production image as of the 2026-08-28 single-build change;
-- SMTP cert probe (deploy-blocker);
-- workflow / Dockerfile / shell linters (actionlint + zizmor +
-  hadolint + shellcheck).
-
-Format, lint, and typecheck run in the local hooks. Local E2E is explicit:
-`pnpm test:affected -- --layer browser` selects affected Chromium contracts,
-while `pnpm test:e2e:release` runs the complete local browser and visual
-release-candidate matrix. `.github/workflows/advisory-quality.yml` runs
-targeted Chromium only on a critical dispatch. The full 5-browser E2E
-matrix and visual matrix run only on a release-candidate dispatch. Artifacts
-and structured result reports are retained for diagnosis.
-
-CI's `build-smoke` job builds and publishes the production image when CI is
-manually dispatched. The separately dispatched Deploy workflow requires the
-latest CI run for the selected SHA to have succeeded, verifies both GHCR
-images, then rolls them out. It does not rebuild the images.
+The local machine is authoritative for review and release evidence. Run
+`pnpm verify`, the full local integration suite, and the migration drill for
+database changes. Run affected browser checks plus bilingual accessibility
+and visual checks for touched UI. A release candidate runs
+`pnpm test:e2e:release`. Before image publication, run the local production
+audit, Docker image startup/liveness smoke, SMTP certificate probe, and the
+applicable workflow/container/shell linters. GitHub Actions are legacy
+maintenance tooling and are not part of the normal release path; details are
+in ADR 0021.
 
 #### Local E2E recipes
 
@@ -435,18 +422,17 @@ Use `pnpm test:area <domain>` when you want to check one domain deliberately.
 Its browser path runs Chromium and only adds affected accessibility or visual
 selectors. Shared or unknown changes escalate to full relevant coverage.
 
-Pre-push runs affected unit and integration checks for the pushed commit range,
+Pre-push runs local unit and integration checks for the pushed commit range,
 not the staging index, so a normal push after committing cannot silently skip
 those checks. It does not run E2E. Run `pnpm test:affected -- --layer browser`
 for normal local browser feedback or `pnpm test:e2e:release` for a release
-candidate. `SKIP_INTEGRATION=1` and `git push --no-verify` remain explicit
-escape hatches, and CI remains authoritative.
+candidate. Hook skips require a documented reason; local evidence is the
+release authority.
 
 #### Local integration setup
 
-The pre-push hook selects affected integration tests on the pushed range.
-CI still runs the complete integration suite as the deploy-gate audit, so
-local selection is fast feedback and CI remains the authoritative result.
+The pre-push hook runs the configured local integration checks on the pushed
+range. Run the complete `pnpm test:integration` suite locally before release.
 
 The integration runner requires a disposable Postgres database that
 contains the substring `test` or `ci` in the URL
@@ -542,12 +528,14 @@ touchable.
 3. They do not bypass authorization in production — they simply do not exist.
 4. They never accept or return secrets; the seed uses the same Drizzle inserts the real bootstrap path uses.
 
-### Running on CI
+### Legacy GitHub Actions workflows
 
-`ci.yml` runs only through manual workflow dispatch. All repository Actions
-workflows are manual-only; pushes, pull requests, schedules, and completion of
-other workflows do not start a run. The 5-browser matrix and the visual run
-are local or explicit release-candidate checks:
+GitHub Actions are not part of the normal branch review or release process.
+Do not dispatch these workflows for routine feature checks, image publication,
+deployment, or release tagging. Use the local commands and exact-SHA evidence
+described in the testing strategy and this runbook. The workflow files remain
+available only for exceptional maintenance or recovery and must not be treated
+as the authoritative release record.
 
 ```yaml
 # .github/workflows/ci.yml  (deploy-gate, post 2026-08-26 plan)
@@ -571,27 +559,24 @@ pnpm test:affected -- --layer browser
 pnpm test:e2e:release
 ```
 
-After reviewing a successful CI run and the target ref, manually dispatch
-the deploy workflow (`deploy.yml`) to SSH to the VPS for production rollout.
-The deploy workflow does not re-run any test against the VPS. See the **CI vs.
-local E2E** section above and
-[`../testing/strategy.md`](../testing/strategy.md) (Release gates)
-for the full contract.
+The workflow definitions describe the previous hosted release path. ADR 0021,
+the **Local review, release, and deployment** section above, and
+[`../testing/strategy.md`](../testing/strategy.md) define the current contract.
 
 ## Patching a dependency advisory
 
-A published advisory blocks the deploy gate (`pnpm audit --prod --audit-level
-high` in `ci.yml`) when CI is next manually dispatched, even if that run
-targets code that did not change.
+A published production advisory blocks release until the local audit
+(`pnpm audit --prod --audit-level high`) is clean, even if the affected
+dependency is outside the current code change.
 
 **"Fixed the audit" is a snapshot, not a state.** Advisories keep arriving —
 patching one batch only buys time until the next lands. Never record an audit
 as clean and stop; re-run the exact CI command before deployment and review
 the advisory issue before dispatching a release.
 
-**Who sees it first.** Dispatch the `Advisory quality` workflow to run the
-audit and open/update an issue. Since workflows do not run automatically,
-check current advisories before a production release.
+**Who sees it first.** The release operator runs the audit locally and reviews
+current advisories before production deployment. GitHub Actions are not
+required for this check.
 
 **Check whether the package is direct or transitive first.** The fix differs:
 
@@ -1007,26 +992,26 @@ The bell counter is the user's primary signal that something needs their attenti
 
 ## Repository protection (GitHub Settings)
 
-The deploy chain is gated in two places: the `ci.yml` workflow (which is code) and the GitHub repository's protection rules (which are configured in the GH UI, not in code). This section is the canonical reference so a new maintainer can reproduce the production posture from a fresh checkout + the runbook.
+GitHub protects the `main` source history and records the independent PR
+review. Verification and deployment are local per ADR 0021; do not require a
+GitHub Actions status check for merge or deployment.
 
-| Surface                  | Setting                                                                                         | Where                                      |
-| ------------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| `main` branch            | Require CI green (`.github/workflows/ci.yml`) before merge; dispatch CI manually for the commit | Branch protection rules                    |
-| `main` branch            | Require 1 review from `@LaraTik/laratik-planner-maintainers`                                    | Branch protection rules                    |
-| `main` branch            | Require linear history (no merge commits)                                                       | Branch protection rules                    |
-| `main` branch            | No force-push                                                                                   | Branch protection rules                    |
-| `main` branch            | No branch deletion                                                                              | Branch protection rules                    |
-| `main` branch            | Require CODEOWNERS review on touched paths (via `.github/CODEOWNERS`)                           | Branch protection rules                    |
-| `production` environment | Require 1 approval from `@LaraTik/laratik-planner-maintainers`                                  | Environments → production                  |
-| `production` environment | No wait timer (deploys are time-bounded; the CI gate is the wait)                               | Environments → production                  |
-| `production` environment | Restrict to `main` branch only                                                                  | Environments → production                  |
-| Repository secrets       | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_PAT`, `GHCR_USER`                                  | Settings → Secrets and variables → Actions |
-| Secret rotation          | GHCR PAT, VPS SSH key: every 90 days (see `OPS-001` evidence)                                   | Calendar reminder                          |
-| Workflow file            | Top-level `permissions: contents: read` (default deny)                                          | All 3 workflows                            |
-| `deploy.yml` job         | `permissions: contents: read, packages: read`                                                   | `deploy.yml` deploy job                    |
-| `lint-meta` job          | Required for deploy (errors fail the gate)                                                      | `ci.yml` lint-meta job                     |
+| Surface                  | Setting                                                                                      | Where                                      |
+| ------------------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `main` branch            | Require 1 review from `@LaraTik/laratik-planner-maintainers`                                 | Branch protection rules                    |
+| `main` branch            | Require linear history (no merge commits)                                                    | Branch protection rules                    |
+| `main` branch            | No force-push                                                                                | Branch protection rules                    |
+| `main` branch            | No branch deletion                                                                           | Branch protection rules                    |
+| `main` branch            | Require CODEOWNERS review on touched paths (via `.github/CODEOWNERS`)                        | Branch protection rules                    |
+| `main` branch            | No required Actions status checks; exact-SHA local evidence is reviewed before merge         | Branch protection rules                    |
+| `production` environment | Not used by the local deployment path; retain only for legacy workflow recovery              | Environments → production                  |
+| Repository secrets       | Not required for the local release path; legacy workflow secrets may be removed after review | Settings → Secrets and variables → Actions |
+| Secret rotation          | GHCR PAT, VPS SSH key: every 90 days (see `OPS-001` evidence)                                | Calendar reminder                          |
+| Workflow file            | Top-level `permissions: contents: read` (default deny; legacy workflows only)                | GitHub Actions configuration               |
+| `deploy.yml` job         | Legacy recovery tooling; not used for routine releases                                       | `deploy.yml` deploy job                    |
+| `lint-meta` job          | Run applicable linters locally before release                                                | `ci.yml` lint-meta job definitions         |
 
-These rules are set in the GH web UI; the in-repo artifacts (`CODEOWNERS`, `dependabot.yml`, `zizmor.yml`, top-level `permissions:` blocks) only enforce what they can. The branch-protection + environment-protection + secret-rotation rules must be configured manually on a fresh repo.
+These rules are set in the GH web UI; the in-repo artifacts (`CODEOWNERS`, `dependabot.yml`, `zizmor.yml`, top-level `permissions:` blocks) only enforce what they can. Configure branch review/history protection and secret handling on a fresh repo. The production Actions environment is legacy because normal deployment starts locally.
 
 ### Code-side enforcement already in place
 

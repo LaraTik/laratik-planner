@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — 2026-10-23
+Superseded for review and release by ADR 0021 — 2026-10-24
 
 ## Context
 
@@ -14,23 +14,21 @@ chain where one automatic event can fan out into additional work.
 ## Decision
 
 Every repository workflow uses `workflow_dispatch` as its only trigger.
-Operators explicitly start CI, advisory checks, deployment, and release
-workflows. A successful run never starts another workflow. Existing manual
-inputs remain available for selecting an advisory suite, deploy ref, or
-successful deploy run.
+This historical decision removed automatic branch, PR, schedule, and chained
+workflow runs. ADR 0021 further moves normal review, verification, image
+publication, and deployment to the local operator machine. The manual
+workflows remain for exceptional maintenance or recovery only.
 
 ## Consequences
 
 - Pushes, pull requests, schedules, and workflow completion consume no Actions
   minutes by themselves.
-- CI, coverage, browser checks, image builds, deployment, and release tagging
-  occur only when manually dispatched. Deploy verifies the latest CI run for
-  the selected SHA before using its already-built image.
-- GitHub branch protection cannot rely on a workflow run automatically
-  refreshing required checks. Operators must run the required checks for the
-  reviewed commit and confirm their results before merge/deploy.
-- Production deployment remains protected by the production environment and
-  the deploy workflow's backup, migration, health-check, and rollback path.
+- Normal review, checks, image builds, deployment, and release tagging happen
+  locally under ADR 0021; these workflows are not dispatched for them.
+- Branch protection records the independent review and protects `main`; it
+  does not require a GitHub Actions status check.
+- Production deployment uses the local operator path and retains the VPS
+  backup, migration, health-check, and rollback safeguards.
 - No application data, schema, or credentials change. The decision was
   explicitly requested by the repository owner to control Actions usage.
 
