@@ -1,5 +1,21 @@
 # Migration and deployment evidence
 
+## Workspace AI Assistant migration release-candidate status — 2026-10-24
+
+The Assistant schema and migration files are unchanged from exact clean SHA
+`e8d779f2d757628fd309db9b24271b7533456e6c` through application code SHA
+`3c43f49b6e15bc131b62032536d28d665a340ac0`. On the disposable PostgreSQL 16
+database `planner_test`, `NODE_ENV=test pnpm migration-drill` passed all five
+scenarios: from-zero (103/103 migrations), skipped-migration repair,
+in-place upgrade, backup/restore (103 ledger rows restored), and
+failed-migration abort. Full details are in
+`docs/production-readiness/TEST_EVIDENCE.md`.
+
+This is local disposable-database evidence only. It does not prove a
+production backup, production restore, or production rollback. Those operator
+gates remain open in `PRODUCTION_READINESS_TRACKER.md`; do not deploy until
+they are recorded.
+
 ## Migration 0088 — advertising signal feedback
 
 `0088_secret_thing.sql` adds the additive `advertising_signal_feedback` table

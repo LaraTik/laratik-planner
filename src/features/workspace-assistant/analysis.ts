@@ -35,7 +35,7 @@ const responseSchema = z.object({
         title: z.string().trim().min(1).max(180),
         detail: z.string().trim().min(1).max(1_200),
         severity: z.enum(["low", "medium", "high"]),
-        evidenceIds: z.array(z.string().max(160)).max(8),
+        evidenceIds: z.array(z.string().max(160)).min(1).max(8),
       }),
     )
     .max(8),
@@ -44,7 +44,7 @@ const responseSchema = z.object({
       z.object({
         title: z.string().trim().min(1).max(180),
         detail: z.string().trim().min(1).max(1_200),
-        evidenceIds: z.array(z.string().max(160)).max(8),
+        evidenceIds: z.array(z.string().max(160)).min(1).max(8),
       }),
     )
     .max(8),
@@ -54,7 +54,7 @@ const responseSchema = z.object({
         field: z.enum(["title", "brief", "plannedPublishAt"]),
         title: z.string().trim().min(1).max(180),
         afterValue: z.string().trim().min(1).max(2_000),
-        evidenceIds: z.array(z.string().max(160)).max(3),
+        evidenceIds: z.array(z.string().max(160)).min(1).max(3),
       }),
     )
     .max(3)

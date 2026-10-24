@@ -1,60 +1,58 @@
-# Workspace AI Assistant — Phase 1
+# Workspace AI Assistant — Current Implementation
 
-The Workspace AI Assistant is the first consumer of a reusable, in-process AI
-foundation. It remains part of the Planner modular monolith. It does not share
-the remote Planner MCP transport, bearer tokens, scopes, or tool descriptions.
+The Workspace AI Assistant is the first consumer of Planner's reusable,
+in-process AI foundation. It remains part of the Planner modular monolith and
+does not share the remote Planner MCP transport, bearer tokens, scopes, or tool
+descriptions.
 
-## Current boundary
+## Current capability boundary
 
-- The route resolves the workspace slug under the signed-in actor's active
-  agency, then requires `workspace_manager` or `content_planner` membership.
-- It reuses the agency AI master switch, the existing
-  `monthly_planning_copilot` capability intersection, the managed MiniMax key,
-  per-user rate limit, and token reservation/reconciliation. Agency model and
-  key configuration remain the existing source of truth.
-- The assistant reads one selected month through the existing content feature
-  query. The server caps the result at 200 active items and passes only the
-  fields required for planning analysis. It does not send titles, briefs,
-  comments, member records, credentials, or other workspaces to the model.
-- The initial fixed read capability set is plan summary, calendar distribution,
-  and content mix. These are application-selected capabilities; the model
-  cannot name a tool, workspace, table, or query. Model-driven tool calling is
-  intentionally not enabled until the configured model and agency key pass a
-  restricted non-production compatibility check.
-- Schedule gaps are computed deterministically. The model may explain and
-  recommend based on those facts, but all structured output is schema-checked
-  and its evidence IDs must refer to the current request's evidence.
-- The browser keeps the visible conversation in component memory. Each request
-  can include up to eight recent turns; the route does not persist them.
-- This phase is read-only. No proposals, status changes, approvals, content
-  writes, or publishing calls are exposed.
+- Each request resolves the signed-in actor, active agency, accessible
+  workspace, and permitted role on the server. It reuses the agency AI switch,
+  `monthly_planning_copilot` capability, managed MiniMax key, model allowlist,
+  per-user rate limit, and token reservation/reconciliation.
+- The assistant reads a selected month through authorized Planner services,
+  with bounded plan items, brand context, and permitted workspace or agency
+  knowledge. Deterministic analysis identifies calendar gaps; model findings
+  and recommendations must cite evidence returned for the current request.
+- Model-driven tools, when enabled by an agency administrator, are a fixed,
+  bounded, schema-validated, read-only allowlist. The model cannot select a
+  workspace, issue database queries, or add tools. Tool use stays disabled
+  until the exact agency key and model pass restricted non-production UAT.
+- Ask mode answers and analyzes. Plan mode can prepare a preview only for an
+  explicitly selected draft when the user requests an edit. Apply mode supports
+  explicit confirmation of individual or selected batches of previews. The
+  current supported edits are title, brief, and planned publish date; existing
+  Planner services recheck role, workspace, status, revision, and prior value
+  when applying them. The assistant cannot approve, publish, or change workflow
+  status.
+- Saved prompts support private, workspace, and agency scopes, typed
+  parameters, immutable revisions, and publication gates. Agency skills have
+  their own review and rollback workflow. Prompt and skill instructions never
+  grant tools, data access, or permissions.
+- Visible chat turns stay in browser memory and are not stored or restored by
+  session APIs. Planner stores session metadata, sanitized short-lived run
+  events, and expiring proposals; those records contain no transcript text.
+  Usage events omit prompts, transcripts, provider secrets, raw provider
+  responses, and hidden reasoning.
 
-## Request flow
+## Current status
 
-`signed-in request → active-agency workspace resolution → role/capability gate
-→ per-user rate limit → AI token reservation → bounded content read →
-deterministic analysis capabilities → MiniMax response → response/evidence
-validation → budget reconciliation → response`
+The code is implemented on PR #44. The latest clean application code evidence
+is SHA `3c43f49b6e15bc131b62032536d28d665a340ac0`; the branch currently ends at
+`6c73c9082d9a895bc5e8bb4bf9dbeb3db6c1f32d` after documentation-only commits.
+Local verification, integration, and the Assistant migration drill are
+recorded in `docs/production-readiness/TEST_EVIDENCE.md`.
 
-Provider errors and model output are not returned raw. Usage events contain the
-existing workspace/member/capability/model/token/request metadata and category
-manifest, not prompts or conversation text. Internal Planner token accounting
-is not an assertion of MiniMax subscription charges.
+This is not a production release approval. The full browser release matrix,
+non-production MiniMax model/tool and privacy checks, separated-account UAT,
+production backup/rollback evidence, and a recorded independent PR approval
+remain open. Check the current verdict in `PRODUCTION_READINESS_TRACKER.md`
+before merging or deploying.
 
 ## Deferred work
 
-Shared prompts, revision and publication workflow, action proposals, confirmation
-and idempotent execution, contextual entry points, workspace knowledge,
-additional providers, image generation, and autonomous workflows are later
-phases. Prompt sharing must never share the creator's workspace data or
-permissions. Any future action must call the existing authorized Planner domain
-commands after explicit confirmation and current-version validation.
-
-## Verification status
-
-This document describes the implemented Phase 1 boundary. The analysis unit
-tests and catalog/navigation checks are local evidence only. Production-ready
-completion still requires route authorization coverage, the repo release gates,
-English/Arabic browser and accessibility review, model/key compatibility UAT,
-privacy/data-processing review, exact-clean-SHA evidence, and independent
-verification. No production readiness status is implied by this document.
+Image generation, additional providers, autonomous workflows, and broader
+cross-feature integrations remain deferred. Any new mutation must continue to
+use existing Planner domain commands, explicit user confirmation, current
+authorization, and version checks.

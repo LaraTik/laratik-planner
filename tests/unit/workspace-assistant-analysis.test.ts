@@ -84,6 +84,43 @@ describe("workspace assistant analysis", () => {
     ).toThrow();
   });
 
+  it("rejects findings, recommendations, and proposed changes without evidence", () => {
+    const response = {
+      answer: "Review",
+      findings: [],
+      recommendations: [],
+      proposedChanges: [],
+      limitations: [],
+    };
+    const cases = [
+      {
+        findings: [{ title: "Gap", detail: "Long break", severity: "medium", evidenceIds: [] }],
+      },
+      {
+        recommendations: [{ title: "Improve", detail: "Add a post", evidenceIds: [] }],
+      },
+      {
+        proposedChanges: [
+          {
+            field: "title",
+            title: "Edit title",
+            afterValue: "A clearer title",
+            evidenceIds: [],
+          },
+        ],
+      },
+    ];
+
+    for (const invalidPart of cases) {
+      expect(() =>
+        parseWorkspaceAssistantResponse(
+          JSON.stringify({ ...response, ...invalidPart }),
+          new Set(["workspace-content-2026-11"]),
+        ),
+      ).toThrow();
+    }
+  });
+
   it("rejects a proposed edit that cites evidence outside the authorized context", () => {
     expect(() =>
       parseWorkspaceAssistantResponse(
