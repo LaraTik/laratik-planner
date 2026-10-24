@@ -222,10 +222,10 @@ jobs:
       - name: Smoke e2e (liveness)
         # Smoke-test the production image's process startup. We hit
         # /api/health/live (liveness only — no DB check) so this smoke stays
-        # independent from the Postgres service used by integration tests.
-        # Readiness (DB + schema) is verified by the unit-quality +
-        # integration jobs above and by Traefik's loadbalancer probe in
-        # production.
+        # independent from the Postgres service used by the migration drill.
+        # Database-backed integration tests run locally in the pre-push hook.
+        # Production readiness is checked by the migration gate and Traefik's
+        # loadbalancer probe after deployment.
         #
         # Why 127.0.0.1 (not localhost): IPv6 trap — the GHA runner
         # resolves "localhost" to ::1 first and Next.js binds 0.0.0.0
