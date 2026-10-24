@@ -9,7 +9,9 @@ import {
 } from "@/lib/content/enriched-list";
 import { humanFormat, humanStatus } from "@/lib/content/status";
 import type { PlanningFilterSelection } from "@/lib/planning/filter-params";
-import { workbookToXlsx, type XlsxWorkbookSheet } from "@/lib/exports/xlsx";
+import { excelDateTime, workbookToXlsx, type XlsxWorkbookSheet } from "@/lib/exports/xlsx";
+import { makeCreativeExportSheets } from "./planning-xlsx-creative.server";
+import { loadCreativeExportData } from "./planning-xlsx-export-data.server";
 
 const PAGE_SIZE = 500;
 const MAX_EXPORT_ITEMS = 25_000;
@@ -18,6 +20,8 @@ export interface PlanningXlsxLabels {
   locale: string;
   summaryTitle: string;
   scheduleTitle: string;
+  creativeHandoffTitle: string;
+  channelCopyTitle: string;
   workspace: string;
   dateRange: string;
   timezone: string;
@@ -34,6 +38,44 @@ export interface PlanningXlsxLabels {
   owner: string;
   designer: string;
   brief: string;
+  itemId: string;
+  contentLanguage: string;
+  caption: string;
+  hashtags: string;
+  hook: string;
+  mainMessage: string;
+  callToAction: string;
+  audience: string;
+  visualDirection: string;
+  onImageText: string;
+  onScreenText: string;
+  coverDirection: string;
+  voiceOverNotes: string;
+  formatOutline: string;
+  mediaRequired: string;
+  yes: string;
+  no: string;
+  requiredImageLinks: string;
+  designReadyLink: string;
+  references: string;
+  firstComment: string;
+  additionalNotes: string;
+  weekday: string;
+  requestedPlatforms: string;
+  publicationStatus: string;
+  channelCaption: string;
+  channelHashtags: string;
+  channelFirstComment: string;
+  channelDescription: string;
+  channelCallToAction: string;
+  channelCallToActionUrl: string;
+  destinationUrl: string;
+  captionSource: string;
+  hashtagsSource: string;
+  channelOverride: string;
+  sharedDraft: string;
+  briefFallback: string;
+  noContent: string;
   noChannels: string;
   statusLabels: Record<string, string>;
   formatLabels: Record<string, string>;
@@ -128,7 +170,15 @@ export async function exportPlanningWorkbook(options: PlanningXlsxExportOptions)
 
   const selectedFilters = filterLabels(options.filters, labels);
   const filterSummary = selectedFilters.length ? selectedFilters.join(", ") : labels.allItems;
+  const creativeData = await loadCreativeExportData(workspaceId, items);
   const schedule = makeScheduleSheet(items, timezone, labels);
+  const [handoff, channelCopy] = makeCreativeExportSheets(
+    items,
+    creativeData,
+    timezone,
+    labels,
+    options.filters?.channelId,
+  );
   const summary = makeSummarySheet({
     items,
     workspaceName,
@@ -137,7 +187,7 @@ export async function exportPlanningWorkbook(options: PlanningXlsxExportOptions)
     filterSummary,
     labels,
   });
-  return workbookToXlsx([summary, schedule]);
+  return workbookToXlsx([summary, schedule, handoff, channelCopy]);
 }
 
 function toQueryFilters(
@@ -312,27 +362,4 @@ function countBy(
     }
   }
   return counts;
-}
-
-function excelDateTime(value: Date, timezone: string): number {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-    numberingSystem: "latn",
-  })
-    .formatToParts(value)
-    .reduce<Record<string, number>>((result, part) => {
-      if (part.type !== "literal") result[part.type] = Number(part.value);
-      return result;
-    }, {});
-  const utcMillis = Date.UTC(parts.year!, parts.month! - 1, parts.day!);
-  const excelEpochMillis = Date.UTC(1899, 11, 30);
-  const dayFraction = ((parts.hour! * 60 + parts.minute!) * 60 + parts.second!) / 86_400;
-  return (utcMillis - excelEpochMillis) / 86_400_000 + dayFraction;
 }

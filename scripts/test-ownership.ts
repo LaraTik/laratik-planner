@@ -132,6 +132,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
       integrationFiles: [
         "tests/integration/journey.test.ts",
         "tests/integration/enriched-list-filters.test.ts",
+        "tests/integration/planning-xlsx-export.test.ts",
         "tests/integration/repro-page-render.test.ts",
         "tests/integration/publishing-m4.test.ts",
         "tests/integration/deadline-reminders.test.ts",
@@ -141,6 +142,16 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
         { spec: "tests/e2e/discussions.spec.ts", projects: chromium },
         { spec: "tests/e2e/publish-package.spec.ts", projects: chromium },
       ],
+    },
+    {
+      id: "spreadsheet-exports",
+      sourceGlobs: ["src/lib/exports/xlsx.ts"],
+      unitFiles: [
+        "tests/unit/planning-xlsx-writer.test.ts",
+        "tests/unit/advertising-reporting-export.test.ts",
+      ],
+      integrationFiles: [],
+      browser: [],
     },
     {
       id: "action-state",
