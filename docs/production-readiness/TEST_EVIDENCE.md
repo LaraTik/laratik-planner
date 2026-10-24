@@ -1,5 +1,21 @@
 # Test and coverage evidence
 
+## Workspace AI Assistant — incomplete provider usage reconciliation — 2026-10-24
+
+Exact clean code SHA: `8d6d92cf754e19ed00cf223a7c3722f7eb3ae1ab`.
+The tool orchestrator now returns token totals only when every provider round
+reports them. If a request fails after partial usage reports, the route uses
+the complete reservation for any dimension with incomplete reports, avoiding
+an unsupported refund of unknown provider usage.
+
+| Check                                                       | Result                                                                                                                                                                                                                                      |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Focused Assistant, tool orchestrator, and budget unit tests | Pass: 3 files / 49 tests.                                                                                                                                                                                                                   |
+| Targeted ESLint, Prettier, TypeScript                       | Pass.                                                                                                                                                                                                                                       |
+| Affected unit checks on push                                | Pass: 2 files / 30 tests.                                                                                                                                                                                                                   |
+| Affected PostgreSQL integration checks on push              | Pass: 7 files / 38 tests.                                                                                                                                                                                                                   |
+| Release state                                               | PR #44 remains open and needs independent approval. Full release browser matrix, MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback remain open. This checkpoint does not authorize merge or deployment. |
+
 ## Workspace AI Assistant — incremental usage accounting and local test loop — 2026-10-24
 
 Exact clean code SHA: `c2ef7c4cb9cfde142b9868b9acf238347c2c53ee`.
