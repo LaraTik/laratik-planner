@@ -6,6 +6,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ResearchWatchlist } from "@/components/workspace/research-watchlist";
 
+const mocks = vi.hoisted(() => ({ refresh: vi.fn() }));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: mocks.refresh }),
+}));
+
 const labels = {
   title: "Research watchlist",
   description: "Keep reference accounts close to planning.",
@@ -32,6 +38,7 @@ describe("ResearchWatchlist", () => {
   const originalFetch = globalThis.fetch;
 
   beforeEach(() => {
+    mocks.refresh.mockClear();
     globalThis.fetch = vi.fn(
       async () =>
         new Response(
@@ -74,11 +81,19 @@ describe("ResearchWatchlist", () => {
     );
     await user.click(screen.getByRole("button", { name: "Add to watchlist" }));
 
-    await waitFor(() => expect(screen.getByText("Competitor")).toBeInTheDocument());
-    expect(screen.getByText("Source reference only")).toBeInTheDocument();
+    await waitFor(() => expect(mocks.refresh).toHaveBeenCalledOnce());
+    expect(screen.getByRole("textbox", { name: /Handle/ })).toHaveValue("");
     expect(globalThis.fetch).toHaveBeenCalledWith(
       "/api/research/watchlist",
-      expect.objectContaining({ method: "POST" }),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          workspaceSlug: "acme",
+          platform: "instagram",
+          handle: "@competitor",
+          sourceUrl: "https://instagram.com/competitor",
+        }),
+      }),
     );
   });
 

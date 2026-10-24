@@ -53,7 +53,12 @@ function collectSourceFiles(directory: string): string[] {
 }
 
 function collectStaticTranslationKeys(): string[] {
-  const keyPattern = /(?:^|[^\w.])(?:[A-Za-z_$][\w$]*\.)?t\(\s*["']([^"']+)["']/gm;
+  // `t(...)` AND `tr(...)` are both catalog reads. The `tr` form was
+  // missing from this pattern, which is how
+  // `contentDetail.workflow.approvalFailed` could ship with no
+  // catalog entry and render as "[contentDetail.workflow.approvalFailed]"
+  // in the approval error banner.
+  const keyPattern = /(?:^|[^\w.])(?:[A-Za-z_$][\w$]*\.)?(?:tr|t)\(\s*["']([^"']+)["']/gm;
   return collectSourceFiles(resolve(process.cwd(), "src")).flatMap((file) => {
     const source = readFileSync(file, "utf8");
     return Array.from(source.matchAll(keyPattern), ([, key]) => key).filter(
@@ -133,5 +138,35 @@ describe("messages — t()", () => {
   it("falls back to English when the resolved locale is unknown", () => {
     const t = messages.tForResolved("xx-YY");
     expect(t("common.save")).toBe("Save");
+  });
+});
+
+describe("messages — isMissingTranslation", () => {
+  // The translator does NOT return the bare key for a missing entry:
+  // it returns the English fallback wrapped in `[…]`, or `[key]` when
+  // neither locale has it. A guard written as `value === key` therefore
+  // never fires, and the caller's English fallback literal is dead
+  // code — a missing key renders on screen as `[some.key]`.
+  it("recognises the bare-key form", () => {
+    expect(messages.isMissingTranslation("some.key", "some.key")).toBe(true);
+  });
+
+  it("recognises the wrapped-key form the translator actually returns", () => {
+    const t = messages.tForResolved("en");
+    const missing = t("not.a.real.key");
+    expect(missing).toBe("[not.a.real.key]");
+    expect(messages.isMissingTranslation(missing, "not.a.real.key")).toBe(true);
+  });
+
+  it("recognises the wrapped English-fallback form", () => {
+    expect(messages.isMissingTranslation("[some.key] Save", "some.key")).toBe(true);
+  });
+
+  it("does not treat a present translation as missing", () => {
+    expect(messages.isMissingTranslation("Save", "common.save")).toBe(false);
+  });
+
+  it("does not treat a different key's wrapper as missing", () => {
+    expect(messages.isMissingTranslation("[other.key] Save", "some.key")).toBe(false);
   });
 });

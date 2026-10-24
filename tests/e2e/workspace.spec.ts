@@ -15,14 +15,18 @@ test.describe("Workspace navigation (admin)", () => {
 
     await page.goto("/app/workspaces");
     await expect(page.getByRole("heading", { name: "Workspaces" })).toBeVisible();
-    const acmeWorkspace = page.locator('a[href="/app/w/acme"]').first();
+    const acmeWorkspace = page.locator('a[href="/app/a/test-agency/w/acme"]').first();
     await expect(acmeWorkspace).toBeVisible();
 
     // Click into the workspace
     await acmeWorkspace.click();
-    await expect(page).toHaveURL(/\/app\/w\/acme$/);
+    await expect(page).toHaveURL(/\/app\/a\/test-agency\/w\/acme$/);
     await expect(page.getByRole("heading", { name: /^Overview / })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Active workspace: Acme/ })).toBeVisible();
+    if ((page.viewportSize()?.width ?? 1280) < 768) {
+      await expect(page.locator('header a[href="/app/a/test-agency/w/acme"]')).toBeVisible();
+    } else {
+      await expect(page.getByRole("button", { name: /Active workspace: Acme/ })).toBeVisible();
+    }
     // The planning + calendar shortcuts must be present
     await expect(page.getByRole("link", { name: /Planning/i }).first()).toBeVisible();
   });
@@ -30,7 +34,7 @@ test.describe("Workspace navigation (admin)", () => {
   test("Planning tab lists channels + an empty-state for fresh workspaces", async ({ page }) => {
     await bootstrapTestSession(page);
 
-    await page.goto("/app/w/acme/planning");
+    await page.goto("/app/a/test-agency/w/acme/planning");
     // The page renders either an item list or an empty state
     await expect(page.getByRole("heading", { name: /Planning|Calendar/i }).first()).toBeVisible();
   });
@@ -50,11 +54,17 @@ test.describe("Workspace navigation (admin)", () => {
     await page.getByRole("button", { name: /Create workspace/i }).click();
 
     // After redirect, we should be on the new workspace's overview
-    await page.waitForURL(new RegExp(`/app/w/${uniqueSlug}$`), { timeout: 10_000 });
+    await page.waitForURL(new RegExp(`/app/a/test-agency/w/${uniqueSlug}$`), { timeout: 10_000 });
     await expect(page.getByRole("heading", { name: /^Overview / })).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: /Active workspace: My New Brand/ }),
-    ).toBeVisible();
+    if ((page.viewportSize()?.width ?? 1280) < 768) {
+      await expect(
+        page.locator(`header a[href="/app/a/test-agency/w/${uniqueSlug}"]`),
+      ).toBeVisible();
+    } else {
+      await expect(
+        page.getByRole("button", { name: /Active workspace: My New Brand/ }),
+      ).toBeVisible();
+    }
 
     // The new workspace must also appear in the list
     await page.goto("/app/workspaces");
@@ -86,7 +96,9 @@ test.describe("Workspace non-member experience", () => {
   });
 });
 
-test.describe("Workspace switcher keyboard (topbar)", () => {
+test.describe("Workspace switcher keyboard (sidebar)", () => {
+  test.skip(({ isMobile }) => isMobile, "These cases exercise the desktop sidebar switcher.");
+
   test("Enter on the trigger opens the listbox; arrow keys move aria-activedescendant", async ({
     page,
   }) => {
@@ -97,8 +109,8 @@ test.describe("Workspace switcher keyboard (topbar)", () => {
     });
     await page.goto("/app");
 
-    // The shared tenant/workspace scope cluster lives in the desktop topbar.
-    const trigger = page.locator('[data-testid="topbar-workspace-switcher-trigger"]');
+    // The shared tenant/workspace scope cluster lives in the persistent sidebar.
+    const trigger = page.locator('[data-testid="sidebar-workspace-switcher-trigger"]');
     await expect(trigger).toBeVisible();
     await trigger.focus();
     await expect(trigger).toBeFocused();
@@ -125,7 +137,7 @@ test.describe("Workspace switcher keyboard (topbar)", () => {
     await bootstrapTestSession(page);
     await page.goto("/app");
 
-    const trigger = page.locator('[data-testid="topbar-workspace-switcher-trigger"]');
+    const trigger = page.locator('[data-testid="sidebar-workspace-switcher-trigger"]');
     await trigger.click();
     await expect(page.getByRole("listbox", { name: "Workspaces" })).toBeVisible();
 
@@ -138,7 +150,7 @@ test.describe("Workspace switcher keyboard (topbar)", () => {
     await bootstrapTestSession(page);
     await page.goto("/app");
 
-    const trigger = page.locator('[data-testid="topbar-workspace-switcher-trigger"]');
+    const trigger = page.locator('[data-testid="sidebar-workspace-switcher-trigger"]');
     await trigger.click();
     await expect(page.getByRole("listbox", { name: "Workspaces" })).toBeVisible();
 

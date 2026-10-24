@@ -16,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
-import { StatusBadge } from "@/components/content/status-badge";
+import { StatusBadge } from "@/features/content";
 import { formatDate } from "@/lib/i18n/format-locale";
 import { currentWorkspaceMonthRange } from "@/lib/i18n/workspace-month";
 

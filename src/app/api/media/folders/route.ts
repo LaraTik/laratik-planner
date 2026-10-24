@@ -3,23 +3,23 @@ import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { workspaces } from "@/lib/db/schema";
-import { createMediaFolder, listMediaFolders, MediaPermissionError } from "@/lib/media/service";
+import { createMediaFolder, listMediaFolders, MediaPermissionError } from "@/features/media/server";
 import { eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const CreateBody = z.object({
-  workspaceId: z.string().uuid(),
+  workspaceId: z.string().guid(),
   name: z.string().trim().min(1).max(80),
-  parentId: z.string().uuid().nullable().optional(),
+  parentId: z.string().guid().nullable().optional(),
 });
 
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   const workspaceId = req.nextUrl.searchParams.get("workspaceId");
-  const parsed = z.string().uuid().safeParse(workspaceId);
+  const parsed = z.string().guid().safeParse(workspaceId);
   if (!parsed.success) return NextResponse.json({ error: "Invalid workspace" }, { status: 400 });
   const [workspace] = await db
     .select({ agencyId: workspaces.agencyId })

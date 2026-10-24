@@ -66,7 +66,7 @@ const PLATFORM_VERSION = 1 as const;
  * `approvedDeliveryVersionId` on the `content_item` matches.
  */
 export const DeliveryReferenceSchema = z.object({
-  deliveryVersionId: z.string().uuid(),
+  deliveryVersionId: z.string().guid(),
   role: z.enum(["primary", "thumbnail", "carousel", "transcript", "subtitle"]),
 });
 
@@ -144,7 +144,7 @@ export const PublicationMethodSchema = z.enum(["api", "manual", "scheduled", "dr
  */
 export const ApprovalStateSchema = z.object({
   finalCopyApproved: z.boolean().default(false),
-  approvedByUserId: z.string().uuid().nullable().default(null),
+  approvedByUserId: z.string().guid().nullable().default(null),
   approvedAt: z.string().datetime().nullable().default(null),
 });
 
@@ -158,7 +158,7 @@ export const CommonPublishingFieldsSchema = z.object({
   schemaVersion: z.literal(PLATFORM_VERSION),
   selectedDestinationProfile: z
     .object({
-      socialChannelId: z.string().uuid(),
+      socialChannelId: z.string().guid(),
     })
     .optional(),
   scheduleOverride: z
@@ -221,7 +221,7 @@ export const InstagramPostPayloadSchema = CommonPublishingFieldsSchema.merge(
     /** The selected feed-crop — the agency's social_profile determines what's supported. */
     feedCrop: z.enum(["1:1", "4:5", "16:9", "9:16", "original"]).default("original"),
     /** Media ordering for a carousel. Empty for single-image / single-video. */
-    carouselOrder: z.array(z.string().uuid()).max(10).default([]),
+    carouselOrder: z.array(z.string().guid()).max(10).default([]),
     /** Branded-content partner handle. */
     brandedContentPartner: z.string().min(1).max(80).optional(),
   }),
@@ -236,7 +236,7 @@ export const InstagramReelPayloadSchema = CommonPublishingFieldsSchema.merge(
     platform: z.literal("instagram_reel"),
     coverFrame: z
       .object({
-        deliveryVersionId: z.string().uuid(),
+        deliveryVersionId: z.string().guid(),
         timestampSeconds: z.number().int().min(0).max(3600).optional(),
       })
       .optional(),
@@ -244,7 +244,7 @@ export const InstagramReelPayloadSchema = CommonPublishingFieldsSchema.merge(
     subtitles: z
       .object({
         language: z.string().min(2).max(10),
-        deliveryVersionId: z.string().uuid(),
+        deliveryVersionId: z.string().guid(),
       })
       .optional(),
     transcriptReviewed: z.boolean().default(false),
@@ -327,7 +327,7 @@ export const YouTubePayloadSchema = CommonPublishingFieldsSchema.merge(
     playlistId: z.string().min(1).max(80).optional(),
     thumbnail: z
       .object({
-        deliveryVersionId: z.string().uuid(),
+        deliveryVersionId: z.string().guid(),
       })
       .optional(),
     defaultLanguage: z
@@ -339,7 +339,7 @@ export const YouTubePayloadSchema = CommonPublishingFieldsSchema.merge(
     captionTrack: z
       .object({
         language: z.string().min(2).max(10),
-        deliveryVersionId: z.string().uuid(),
+        deliveryVersionId: z.string().guid(),
       })
       .optional(),
     madeForKids: z.boolean().default(false),
@@ -447,7 +447,7 @@ export type ApprovalState = z.infer<typeof ApprovalStateSchema>;
 export type PublicationMethod = z.infer<typeof PublicationMethodSchema>;
 
 export const PLATFORM_KEYS = PlatformPayloadSchema.options.map(
-  (option) => option.shape.platform._def.value as string,
+  (option) => [...option.shape.platform._def.values][0] as string,
 );
 
 export const PLATFORM_KEY = PLATFORM_VERSION;

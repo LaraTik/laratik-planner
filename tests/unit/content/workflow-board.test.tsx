@@ -1,0 +1,444 @@
+import { describe, expect, it } from "vitest";
+import { render, screen, within } from "@testing-library/react";
+import {
+  WorkflowBoard,
+  type BoardMemberEntry,
+  type WorkflowBoardColumn,
+  type WorkflowBoardItem,
+} from "@/features/content/components/workflow-board";
+import type { ContentStatus } from "@/lib/content/status";
+import { tFor } from "@/messages";
+
+const COLUMNS: readonly WorkflowBoardColumn[] = [
+  { label: "Ideas", statuses: ["draft", "changes_requested", "blocked"] },
+  { label: "Content review", statuses: ["content_review"] },
+  { label: "Approved", statuses: ["approved_for_design"] },
+  { label: "Design", statuses: ["in_design"] },
+  { label: "Creative review", statuses: ["creative_review"] },
+  { label: "Ready", statuses: ["ready_to_publish"] },
+  { label: "Published", statuses: ["partially_published", "published"] },
+];
+
+function makeItem(overrides: Partial<WorkflowBoardItem> & { id: string }): WorkflowBoardItem {
+  return {
+    title: `Item ${overrides.id}`,
+    format: "static_post",
+    status: "draft" as ContentStatus,
+    plannedPublishAt: new Date("2026-08-21T10:00:00.000Z"),
+    ...overrides,
+  };
+}
+
+describe("WorkflowBoard", () => {
+  it("renders six active stage columns at the xl breakpoint", () => {
+    // The Planning contract is six active stages at xl+. Blocked items
+    // render in a separate grouping and do not create a seventh stage.
+    render(<WorkflowBoard agencySlug="acme" items={[]} columns={COLUMNS} workspaceSlug="acme" />);
+    // The grid root carries the layout classes (Tailwind 4 keeps the
+    // class literal on the element for static analysis). We assert the
+    // Six-column class is present and the old four-column class is not.
+    const root = document.querySelector("div.grid.gap-3");
+    expect(root).not.toBeNull();
+    expect(root!.className).toMatch(/\bxl:grid-cols-6\b/);
+    expect(root!.className).not.toMatch(/\bxl:grid-cols-4\b/);
+    expect(root!.className).toMatch(/\bitems-start\b/);
+  });
+
+  it("renders one section per column with the column label as heading", () => {
+    render(<WorkflowBoard agencySlug="acme" items={[]} columns={COLUMNS} workspaceSlug="acme" />);
+    for (const col of COLUMNS) {
+      expect(screen.getByRole("heading", { name: col.label })).toBeInTheDocument();
+    }
+  });
+
+  it("shows the column count next to each label", () => {
+    render(<WorkflowBoard agencySlug="acme" items={[]} columns={COLUMNS} workspaceSlug="acme" />);
+    const counts = document.querySelectorAll('[data-testid^="board-column-count-"]');
+    expect(counts).toHaveLength(COLUMNS.length);
+    counts.forEach((c) => expect(c.textContent).toBe("0"));
+  });
+
+  it("buckets items into the right column by status", () => {
+    const items: WorkflowBoardItem[] = [
+      makeItem({ id: "a", status: "draft", title: "First idea" }),
+      makeItem({ id: "b", status: "content_review", title: "Being reviewed" }),
+      makeItem({ id: "c", status: "in_design", title: "In design" }),
+      makeItem({ id: "d", status: "ready_to_publish", title: "Ready to go" }),
+      makeItem({ id: "e", status: "published", title: "Live" }),
+    ];
+    render(
+      <WorkflowBoard agencySlug="acme" items={items} columns={COLUMNS} workspaceSlug="acme" />,
+    );
+
+    const ideas = screen.getByTestId("board-column-ideas");
+    expect(within(ideas).getByText("First idea")).toBeInTheDocument();
+    expect(within(ideas).getByTestId("board-column-count-ideas").textContent).toBe("1");
+
+    const cr = screen.getByTestId("board-column-content-review");
+    expect(within(cr).getByText("Being reviewed")).toBeInTheDocument();
+    expect(within(cr).getByTestId("board-column-count-content-review").textContent).toBe("1");
+
+    const design = screen.getByTestId("board-column-design");
+    expect(within(design).getByText("In design")).toBeInTheDocument();
+
+    const ready = screen.getByTestId("board-column-ready");
+    expect(within(ready).getByText("Ready to go")).toBeInTheDocument();
+
+    const published = screen.getByTestId("board-column-published");
+    expect(within(published).getByText("Live")).toBeInTheDocument();
+  });
+
+  it("puts multiple matching items into a single column and counts them", () => {
+    const items: WorkflowBoardItem[] = [
+      makeItem({ id: "a", status: "draft" }),
+      makeItem({ id: "b", status: "blocked" }),
+      makeItem({ id: "c", status: "changes_requested" }),
+    ];
+    render(
+      <WorkflowBoard agencySlug="acme" items={items} columns={COLUMNS} workspaceSlug="acme" />,
+    );
+    const ideas = screen.getByTestId("board-column-ideas");
+    expect(within(ideas).getAllByRole("link")).toHaveLength(3);
+    expect(within(ideas).getByTestId("board-column-count-ideas").textContent).toBe("3");
+  });
+
+  it("renders blocked items in a separate condition group when requested", () => {
+    const blocked = makeItem({ id: "blocked", status: "blocked" });
+    render(
+      <WorkflowBoard
+        agencySlug="acme"
+        items={[blocked]}
+        blockedItems={[blocked]}
+        columns={[
+          { label: "Planning", statuses: ["draft"] },
+          { label: "Content review", statuses: ["content_review", "changes_requested"] },
+          { label: "Creative production", statuses: ["approved_for_design", "in_design"] },
+          { label: "Creative approval", statuses: ["creative_review"] },
+          { label: "Publishing setup", statuses: ["ready_to_publish", "partially_published"] },
+          { label: "Published", statuses: ["published"] },
+        ]}
+        workspaceSlug="acme"
+      />,
+    );
+    expect(screen.getByTestId("board-blocked-group")).toBeInTheDocument();
+    expect(screen.getByTestId("board-blocked-count")).toHaveTextContent("1");
+    expect(screen.getByTestId("board-blocked-group")).toHaveTextContent("Blocked");
+    expect(screen.getByTestId("board-column-planning")).not.toHaveTextContent("Item blocked");
+  });
+
+  it("renders the 'No items' placeholder in empty columns", () => {
+    render(<WorkflowBoard agencySlug="acme" items={[]} columns={COLUMNS} workspaceSlug="acme" />);
+    expect(screen.getAllByText("No items")).toHaveLength(COLUMNS.length);
+  });
+
+  it("builds the link href from the workspace slug and item id", () => {
+    const items = [makeItem({ id: "abc-123", status: "draft" })];
+    render(
+      <WorkflowBoard agencySlug="acme" items={items} columns={COLUMNS} workspaceSlug="acme" />,
+    );
+    const link = screen.getByTestId("board-card-abc-123");
+    expect(link.tagName).toBe("A");
+    expect(link).toHaveAttribute("href", "/app/a/acme/w/acme/planning/abc-123");
+  });
+
+  it("uses a string date the same way as a Date instance", () => {
+    const items = [
+      makeItem({ id: "a", status: "draft", plannedPublishAt: "2026-08-21T00:00:00.000Z" }),
+    ];
+    render(
+      <WorkflowBoard agencySlug="acme" items={items} columns={COLUMNS} workspaceSlug="acme" />,
+    );
+    // The card's meta line should include a localized date. The exact
+    // string depends on the locale; assert the year is rendered.
+    expect(screen.getByText(/2026/)).toBeInTheDocument();
+  });
+
+  it("renders the StatusBadge with the item's status", () => {
+    const items = [makeItem({ id: "a", status: "ready_to_publish" })];
+    render(
+      <WorkflowBoard agencySlug="acme" items={items} columns={COLUMNS} workspaceSlug="acme" />,
+    );
+    expect(screen.getByText(/Ready To Publish/i)).toBeInTheDocument();
+    expect(screen.getByTestId("board-card-status")).toBeInTheDocument();
+  });
+
+  it("keeps format, planned date, assignments, and status in separate card regions", () => {
+    render(
+      <WorkflowBoard
+        agencySlug="acme"
+        items={[
+          makeItem({
+            id: "regions",
+            status: "in_design",
+            format: "static_post",
+            plannedPublishAt: "2026-08-21T00:00:00.000Z",
+          }),
+        ]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+      />,
+    );
+
+    const card = screen.getByTestId("board-card-regions");
+    expect(within(card).getByText("Static Post")).toBeInTheDocument();
+    expect(within(card).getByRole("time")).toBeInTheDocument();
+    expect(within(card).getByTestId("board-card-people")).toBeInTheDocument();
+    expect(within(card).getByTestId("board-card-status")).toBeInTheDocument();
+  });
+
+  it("renders the human format label", () => {
+    const items = [makeItem({ id: "a", status: "draft", format: "short_form_video" })];
+    render(
+      <WorkflowBoard agencySlug="acme" items={items} columns={COLUMNS} workspaceSlug="acme" />,
+    );
+    expect(screen.getByText(/Short Form Video/)).toBeInTheDocument();
+  });
+
+  it("groups designer and owner into a readable assignment block", () => {
+    render(
+      <WorkflowBoard
+        agencySlug="acme"
+        items={[
+          makeItem({
+            id: "assigned",
+            status: "in_design",
+            contentOwnerId: "owner-1",
+            designerId: "designer-1",
+          }),
+        ]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+        memberDirectory={{
+          "owner-1": { id: "owner-1", name: "Owner Name", displayName: null },
+          "designer-1": { id: "designer-1", name: "Designer Name", displayName: null },
+        }}
+      />,
+    );
+
+    const assignments = screen.getByTestId("board-card-people");
+    // Board refactor (2026-09-03, /ui-ux-pro-max): the
+    // "Assignments" header was removed; the role icons in
+    // each row are self-explanatory and the header ate
+    // 24 px of vertical space in a 7-column board where
+    // each card is ~180 px wide. The two role rows are
+    // enough.
+    expect(within(assignments).queryByText("Assignments")).not.toBeInTheDocument();
+    expect(within(assignments).getByTestId("board-card-designer")).toHaveTextContent(
+      "Designer Name",
+    );
+    expect(within(assignments).getByTestId("board-card-owner")).toHaveTextContent("Owner Name");
+    expect(assignments.textContent?.indexOf("Designer Name")).toBeLessThan(
+      assignments.textContent?.indexOf("Owner Name") ?? 0,
+    );
+  });
+
+  it("makes an unassigned designer state actionable without nesting controls", () => {
+    render(
+      <WorkflowBoard
+        agencySlug="acme"
+        items={[makeItem({ id: "needs-designer", status: "in_design", designerId: null })]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+      />,
+    );
+
+    const card = screen.getByTestId("board-card-needs-designer");
+    expect(screen.getByTestId("board-card-designer-action")).toHaveTextContent(
+      "Open item to assign a designer",
+    );
+    expect(card.tagName).toBe("A");
+    expect(card.querySelectorAll("a")).toHaveLength(0);
+  });
+
+  it("localizes board copy and isolates bilingual card content", () => {
+    render(
+      <WorkflowBoard
+        agencySlug="acme"
+        items={[
+          makeItem({
+            id: "ar-1",
+            title: "اختبار المحتوى",
+            format: "static_post",
+            status: "draft",
+            contentOwnerId: null,
+            designerId: null,
+          }),
+        ]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+        locale="ar"
+        workspaceTimezone="Asia/Riyadh"
+        t={tFor("ar")}
+      />,
+    );
+
+    expect(screen.getByText("اختبار المحتوى")).toHaveAttribute("dir", "auto");
+    const card = screen.getByTestId("board-card-ar-1");
+    expect(card).toHaveTextContent("منشور ثابت");
+    expect(card).toHaveTextContent("تخطيط");
+    expect(card).toHaveTextContent("مالك");
+    expect(card).toHaveTextContent("غير مُسنَّد");
+    expect(screen.getAllByText("لا توجد عناصر")).toHaveLength(COLUMNS.length - 1);
+  });
+
+  it("ignores items with a status that does not match any column", () => {
+    const items = [makeItem({ id: "a", status: "cancelled" })];
+    render(
+      <WorkflowBoard agencySlug="acme" items={items} columns={COLUMNS} workspaceSlug="acme" />,
+    );
+    expect(screen.queryByTestId("board-card-a")).toBeNull();
+    // All columns should still show 0 + "No items"
+    expect(screen.getAllByText("No items")).toHaveLength(COLUMNS.length);
+  });
+
+  it("uses a custom column order exactly as provided", () => {
+    const custom: readonly WorkflowBoardColumn[] = [
+      { label: "Zeta", statuses: ["cancelled"] },
+      { label: "Alpha", statuses: ["draft"] },
+    ];
+    const items = [
+      makeItem({ id: "a", status: "draft" }),
+      makeItem({ id: "b", status: "cancelled" }),
+    ];
+    render(<WorkflowBoard agencySlug="acme" items={items} columns={custom} workspaceSlug="acme" />);
+    // The <section> wrappers carry the board-column- testid; the
+    // count badges carry board-column-count-. Query the sections
+    // directly so we don't accidentally pick up the count badges.
+    const sections = document.querySelectorAll("section[data-testid^='board-column-']");
+    expect(sections).toHaveLength(2);
+    expect(sections[0]).toHaveAttribute("data-testid", "board-column-zeta");
+    expect(sections[1]).toHaveAttribute("data-testid", "board-column-alpha");
+  });
+});
+
+/**
+ * Owner + Designer role rows on the board card (master prompt §5,
+ * §11, AGENTS.md §C). The card's contract:
+ *  - Always renders the role label (Owner / Designer), even when
+ *    the id is missing — never an empty row, never a hidden role.
+ *  - Renders the user's displayName when the directory knows them;
+ *    falls back to the raw name; falls back to italic "Unassigned"
+ *    when the id is missing or unknown.
+ *  - The `data-role` + `data-empty` attributes are the contract
+ *    the planning list's PeopleCell uses too — a regression that
+ *    re-collapses Owner + Designer into a single pill fails
+ *    this test.
+ */
+const directory: Record<string, BoardMemberEntry> = {
+  "user-owner": { id: "user-owner", name: "Ghaleb", displayName: "Ghaleb K." },
+  "user-designer": { id: "user-designer", name: "Sarah", displayName: "Sarah A." },
+};
+
+describe("WorkflowBoard — role-labelled Owner/Designer on cards", () => {
+  it("renders the role label and the user's display name when the directory knows them", () => {
+    render(
+      <WorkflowBoard
+        agencySlug="acme"
+        items={[
+          makeItem({
+            id: "k-1",
+            status: "in_design",
+            contentOwnerId: "user-owner",
+            designerId: "user-designer",
+          }),
+        ]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+        memberDirectory={directory}
+      />,
+    );
+    const ownerRow = screen.getByTestId("board-card-owner");
+    expect(ownerRow).toHaveAttribute("data-role", "owner");
+    expect(ownerRow).toHaveTextContent("Owner");
+    expect(ownerRow).toHaveTextContent("Ghaleb K.");
+    expect(ownerRow).not.toHaveAttribute("data-empty");
+    const designerRow = screen.getByTestId("board-card-designer");
+    expect(designerRow).toHaveAttribute("data-role", "designer");
+    expect(designerRow).toHaveTextContent("Designer");
+    expect(designerRow).toHaveTextContent("Sarah A.");
+  });
+
+  it("renders italic 'Unassigned' when the owner id is missing", () => {
+    render(
+      <WorkflowBoard
+        agencySlug="acme"
+        items={[makeItem({ id: "k-1", status: "in_design", contentOwnerId: null })]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+        memberDirectory={directory}
+      />,
+    );
+    const ownerRow = screen.getByTestId("board-card-owner");
+    expect(ownerRow).toHaveAttribute("data-empty", "true");
+    expect(ownerRow).toHaveTextContent("Unassigned");
+  });
+
+  it("renders italic 'Unassigned' when the designer id is missing", () => {
+    render(
+      <WorkflowBoard
+        agencySlug="acme"
+        items={[makeItem({ id: "k-1", status: "in_design", designerId: null })]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+        memberDirectory={directory}
+      />,
+    );
+    const designerRow = screen.getByTestId("board-card-designer");
+    expect(designerRow).toHaveAttribute("data-empty", "true");
+    expect(designerRow).toHaveTextContent("Unassigned");
+  });
+
+  it("renders italic 'Unassigned' when the user is not in the directory", () => {
+    render(
+      <WorkflowBoard
+        agencySlug="acme"
+        items={[makeItem({ id: "k-1", status: "in_design", contentOwnerId: "ghost-id" })]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+        memberDirectory={directory}
+      />,
+    );
+    const ownerRow = screen.getByTestId("board-card-owner");
+    expect(ownerRow).toHaveAttribute("data-empty", "true");
+  });
+
+  it("falls back to the raw name when displayName is null", () => {
+    const noDisplay: Record<string, BoardMemberEntry> = {
+      "user-owner": { id: "user-owner", name: "Ghaleb Raw", displayName: null },
+    };
+    render(
+      <WorkflowBoard
+        agencySlug="acme"
+        items={[
+          makeItem({
+            id: "k-1",
+            status: "in_design",
+            contentOwnerId: "user-owner",
+            designerId: null,
+          }),
+        ]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+        memberDirectory={noDisplay}
+      />,
+    );
+    const ownerRow = screen.getByTestId("board-card-owner");
+    expect(ownerRow).toHaveTextContent("Ghaleb Raw");
+  });
+
+  it("renders the role rows even when no memberDirectory is provided", () => {
+    render(
+      <WorkflowBoard
+        agencySlug="acme"
+        items={[makeItem({ id: "k-1", status: "in_design" })]}
+        columns={COLUMNS}
+        workspaceSlug="acme"
+      />,
+    );
+    // The role label is the canonical signal — without a directory
+    // the name renders as "Unassigned" so the user can still see
+    // the role is missing rather than guessing.
+    expect(screen.getByTestId("board-card-owner")).toHaveTextContent("Unassigned");
+    expect(screen.getByTestId("board-card-designer")).toHaveTextContent("Unassigned");
+  });
+});

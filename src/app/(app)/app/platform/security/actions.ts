@@ -8,7 +8,6 @@ import { db } from "@/lib/db";
 import { agencies } from "@/lib/db/schema";
 import {
   createSupportAccessRequest,
-  decideSupportAccessRequest,
   expireStaleSupportAccessGrants,
   listActiveGrantsForActor,
   listRecentAuditForActor,
@@ -19,15 +18,15 @@ import {
   type SupportAccessRequestRow,
 } from "@/lib/support";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
-import { getPlatformPrincipal } from "@/lib/auth/platform-access";
+import { getPlatformPrincipal, requirePlatformPermission } from "@/lib/auth/platform-access";
 import { PermissionDeniedError } from "@/lib/auth/policy";
 
 /**
  * M3.4 — Platform console support-access actions.
  *
- * These are the only mutations a platform admin (or, where
- * noted, an agency admin) can run on the support-access
- * surface. The functions follow the existing
+ * These are platform-side mutations for the support-access
+ * surface. Agency admins decide requests from their own
+ * agency settings route. The functions follow the existing
  * (app)/app/platform/STAR/actions.ts pattern: thin wrappers over
  * the service-layer helpers that the UI calls, with rate
  * limiting, error translation, and revalidatePath baked in.
@@ -52,8 +51,8 @@ async function requirePlatformActor() {
 const CreateSupportAccessRequestFormSchema = z.object({
   ticketReference: z.string().trim().min(3).max(120),
   reason: z.string().trim().min(8).max(2000),
-  targetAgencyId: z.string().uuid(),
-  scopeWorkspaceId: z.string().uuid().nullable().optional(),
+  targetAgencyId: z.string().guid(),
+  scopeWorkspaceId: z.string().guid().nullable().optional(),
   scopeMetadataOnly: z.boolean().default(false),
   requestedDurationHours: z.coerce.number().int().min(1).max(168),
   downloadsRequested: z.boolean().default(false),
@@ -113,39 +112,8 @@ export async function createSupportAccessRequestFormAction(
   });
 }
 
-const DecideFormSchema = z.object({
-  requestId: z.string().uuid(),
-  decision: z.enum(["approved", "rejected"]),
-  reason: z.string().trim().min(3).max(2000),
-  grantDownloads: z.boolean().default(false),
-});
-
-export async function decideSupportAccessRequestAction(input: z.input<typeof DecideFormSchema>) {
-  const { actor } = await requirePlatformActor();
-  const parsed = DecideFormSchema.parse(input);
-  const limit = await enforceRateLimit({
-    scope: "support_access_decision",
-    subject: actor.id,
-    actorId: actor.id,
-  });
-  if (!limit.allowed) {
-    return { ok: false as const, error: "Too many decisions. Try again shortly." };
-  }
-  try {
-    const result = await decideSupportAccessRequest(actor, parsed.requestId, parsed.decision, {
-      reason: parsed.reason,
-      grantDownloads: parsed.grantDownloads,
-    });
-    revalidatePath("/app/platform/security");
-    revalidatePath("/app/agency-settings/plan");
-    return { ok: true as const, ...result };
-  } catch (e) {
-    return translateSupportError(e);
-  }
-}
-
 const RevokeFormSchema = z.object({
-  grantId: z.string().uuid(),
+  grantId: z.string().guid(),
   reason: z.string().trim().min(3).max(2000),
 });
 
@@ -163,9 +131,9 @@ export async function revokeSupportAccessGrantAction(input: z.input<typeof Revok
 
 export async function expireStaleSupportAccessGrantsAction() {
   const { actor } = await requirePlatformActor();
+  await requirePlatformPermission(actor, "platform.access.manage");
   const result = await expireStaleSupportAccessGrants();
   revalidatePath("/app/platform/security");
-  void actor; // rate-limited implicitly by the platform gate
   return { ok: true as const, ...result };
 }
 
@@ -219,7 +187,7 @@ function translateSupportError(e: unknown): { ok: false; error: string; code?: s
     return { ok: false, error: e.message, code: e.code };
   }
   if (e instanceof z.ZodError) {
-    return { ok: false, error: e.errors.map((issue) => issue.message).join("; ") };
+    return { ok: false, error: e.issues.map((issue) => issue.message).join("; ") };
   }
   return { ok: false, error: "Unexpected error" };
 }

@@ -60,7 +60,8 @@ const dbMock = {
 
 vi.mock("@/lib/db", () => ({ db: dbMock }));
 
-const { loadAiContext, isContextMeaningful, EMPTY_CONTEXT } = await import("@/lib/ai/context");
+const { loadAiContext, isContextMeaningful, buildAiContextManifestCategories, EMPTY_CONTEXT } =
+  await import("@/lib/ai/context");
 
 beforeEach(() => {
   state = { selectResults: [], selectCalls: 0 };
@@ -203,6 +204,51 @@ describe("isContextMeaningful", () => {
         brandVisuals: { colors: [], fonts: [], publishingRules: [] },
       }),
     ).toBe(false);
+  });
+});
+
+describe("buildAiContextManifestCategories", () => {
+  it("records selected branches as used or empty and omits unselected branches", () => {
+    const categories = buildAiContextManifestCategories(
+      {
+        brandKit: true,
+        brandVisuals: true,
+        campaign: true,
+        pillars: true,
+        channels: true,
+        approvedContent: true,
+      },
+      {
+        ...EMPTY_CONTEXT,
+        brandVoice: { tone: ["plainspoken"], do: [], dont: [] },
+        campaign: { name: "Spring", objective: null, description: null },
+        channels: [{ platform: "instagram", accountName: "Main" }],
+      },
+    );
+    expect(categories).toEqual([
+      "title",
+      "brief",
+      "format",
+      "workspace_name",
+      "brand_kit:used",
+      "brand_visuals:empty",
+      "campaign:used",
+      "pillars:empty",
+      "channels:used",
+      "approved_content:empty",
+    ]);
+  });
+
+  it("always records base inputs and ignores data from unselected categories", () => {
+    const categories = buildAiContextManifestCategories(
+      {},
+      {
+        ...EMPTY_CONTEXT,
+        brandVoice: { tone: ["plainspoken"], do: [], dont: [] },
+        campaign: { name: "Spring", objective: null, description: null },
+      },
+    );
+    expect(categories).toEqual(["title", "brief", "format", "workspace_name"]);
   });
 });
 

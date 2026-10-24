@@ -104,7 +104,7 @@ export function ManagedSecretForm({
             <AlertTriangle className="text-warning mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <div className="min-w-0 flex-1">
               <p className="font-semibold">
-                {kekStatus.warning?.includes("Will be") || kekStatus.warning?.includes("unreadable")
+                {kekStatus.warningCode === "generate-on-save"
                   ? t("agencyAi.managedSecret.autoManagedTitle")
                   : t("agencyAi.managedSecret.backupTitle")}
               </p>
@@ -116,7 +116,9 @@ export function ManagedSecretForm({
                 {t("agencyAi.managedSecret.autoManagedDescriptionSuffix")}
               </p>
               <p className="text-fg-secondary mt-1">
-                {kekStatus.warning ?? t("agencyAi.managedSecret.warningFallback")}
+                {kekStatus.warningCode
+                  ? t(`agencyAi.managedSecret.encryptionWarnings.${kekStatus.warningCode}`)
+                  : t("agencyAi.managedSecret.warningFallback")}
                 {kekStatus.createdAt ? (
                   <>
                     {" "}
@@ -213,13 +215,13 @@ export function ManagedSecretForm({
                 data-testid="ai-managed-secret-key"
               />
             </div>
-            {state.error ? (
+            {state.errorCode ? (
               <p
                 role="alert"
                 data-testid="ai-managed-secret-error"
                 className="text-body text-danger font-semibold"
               >
-                {state.error}
+                {t(`agencyAi.managedSecret.actionErrors.${state.errorCode}`)}
               </p>
             ) : null}
             {state.ok ? (
@@ -282,13 +284,13 @@ export function ManagedSecretForm({
                 data-testid="ai-managed-secret-clear-reason"
               />
             </div>
-            {clearState.error ? (
+            {clearState.errorCode ? (
               <p
                 role="alert"
                 data-testid="ai-managed-secret-clear-error"
                 className="text-body text-danger font-semibold"
               >
-                {clearState.error}
+                {t(`agencyAi.managedSecret.actionErrors.${clearState.errorCode}`)}
               </p>
             ) : null}
             {clearState.ok ? (

@@ -1,5 +1,61 @@
 # Migration and deployment evidence
 
+## Workspace AI Assistant migration release-candidate status — 2026-10-24
+
+The Assistant schema and migration files are unchanged from exact clean SHA
+`e8d779f2d757628fd309db9b24271b7533456e6c` through application code SHA
+`3c43f49b6e15bc131b62032536d28d665a340ac0`. On the disposable PostgreSQL 16
+database `planner_test`, `NODE_ENV=test pnpm migration-drill` passed all five
+scenarios: from-zero (103/103 migrations), skipped-migration repair,
+in-place upgrade, backup/restore (103 ledger rows restored), and
+failed-migration abort. Full details are in
+`docs/production-readiness/TEST_EVIDENCE.md`.
+
+This is local disposable-database evidence only. It does not prove a
+production backup, production restore, or production rollback. Those operator
+gates remain open in `PRODUCTION_READINESS_TRACKER.md`; do not deploy until
+they are recorded.
+
+## Migration 0088 — advertising signal feedback
+
+`0088_secret_thing.sql` adds the additive `advertising_signal_feedback` table
+used by the Advertising Action Center. A row is scoped to the agency,
+workspace, ad account, authenticated user, signal, entity, and reporting
+period. The database checks the supported entity/state values and prevents an
+invalid period. A unique identity index makes repeated review actions
+idempotent; the application service records the state transition and a
+sanitized security-audit event without storing provider payloads.
+
+Filename: `src/lib/db/migrations/0088_secret_thing.sql`  
+Journal tag: `0088_secret_thing`
+
+Compatibility: older application images do not read this table and continue
+to render the existing read-only Action Center. The new image remains
+compatible with databases where the table is empty. The migration is
+forward-only; a normal application rollback leaves the additive table in
+place, while schema rollback requires an approved restore of the verified
+backup or a reviewed forward fix. Before production rollout, operators must
+take the standard database backup and confirm the migration drill covers
+from-zero, supported upgrade, backup/restore, and failed-migration abort.
+
+Local application verification on 2026-10-19 against disposable PostgreSQL 16
+(`planner_test`) completed with `TEST_DATABASE_URL=… pnpm migration-drill`:
+
+```text
+1. from-zero                 PASS  142 tables; Drizzle ledger 89/89
+2. skipped migration repair  PASS  missing 0025 columns restored; ledger 1
+3. in-place upgrade          PASS  marker add/drop cycle
+4. backup + restore          PASS  ledger 89 before / 89 after; restore verified
+5. failed-migration abort    PASS  schema unchanged after injected failure
+total: 5/5 PASS
+```
+
+Focused signal-feedback unit coverage passed 4/4 and the English/Arabic
+Chromium reporting contract passed 2/2, including a successful persisted
+review transition. This evidence is still **Tested** only after it is tied to
+the exact clean commit below; an independent reviewer must assign
+**Verified**.
+
 ## Migration 0080 — advertising sync dead-letter state
 
 `0080_advertising_sync_dead_letter.sql` widens the advertising sync-state
@@ -974,3 +1030,231 @@ upgrade, backup/restore, and failed-migration abort. The exact clean release
 SHA must be recorded again after commit/deploy, together with the MCP
 unauthenticated transport smoke test and authenticated `initialize` / `tools/list`
 check.
+
+## Migration 0090 — Workspace Assistant conversations
+
+Creates workspace- and owner-bound conversation and message tables with bounded content, role constraints, foreign keys, and indexes. Conversation rows cascade with workspace/user deletion; messages cascade with conversation deletion. Application services still enforce active workspace and owner access on each operation.
+
+Older application images ignore the additive tables. Normal rollback pins the previous image and leaves the tables in place; conversation data retention and production privacy review remain explicit release gates.
+
+## Migration 0091 — Workspace Assistant prompt library
+
+Creates prompt definitions and revision snapshots with private, workspace, and agency scope; draft, pending approval, published, and archived lifecycle values; typed prompt metadata; owner/agency/workspace foreign keys; and discovery indexes. Publication permissions remain service-enforced and sharing prompt instructions never grants data access.
+
+Older images ignore the additive tables. Normal rollback leaves them in place. Production backup/restore and privacy review are required before release.
+
+## Migration 0092 — unique prompt revision identity
+
+Adds a unique index on `(prompt_id, revision)` to prevent duplicate revisions for one prompt. The additive index is safe for older images and remains in place on application rollback.
+
+## Migration 0093 — Workspace Assistant proposals
+
+Creates actor-, conversation-, workspace-, and content-item-bound proposal records with expected revisions, before/after values, evidence references, expiry, and constrained title/brief fields and lifecycle states. Existing Planner services perform writes after confirmation; this table does not grant the model direct database write access.
+
+Older images ignore the table. Normal rollback leaves the additive table in place; destructive schema rollback requires a verified backup or reviewed forward fix.
+
+## Migration 0094 — Workspace Assistant conversation mode
+
+**Forward behavior:** Adds a non-null `mode` column to
+`workspace_assistant_conversation`, defaulting existing and new records to
+`ask`. A database check permits only `ask`, `plan`, and `apply`. The additive
+column is read and changed through the existing workspace/owner-scoped
+conversation service. It stores the UI operating mode only; it does not grant
+permissions or authorize an action.
+
+**Compatibility and rollback:** Older application versions ignore this
+additive column. Normal rollback pins the previous application image and
+leaves the column in place. Do not drop it as part of an application rollback.
+
+**Evidence:** On 2026-10-23 the five migration drills passed on disposable
+PostgreSQL 17.10 and PostgreSQL 16.15. The PostgreSQL 17 run was 95/95
+migrations from zero; after later migrations were added, the current 97/97
+migration chain also passed on both versions. Exact-clean-SHA evidence
+remains pending.
+
+## Migration 0095 — typed assistant prompt parameters
+
+**Filename:** `src/lib/db/migrations/0095_serious_kinsey_walden.sql`
+
+### Forward behavior
+
+Sets the prompt `parameters` JSONB default to an empty array, normalizes
+existing non-array values to `[]`, and adds a check constraint that preserves
+the array contract. Parameter definitions remain versioned prompt metadata;
+they do not grant new context or tool access.
+
+### Compatibility and rollback
+
+The change is additive and existing prompt rows are normalized before the
+constraint is installed. Older application images ignore the default and
+constraint. Normal rollback leaves the schema in place; destructive rollback
+requires restoring a verified pre-migration backup or an approved forward fix.
+
+### Evidence
+
+`pnpm migration-drill` passed all five scenarios with 97/97 migrations on
+disposable PostgreSQL 17.10 and PostgreSQL 16.15 on 2026-10-23.
+Exact-clean-SHA evidence remains pending.
+
+## Migration 0096 — agency-gated Workspace Assistant tool calling
+
+**Filename:** `src/lib/db/migrations/0096_workspace_assistant_tool_calling.sql`
+
+### Forward behavior
+
+Adds `ai_feature_setting.tool_calling_enabled`, default `false`, so existing
+agencies remain on the existing non-tool request path unless an authorized
+agency administrator enables it after an external account/model smoke. The
+setting is accepted only with `MiniMax-M3.1-Flash`. Tool calls remain
+read-only, allowlisted, schema-validated, bounded, and workspace-scoped.
+
+The column uses `ADD COLUMN IF NOT EXISTS` because the repository's skipped
+migration repair drill can replay later additive migrations while retaining
+their schema changes.
+
+### Compatibility and rollback
+
+Older application images ignore the additive column and continue using their
+existing AI settings. Rollback pins the prior image and leaves the column in
+place; because the default is false, it does not enable tool orchestration.
+Do not remove the column during routine rollback.
+
+### Evidence
+
+On 2026-10-23 the full five-scenario migration drill passed on disposable
+PostgreSQL 17.10 and PostgreSQL 16.15, including from-zero (97/97 migrations),
+replay repair, upgrade, backup/restore, and failed-migration abort. Exact
+clean-SHA, production backup, compatibility, and rollback evidence remain
+pending.
+
+## Migration 0097 — Workspace Assistant schedule proposals
+
+**Filename:** `src/lib/db/migrations/0097_workspace_assistant_schedule_proposals.sql`
+
+### Forward behavior
+
+Extends the proposal field check to include `plannedPublishAt`, allowing an
+explicitly selected draft's planned date to be previewed and approved alongside
+the existing title and brief edits. The proposal still binds to the actor,
+workspace, item revision, exact prior timestamp, evidence, and expiry. The
+application accepts only a calendar date, preserves the item's existing UTC
+posting time, and routes the update through `updateContentItem` with the
+expected revision fence.
+
+### Compatibility and rollback
+
+The check constraint change is additive to application behavior but older
+images can encounter rows containing the new field if one is applied. Keep the
+assistant change disabled for production until the new image is deployed. The
+normal rollback path should pin the prior image and leave the broadened check
+in place; no proposal rows should be destructively rewritten. Existing stored
+title/brief proposals remain valid.
+
+### Evidence
+
+On 2026-10-24, all five migration-drill scenarios passed on disposable
+PostgreSQL 16.15 and PostgreSQL 17.10. Both from-zero runs applied 98/98
+migrations; skipped-migration repair, in-place upgrade, backup/restore, and
+failed-migration abort also passed. The full integration suite passed on both
+versions, including the schedule-proposal apply test. These are dirty
+working-tree results. Exact-clean-SHA backup/restore and production rollback
+evidence remains pending.
+
+## Migration 0098 — governed Workspace Assistant knowledge
+
+**Filename:** `src/lib/db/migrations/0098_workspace_assistant_knowledge.sql`
+
+### Forward behavior
+
+Creates `workspace_assistant_knowledge` for agency- or workspace-scoped
+reference entries and `workspace_assistant_knowledge_revision` for immutable
+snapshots. Constraints bind agency entries to a null workspace and workspace
+entries to a workspace, constrain supported categories and verification
+states, and validate bounded text/revision values. The application enforces
+workspace-manager and agency-admin writes, tenant filtering, URL schemes, and
+revision checks. Archive is soft-delete; records are not purged by this
+feature.
+
+### Compatibility and rollback
+
+The migration is additive. Older application images ignore both tables and
+retain their prior assistant behavior. Normal rollback pins the previous image
+and leaves the new tables in place. Do not drop or truncate knowledge during
+application rollback. Any data purge requires a separate privacy/retention
+decision, verified backup, and reviewed destructive migration.
+
+### Evidence
+
+On 2026-10-24, all five migration-drill scenarios passed on disposable
+PostgreSQL 16.15 and 17.10 with 99/99 migrations from zero, including
+skipped-migration repair, in-place upgrade, backup/restore, and failed-migration
+abort. The full integration suite passed on both versions, including the
+Workspace Assistant knowledge isolation/revision cases. These are dirty
+working-tree results. Exact-clean-SHA, production backup/restore, and
+production rollback evidence remain pending.
+
+## Migration 0100 — agency-permitted AI models
+
+**Filename:** `src/lib/db/migrations/0100_ai_permitted_models.sql`
+**Journal tag:** `0100_ai_permitted_models`
+**Journal `when`:** `1792807007131`
+**SHA-256:** `97b98b50646a61a997522c916301ee84d4057980e8eee93df34d8b07b61d55c6`
+
+### Forward behavior
+
+Adds `ai_feature_setting.permitted_models` as a non-null text array. Existing
+rows backfill to a one-element array containing their current default `model`.
+The migration does not change agency IDs, provider secrets, usage events, or
+workspace data.
+
+### Compatibility and rollback
+
+Older application images ignore the additive column. The new application
+falls back to the existing default model if the array is empty, and the
+settings service always stores the default inside the permitted list. Normal
+application rollback leaves the column in place. A destructive schema rollback
+would remove agency model choices; use the verified database restore or a
+reviewed forward fix instead of dropping the column in production.
+
+### Evidence
+
+On disposable PostgreSQL 16.15, the migration drill passed all five scenarios:
+from-zero applied 101/101 registered migrations; skipped-migration repair
+replayed migration 0100; in-place marker upgrade, backup/restore, and failed
+migration abort passed. The Workspace Assistant integration suite passed
+11/11 after the drill. The agency model settings and assistant model-choice
+flow passed focused unit and Chromium coverage. These are dirty-working-tree
+results; exact-clean-SHA, production backup/restore, and production rollback
+evidence remain pending.
+
+## Migrations 0101–0102 — governed agency assistant skills
+
+`0101_aromatic_meteorite.sql` adds agency-owned skill identities and immutable
+revision snapshots, with constraints for revision state, reviewer metadata,
+agency-scoped slug uniqueness, and archive state. `0102_worthless_mulholland_black.sql`
+adds rollback provenance to each revision. The application permits an agency
+admin to author and revise skills; a different agency admin must review a
+revision before it becomes active. A rollback request creates a new draft
+revision and follows the same review path. Custom skills are instruction-only
+and cannot add tools or permissions.
+
+Files, journal tags, and SHA-256:
+
+- `src/lib/db/migrations/0101_aromatic_meteorite.sql` —
+  `0101_aromatic_meteorite` —
+  `8c263bbb21d97885cc0fefc186335379485bbb8130797c5ccce0bcf28ee342b0`
+- `src/lib/db/migrations/0102_worthless_mulholland_black.sql` —
+  `0102_worthless_mulholland_black` —
+  `9fa71fe9349844142b0c1d1c0001b89be37440cd07c0aff720ea9d1a0ead60af`
+
+Both migrations are additive. Older application images ignore the new tables
+and column. Application rollback leaves them in place; do not drop skill
+history during rollback. A destructive schema rollback requires a verified
+backup and separately reviewed restoration plan.
+
+On 2026-10-24, all five migration-drill scenarios passed on disposable
+PostgreSQL 16.15. The from-zero Drizzle migrator applied 103/103 registered
+migrations and created 155 tables; skipped-migration repair, in-place upgrade,
+backup/restore, and failed-migration abort passed. This is dirty-working-tree
+evidence. Exact-clean-SHA verification, production backup/restore, and
+production rollback evidence remain pending.

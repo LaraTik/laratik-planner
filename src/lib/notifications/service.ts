@@ -1,30 +1,38 @@
 import "server-only";
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { updateTag } from "next/cache";
 import { db } from "@/lib/db";
 import {
   agencies,
   notifications,
   notificationPreferences,
-  notificationEmailDeliveries,
   outboxEvents,
-  users,
   contentItems,
   workspaces,
 } from "@/lib/db/schema";
-import { type Actor } from "@/lib/auth/policy";
 import { workspaceBasePath } from "@/lib/urls";
-import { sendEmail } from "@/lib/email";
-import { tFor } from "@/messages";
-import { renderNotificationEmailCopy } from "@/lib/notifications/email-copy";
 import { notificationsUserTag } from "@/lib/notifications/cache";
-import {
-  NOTIFICATION_KIND_VALUES,
-  type NotificationKind,
-  type NotificationKindForPrefs,
-  type NotificationPreferencesSnapshot,
-} from "@/lib/notifications/types";
-import { z } from "zod";
+import type { NotificationKind } from "@/lib/notifications/types";
+import { defaultBodyFor, defaultTitleFor } from "@/lib/notifications/copy";
+import { logError } from "@/lib/observability/logger";
+export { dispatchEmailOnce } from "@/lib/notifications/email-dispatch";
+import { shouldEmailUserFor } from "@/lib/notifications/preferences";
+
+export {
+  defaultNotificationPreferences,
+  getNotificationPreferencesForUser,
+  NotificationKindSchema,
+  NotificationKindSchemaValues,
+  SetNotificationPreferencesSchema,
+  setNotificationPreferencesForUser,
+  shouldDigestUserFor,
+  updateNotificationPreferences,
+} from "@/lib/notifications/preferences";
+export { shouldEmailUserFor };
+export type {
+  SetNotificationPreferencesInput,
+  UpdateNotificationPreferencesInput,
+} from "@/lib/notifications/preferences";
 
 export type {
   NotificationKind,
@@ -78,8 +86,6 @@ export type OutboxEventType = (typeof OUTBOX_EVENT_TYPES)[number];
  *    on the notification is the only delivery state we track in v1.
  */
 
-export const NotificationKindSchema = z.enum(NOTIFICATION_KIND_VALUES);
-
 // ─── In-app notification writers (used by other services / outbox worker) ─
 
 /**
@@ -103,31 +109,8 @@ type NotificationCore = {
   actionUrl?: string;
 };
 
-/**
- * The set of fields shared by both the `notifications` row and the
- * `outbox_events.payload` jsonb blob. Centralised so a new field
- * (e.g. `actorId`) added to one site is also added to the other
- * automatically — the previous implementation had three spread
- * sites that could drift.
- *
- * Falsy values are dropped so the resulting object is JSON-safe and
- * Drizzle doesn't try to insert `null` into a non-null column.
- * The return type is the union of all present fields; callers can
- * spread it into a typed insert without losing inference.
- */
-type NotificationCoreFields = {
-  userId: string;
-  workspaceId?: string;
-  contentItemId?: string;
-  title?: string;
-  body?: string;
-  messageKey?: string;
-  messageParams?: Record<string, string | number>;
-  actionUrl?: string;
-};
-
-function notificationCoreFields(input: NotificationCore): NotificationCoreFields {
-  const out: NotificationCoreFields = { userId: input.userId };
+function notificationCoreFields(input: NotificationCore): NotificationCore {
+  const out: NotificationCore = { userId: input.userId };
   if (input.workspaceId) out.workspaceId = input.workspaceId;
   if (input.contentItemId) out.contentItemId = input.contentItemId;
   if (input.title) out.title = input.title;
@@ -215,11 +198,31 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
   const processed: string[] = [];
   for (const evt of events) {
     try {
-      await db.transaction(async (tx) => {
-        const payload = evt.payload as Record<string, unknown> | null;
+      const recipients = await db.transaction(async (tx) => {
+        // The candidate read above is intentionally lock-free. Multiple cron
+        // invocations can see the same pending rows, so acquire ownership
+        // inside the transaction and re-check eligibility before fan-out.
+        // SKIP LOCKED lets another worker take the next row instead of
+        // waiting, while the processed_at predicate prevents a second worker
+        // from replaying a row after the first commits.
+        const [claimed] = await tx
+          .select()
+          .from(outboxEvents)
+          .where(
+            and(
+              eq(outboxEvents.id, evt.id),
+              isNull(outboxEvents.processedAt),
+              sql`${outboxEvents.availableAt} <= ${availabilityCutoff}`,
+            ),
+          )
+          .for("update", { skipLocked: true })
+          .limit(1);
+        if (!claimed) return null;
+
+        const payload = claimed.payload as Record<string, unknown> | null;
+        let recipients: string[] = [];
         if (payload) {
-          let recipients: string[] = [];
-          switch (evt.eventType as OutboxEventType) {
+          switch (claimed.eventType as OutboxEventType) {
             case "comment_created":
               recipients = await fanOutCommentCreated(payload, tx);
               break;
@@ -265,7 +268,6 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
               // preserved for forensics.
               break;
           }
-          for (const userId of recipients) recipientIds.add(userId);
         }
         // Mark the event processed (or no-op for unknown types — see
         // above). A failure inside the fan-out throws and rolls this
@@ -273,18 +275,22 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
         await tx
           .update(outboxEvents)
           .set({ processedAt: new Date(), attemptCount: sql`${outboxEvents.attemptCount} + 1` })
-          .where(eq(outboxEvents.id, evt.id));
+          .where(eq(outboxEvents.id, claimed.id));
+        return recipients;
       });
+      if (recipients === null) continue;
+      for (const userId of recipients) recipientIds.add(userId);
       processed.push(evt.id);
     } catch (err) {
       // Failure path runs OUTSIDE the rolled-back tx so the error
       // bookkeeping (attempt_count++, last_error) is persisted even
       // when the inner fan-out throws.
+      logError("notification.outbox_dispatch_failed", { err, outboxEventId: evt.id });
       await db
         .update(outboxEvents)
         .set({
           attemptCount: sql`${outboxEvents.attemptCount} + 1`,
-          lastError: err instanceof Error ? err.message : String(err),
+          lastError: "outbox_dispatch_failed",
         })
         .where(eq(outboxEvents.id, evt.id));
     }
@@ -320,247 +326,6 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
     }
   }
   return { processed: processed.length };
-}
-
-// ─── FEAT-10 — email dispatch (GAP-FULL-REVIEW-2026-08-25) ─────────────────
-//
-// The in-app dispatcher above handles the bell. This companion
-// function reads the same outbox_events rows, but fans out via
-// `sendEmail` (Mailcow) instead. It honours
-// `notification_preferences.email_enabled` per (user, kind) and
-// silently skips the recipient when the user hasn't opted in.
-//
-// Invariants:
-//   - Re-reads the user + preference for every row (avoids stale
-//     reads when a user toggles their preference between writes).
-//   - Email state is independent from in-app state. The two workers
-//     can run in either order without suppressing one another.
-//   - Multi-recipient events have one delivery row per recipient, so
-//     retrying a failed address never resends a successful address.
-//   - The cron route (/api/cron/email-dispatch) only invokes this
-//     helper, so all side effects flow through one place.
-//
-// The per-event envelope is the same one the in-app dispatcher
-// writes; the email body is whatever `payload.title` /
-// `payload.body` the call site set. For comment mentions, the
-// notification_kind is "mention" so the preference lookup is
-// consistent across surfaces.
-
-/**
- * One email-dispatch tick. Claims at most `maxEvents` due
- * outbox_events rows, sends the email when the recipient's
- * `email_enabled` flag is set for the matching kind. Returns the
- * counts the cron route logs.
- */
-export async function dispatchEmailOnce(
-  opts: { maxEvents?: number; now?: Date } = {},
-): Promise<{ processed: number; sent: number; skipped: number; failed: number }> {
-  const now = opts.now ?? new Date();
-  const maxEvents = opts.maxEvents ?? 50;
-
-  const events = await db
-    .select()
-    .from(outboxEvents)
-    .where(and(isNull(outboxEvents.emailProcessedAt), sql`${outboxEvents.availableAt} <= ${now}`))
-    .orderBy(outboxEvents.availableAt)
-    .limit(maxEvents);
-
-  let sent = 0;
-  let skipped = 0;
-  let failed = 0;
-  for (const evt of events) {
-    const payload = (evt.payload as Record<string, unknown> | null) ?? {};
-    const kind = eventTypeToNotificationKind(evt.eventType as string);
-    const recipients = await emailRecipientIds(evt.eventType as string, payload);
-    if (!kind || recipients.length === 0) {
-      skipped += recipients.length === 0 ? 1 : recipients.length;
-      await markEmailEventProcessed(evt.id);
-      continue;
-    }
-
-    await db
-      .insert(notificationEmailDeliveries)
-      .values(recipients.map((userId) => ({ outboxEventId: evt.id, userId })))
-      .onConflictDoNothing();
-    const deliveries = await db
-      .select()
-      .from(notificationEmailDeliveries)
-      .where(
-        and(
-          eq(notificationEmailDeliveries.outboxEventId, evt.id),
-          isNull(notificationEmailDeliveries.processedAt),
-        ),
-      );
-
-    // A delivery row should always exist after the upsert. Treat an empty
-    // result as a completed skip defensively (for example, if a recipient
-    // was deleted between the two statements) so the event cannot spin.
-    if (deliveries.length === 0) {
-      skipped += recipients.length;
-      await markEmailEventProcessed(evt.id);
-      continue;
-    }
-
-    for (const delivery of deliveries) {
-      const wantsEmail = await shouldEmailUserFor(delivery.userId, kind);
-      if (!wantsEmail) {
-        skipped += 1;
-        await markEmailDeliveryProcessed(evt.id, delivery.userId);
-        continue;
-      }
-      const [user] = await db
-        .select({ email: users.email, locale: users.locale })
-        .from(users)
-        .where(eq(users.id, delivery.userId))
-        .limit(1);
-      if (!user) {
-        skipped += 1;
-        await markEmailDeliveryProcessed(evt.id, delivery.userId);
-        continue;
-      }
-      const title = (payload["title"] as string | undefined) ?? defaultTitleFor(kind);
-      const body = (payload["body"] as string | undefined) ?? defaultBodyFor(kind);
-      const messageKey = payload["messageKey"] as string | undefined;
-      const messageParams =
-        (payload["messageParams"] as Record<string, string | number> | undefined) ?? undefined;
-      const { subject, text: emailBody } = renderNotificationEmailCopy(
-        {
-          title,
-          body,
-          ...(messageKey ? { messageKey } : {}),
-          ...(messageParams ? { messageParams } : {}),
-        },
-        user.locale ?? "en",
-      );
-      try {
-        await sendEmail({ to: user.email, subject, text: emailBody });
-        sent += 1;
-        await markEmailDeliveryProcessed(evt.id, delivery.userId, true);
-      } catch (err) {
-        failed += 1;
-        const message = err instanceof Error ? err.message : String(err);
-        const nextAttempt = (delivery.attemptCount ?? 0) + 1;
-        const isPoisoned = nextAttempt >= EMAIL_DLQ_THRESHOLD;
-        await db
-          .update(notificationEmailDeliveries)
-          .set({
-            ...(isPoisoned ? { processedAt: new Date() } : {}),
-            attemptCount: sql`${notificationEmailDeliveries.attemptCount} + 1`,
-            lastError: isPoisoned ? `[poisoned] ${message}` : message,
-          })
-          .where(
-            and(
-              eq(notificationEmailDeliveries.outboxEventId, evt.id),
-              eq(notificationEmailDeliveries.userId, delivery.userId),
-            ),
-          );
-        await db
-          .update(outboxEvents)
-          .set({
-            emailAttemptCount: sql`${outboxEvents.emailAttemptCount} + 1`,
-            emailLastError: isPoisoned ? `[poisoned] ${message}` : message,
-          })
-          .where(eq(outboxEvents.id, evt.id));
-      }
-    }
-
-    const pending = await db
-      .select({ userId: notificationEmailDeliveries.userId })
-      .from(notificationEmailDeliveries)
-      .where(
-        and(
-          eq(notificationEmailDeliveries.outboxEventId, evt.id),
-          isNull(notificationEmailDeliveries.processedAt),
-        ),
-      );
-    if (pending.length === 0) await markEmailEventProcessed(evt.id);
-  }
-  return { processed: events.length, sent, skipped, failed };
-}
-
-async function emailRecipientIds(eventType: string, payload: Record<string, unknown>) {
-  const mentionRecipients = Array.isArray(payload["mentionedUserIds"])
-    ? payload["mentionedUserIds"]
-    : [];
-  const payloadRecipients =
-    eventType === "comment_created" && mentionRecipients.length > 0
-      ? mentionRecipients
-      : [payload["userId"]];
-  if (eventType !== "publication_recorded") {
-    return [...new Set(payloadRecipients.filter((id): id is string => typeof id === "string"))];
-  }
-  const contentItemId = payload["contentItemId"] as string | undefined;
-  if (!contentItemId) return [];
-  const [item] = await db
-    .select({ contentOwnerId: contentItems.contentOwnerId, designerId: contentItems.designerId })
-    .from(contentItems)
-    .where(eq(contentItems.id, contentItemId))
-    .limit(1);
-  return [...new Set([item?.contentOwnerId, item?.designerId].filter((id): id is string => !!id))];
-}
-
-async function markEmailDeliveryProcessed(eventId: string, userId: string, sent = false) {
-  await db
-    .update(notificationEmailDeliveries)
-    .set({
-      processedAt: new Date(),
-      ...(sent ? { attemptCount: sql`${notificationEmailDeliveries.attemptCount} + 1` } : {}),
-    })
-    .where(
-      and(
-        eq(notificationEmailDeliveries.outboxEventId, eventId),
-        eq(notificationEmailDeliveries.userId, userId),
-      ),
-    );
-}
-
-async function markEmailEventProcessed(eventId: string) {
-  await db
-    .update(outboxEvents)
-    .set({ emailProcessedAt: new Date() })
-    .where(eq(outboxEvents.id, eventId));
-}
-
-/**
- * FEAT-AUDIT-R6 — DLQ threshold. After this many failed attempts,
- * the email row is marked processed with a "poisoned" marker in
- * `last_error` so it stops re-trying. Five retries at 1-minute
- * cron cadence = 5 minutes of backoff, which is enough to clear
- * a transient Mailcow outage but short enough to catch
- * configuration errors (e.g. a missing SMTP secret) before the
- * table fills with poison rows.
- */
-const EMAIL_DLQ_THRESHOLD = 5;
-
-function eventTypeToNotificationKind(eventType: string): NotificationKind | null {
-  switch (eventType as OutboxEventType) {
-    case "comment_created":
-      return "mention";
-    case "assignment":
-    case "claim":
-    case "release":
-      return "assignment";
-    case "review_request":
-      return "review_request";
-    case "approval":
-      return "approval";
-    case "changes_requested":
-      return "changes_requested";
-    case "reply":
-      return "reply";
-    case "unresolved_question":
-      return "unresolved_question";
-    case "deadline":
-      return "deadline";
-    case "delivery":
-      return "delivery";
-    case "ready_to_publish":
-      return "ready_to_publish";
-    case "publication_recorded":
-      return "system";
-    default:
-      return null;
-  }
 }
 
 async function fanOutCommentCreated(
@@ -762,60 +527,6 @@ async function fanOutPublicationRecorded(
   return recipients;
 }
 
-function defaultTitleFor(kind: NotificationKind): string {
-  switch (kind) {
-    case "assignment":
-      return "You were assigned a task";
-    case "review_request":
-      return "Your review is requested";
-    case "approval":
-      return "Content approved";
-    case "changes_requested":
-      return "Changes requested";
-    case "reply":
-      return "New reply on a comment";
-    case "unresolved_question":
-      return "Unresolved question needs attention";
-    case "deadline":
-      return "A deadline is approaching";
-    case "delivery":
-      return "A delivery was submitted";
-    case "ready_to_publish":
-      return "A piece is ready to publish";
-    case "mention":
-      return "You were mentioned in a comment";
-    case "system":
-      return "System update";
-  }
-}
-
-function defaultBodyFor(kind: NotificationKind): string {
-  switch (kind) {
-    case "assignment":
-      return "You were assigned a content item. Open it to start work.";
-    case "review_request":
-      return "An approval request is waiting on you.";
-    case "approval":
-      return "An approval was recorded on a content item you follow.";
-    case "changes_requested":
-      return "Reviewer requested changes. Open the item to see the notes.";
-    case "reply":
-      return "Someone replied to a comment you're part of.";
-    case "unresolved_question":
-      return "A comment is still marked as an unresolved question.";
-    case "deadline":
-      return "A planned publish date is approaching. Confirm the package is on track.";
-    case "delivery":
-      return "A new delivery version was submitted for review.";
-    case "ready_to_publish":
-      return "A content item moved into the ready-to-publish lane.";
-    case "mention":
-      return "Someone @mentioned you in a comment on a content item.";
-    case "system":
-      return "The workspace has a new system update.";
-  }
-}
-
 /**
  * Resolve a workspace slug from a workspace identifier and return
  * a valid App Router deep-link to the planning detail page. The
@@ -953,177 +664,6 @@ async function maybeNotify(
     actionUrl,
     tx,
   });
-}
-
-// ─── Preference readers / writers (FEAT-08) ─────────────────────────────
-
-/**
- * FEAT-08 (GAP-FULL-REVIEW-2026-08-25) — notification_preferences
- * was a dead schema: the columns existed but no UI wrote them and no
- * service read them. These helpers are the only API for the rest of
- * the codebase, so the future email worker and the existing
- * dispatchOutboxOnce funnel through one place.
- *
- * Conventions:
- *  - `emailEnabled` is per (user, kind). Default OFF (opt-in).
- *  - `digestEnabled` is a single user-level toggle stored on the
- *    `system` kind (no other kind writes to it). Default OFF (opt-in).
- *  - Missing rows mean "no preference saved" — callers fall back to
- *    the safe default.
- */
-
-async function readPreferenceRow(userId: string, kind: NotificationKind) {
-  const [row] = await db
-    .select({
-      inAppEnabled: notificationPreferences.inAppEnabled,
-      emailEnabled: notificationPreferences.emailEnabled,
-      digestEnabled: notificationPreferences.digestEnabled,
-    })
-    .from(notificationPreferences)
-    .where(and(eq(notificationPreferences.userId, userId), eq(notificationPreferences.kind, kind)))
-    .limit(1);
-  return row;
-}
-
-/**
- * Should we email `userId` about a `kind` event? Master prompt §8
- * defaults to off; the future email worker checks this before queueing
- * a Mailcow SMTP send.
- */
-export async function shouldEmailUserFor(userId: string, kind: NotificationKind): Promise<boolean> {
-  const row = await readPreferenceRow(userId, kind);
-  return row?.emailEnabled ?? false;
-}
-
-/**
- * Should the daily digest include events for `userId`? The digest is a
- * single user-level toggle (any "active" kind goes into the digest
- * body), so we read the `system` row.
- */
-export async function shouldDigestUserFor(userId: string): Promise<boolean> {
-  const row = await readPreferenceRow(userId, "system");
-  return row?.digestEnabled ?? false;
-}
-
-/**
- * Per-kind preference shape used by the account-page form. R4
- * expanded the surface from two booleans to a full 11-kind
- * matrix. The `system` kind's `inAppEnabled` is intentionally
- * NOT exposed — the master prompt §8 promises "invitations and
- * security events cannot be disabled", and the `system` kind
- * is the closest match. We hardcode `inAppEnabled = true` for
- * it and force `emailEnabled = false` (those events are
- * bell-only; the email surface is reserved for user-driven
- * kinds).
- */
-export const NotificationKindSchemaValues = NOTIFICATION_KIND_VALUES;
-
-/**
- * Default snapshot. Matches the schema's column defaults
- * (`inAppEnabled: true`, `emailEnabled: false`,
- * `digestEnabled: false`) and the master prompt §8 contract
- * (in-app bell is on, email is opt-in per kind, daily digest
- * is opt-in via the system row).
- */
-export function defaultNotificationPreferences(): NotificationPreferencesSnapshot {
-  const out = {} as NotificationPreferencesSnapshot;
-  for (const k of NotificationKindSchemaValues) {
-    out[k] = { inAppEnabled: true, emailEnabled: false };
-  }
-  out.dailyDigest = false;
-  return out;
-}
-
-/**
- * Snapshot of the user's notification preferences for the
- * account-page UI. Returns safe defaults when no row exists yet
- * — every kind defaults to "in-app on, email off" so a brand-
- * new user immediately gets the bell experience the master
- * prompt §8 contract promises.
- */
-export async function getNotificationPreferencesForUser(
-  userId: string,
-): Promise<NotificationPreferencesSnapshot> {
-  const rows = await db
-    .select()
-    .from(notificationPreferences)
-    .where(eq(notificationPreferences.userId, userId));
-  const snap = defaultNotificationPreferences();
-  for (const row of rows) {
-    if (NotificationKindSchemaValues.includes(row.kind as NotificationKindForPrefs)) {
-      snap[row.kind as NotificationKindForPrefs] = {
-        inAppEnabled: row.inAppEnabled,
-        emailEnabled: row.emailEnabled,
-      };
-    }
-    if (row.kind === "system") {
-      snap.dailyDigest = row.digestEnabled;
-    }
-  }
-  return snap;
-}
-
-export const SetNotificationPreferencesSchema = z.object({
-  /**
-   * Per-kind matrix. The form posts each kind × channel
-   * boolean; the action flattens this back into the right
-   * shape. A missing kind is treated as the default (in-app
-   * on, email off) — the form is the source of truth, the
-   * service just persists what the form sent.
-   */
-  prefs: z.record(
-    NotificationKindSchema,
-    z.object({
-      inAppEnabled: z.boolean(),
-      emailEnabled: z.boolean(),
-    }),
-  ),
-  /** Daily-digest toggle. Lives on the `system` kind's
-   * `digestEnabled` column. */
-  dailyDigest: z.boolean(),
-});
-export type SetNotificationPreferencesInput = z.infer<typeof SetNotificationPreferencesSchema>;
-
-/**
- * Upsert the user's notification preferences. Idempotent:
- * each (user, kind) row is overwritten on save so a user who
- * flips a toggle and saves sees the new state immediately on
- * the next request. We always write the `inAppEnabled` flag
- * the form sent — except for `system`, which is forced to
- * `true` to honour the master prompt §8 "invitations and
- * security events cannot be disabled" rule.
- */
-export async function setNotificationPreferencesForUser(
-  userId: string,
-  input: SetNotificationPreferencesInput,
-): Promise<void> {
-  const parsed = SetNotificationPreferencesSchema.parse(input);
-  for (const [kindRaw, prefs] of Object.entries(parsed.prefs)) {
-    const kind = kindRaw as NotificationKindForPrefs;
-    // Master prompt §8 — `system` is the kind we use for
-    // invitations + security events. Keep it on in the bell.
-    const inAppEnabled = kind === "system" ? true : prefs.inAppEnabled;
-    await db
-      .insert(notificationPreferences)
-      .values({
-        userId,
-        kind,
-        inAppEnabled,
-        emailEnabled: prefs.emailEnabled,
-        // Only the `system` row carries digestEnabled; the other
-        // kinds share the same column shape but the value is
-        // irrelevant there.
-        digestEnabled: kind === "system" ? parsed.dailyDigest : false,
-      })
-      .onConflictDoUpdate({
-        target: [notificationPreferences.userId, notificationPreferences.kind],
-        set: {
-          inAppEnabled,
-          emailEnabled: prefs.emailEnabled,
-          ...(kind === "system" ? { digestEnabled: parsed.dailyDigest } : {}),
-        },
-      });
-  }
 }
 
 // ─── FEAT-01 — enqueue helpers (GAP-FULL-REVIEW-2026-08-25) ────────────────
@@ -1283,146 +823,14 @@ export async function enqueueReadyToPublishNotification(
   return enqueueOutboxEvent("ready_to_publish", input, tx);
 }
 
-// ─── Read helpers for the /app topbar ──────────────────────────────────
-
-export type NotificationRow = {
-  id: string;
-  kind: NotificationKind;
-  title: string;
-  body: string;
-  // STUDIOFLOW_MASTER_PROMPT.md §1 — Stored system copy. The
-  // bell + email dispatcher render the i18n at view / send time
-  // when set; otherwise the stored `title` / `body` is the fallback.
-  messageKey: string | null;
-  messageParams: Record<string, string | number> | null;
-  actionUrl: string | null;
-  readAt: Date | null;
-  createdAt: Date;
-  workspaceId: string | null;
-  contentItemId: string | null;
-};
-
-export async function listNotificationsForUser(
-  actor: Actor,
-  opts: { unreadOnly?: boolean; limit?: number } = {},
-): Promise<NotificationRow[]> {
-  const limit = opts.limit ?? 50;
-  const where = opts.unreadOnly
-    ? and(eq(notifications.userId, actor.id), isNull(notifications.readAt))
-    : eq(notifications.userId, actor.id);
-  const rows = await db
-    .select()
-    .from(notifications)
-    .where(where)
-    .orderBy(desc(notifications.createdAt))
-    .limit(limit);
-  return rows as NotificationRow[];
-}
-
-/**
- * STUDIOFLOW_MASTER_PROMPT.md §1 — Stored system copy. Render the
- * persisted `title` + `body` for the given locale using the
- * `messageKey` + `messageParams` columns when present. Falls back
- * to the stored English copy when `messageKey` is null (the
- * additive migration keeps every pre-existing row with no
- * `messageKey`, so the fallback is the common case until every
- * writer is updated).
- */
-export function renderNotificationCopy(
-  row: Pick<NotificationRow, "title" | "body" | "messageKey" | "messageParams">,
-  locale: string,
-): { title: string; body: string } {
-  if (!row.messageKey) return { title: row.title, body: row.body };
-  const t = tFor(locale as Parameters<typeof tFor>[0]);
-  const title = t(row.messageKey + ".title", row.messageParams ?? undefined);
-  const body = t(row.messageKey + ".body", row.messageParams ?? undefined);
-  // Loud-key wrapper on missing translations — surface the gap
-  // to tests rather than silently falling back to English.
-  if (title.startsWith("[") || body.startsWith("[")) {
-    return { title: row.title, body: row.body };
-  }
-  return { title, body };
-}
-
-export async function countUnreadNotifications(actor: Actor): Promise<number> {
-  const [row] = await db
-    .select({ n: sql<number>`count(*)::int` })
-    .from(notifications)
-    .where(and(eq(notifications.userId, actor.id), isNull(notifications.readAt)));
-  return row?.n ?? 0;
-}
-
-export const MarkReadSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1).max(200),
-});
-export type MarkReadInput = z.infer<typeof MarkReadSchema>;
-
-export async function markNotificationsRead(actor: Actor, input: MarkReadInput) {
-  const parsed = MarkReadSchema.safeParse(input);
-  if (!parsed.success) {
-    throw new Error(parsed.error.issues.map((i) => i.message).join("; "));
-  }
-  // Only mark the actor's own notifications read
-  await db
-    .update(notifications)
-    .set({ readAt: new Date() })
-    .where(and(eq(notifications.userId, actor.id), inArray(notifications.id, parsed.data.ids)));
-}
-
-export async function markAllNotificationsRead(actor: Actor) {
-  await db
-    .update(notifications)
-    .set({ readAt: new Date() })
-    .where(and(eq(notifications.userId, actor.id), isNull(notifications.readAt)));
-}
-
-// ─── FEAT-07 — single-row mark + preferences write (GAP-FULL-REVIEW-2026-08-25) ──
-//
-// §14 listed `markNotificationRead` (singular) and
-// `updateNotificationPreferences` as required commands. The plural
-// `markNotificationsRead` was already exported (the bell's
-// "Mark all as read" button uses the batch path), but the
-// per-notification one was missing. Same for the preferences writer
-// — the FEAT-08 helpers above only read the rows; the UI was left to
-// re-use `setNotificationPreferencesForUser` and that was never
-// re-exported under the §14 contract name.
-
-export const MarkReadOneSchema = z.object({
-  notificationId: z.string().uuid(),
-});
-export type MarkReadOneInput = z.infer<typeof MarkReadOneSchema>;
-
-/**
- * Mark a single notification as read. Idempotent — re-marking an
- * already-read row leaves `read_at` unchanged. Refuses to mark
- * another user's notification read (the actor can only act on
- * their own).
- */
-export async function markNotificationRead(actor: Actor, input: MarkReadOneInput) {
-  const parsed = MarkReadOneSchema.safeParse(input);
-  if (!parsed.success) {
-    throw new Error(parsed.error.issues.map((i) => i.message).join("; "));
-  }
-  await db
-    .update(notifications)
-    .set({ readAt: new Date() })
-    .where(
-      and(eq(notifications.userId, actor.id), eq(notifications.id, parsed.data.notificationId)),
-    );
-}
-
-export type UpdateNotificationPreferencesInput = SetNotificationPreferencesInput;
-
-/**
- * §14 `updateNotificationPreferences` — alias for the FEAT-08 writer
- * so the §14 contract name resolves to the same code path. UI code
- * that imports `updateNotificationPreferences` (instead of the older
- * `setNotificationPreferencesForUser`) gets the same
- * idempotent-upsert behaviour.
- */
-export async function updateNotificationPreferences(
-  userId: string,
-  input: UpdateNotificationPreferencesInput,
-): Promise<void> {
-  return setNotificationPreferencesForUser(userId, input);
-}
+export {
+  countUnreadNotifications,
+  listNotificationsForUser,
+  markAllNotificationsRead,
+  markNotificationRead,
+  MarkReadOneSchema,
+  MarkReadSchema,
+  markNotificationsRead,
+  renderNotificationCopy,
+} from "@/lib/notifications/inbox";
+export type { MarkReadInput, MarkReadOneInput, NotificationRow } from "@/lib/notifications/inbox";

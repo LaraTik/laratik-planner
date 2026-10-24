@@ -12,7 +12,7 @@ import {
   leadTimeTemplates,
   monthlyTargetTemplates,
 } from "@/lib/workspaces/settings-templates";
-import { WORKFLOW_SCENARIOS, type WorkflowScenarioId } from "@/lib/content/workflow";
+import { applyWorkflowScenario } from "@/features/content/server";
 
 /**
  * Settings templates (Phase C) — "Apply preset" actions.
@@ -32,7 +32,7 @@ export interface TemplateApplyResult {
 async function authedWorkspace(
   agencySlug: string,
   slug: string,
-): Promise<{ ok: true; workspaceId: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; workspaceId: string; actorId: string } | { ok: false; error: string }> {
   const session = await auth();
   if (!session?.user?.id) return { ok: false, error: "Sign in again to apply presets." };
   const workspace = await getAccessibleWorkspaceAtPath({ id: session.user.id }, agencySlug, slug);
@@ -40,7 +40,7 @@ async function authedWorkspace(
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"]))) {
     return { ok: false, error: "Workspace manager access is required." };
   }
-  return { ok: true, workspaceId: workspace.id };
+  return { ok: true, workspaceId: workspace.id, actorId: session.user.id };
 }
 
 export async function applyLeadTimeTemplateAction(
@@ -134,45 +134,8 @@ export async function applyWorkflowScenarioAction(
 > {
   const auth = await authedWorkspace(agencySlug, slug);
   if (!auth.ok) return { ok: false, error: auth.error };
-  const scenario = WORKFLOW_SCENARIOS[scenarioId as WorkflowScenarioId];
-  if (!scenario) {
-    return { ok: false, error: "Unknown workflow scenario." };
-  }
-  // Resolve the forced approval mode for the side-effect hint. We
-  // don't write `null` — `standard` keeps the workspace's existing
-  // approvalMode unchanged.
-  const forcedApprovalMode =
-    scenario.approvalMode === "single"
-      ? "simple"
-      : scenario.approvalMode === "two_gate"
-        ? "internal_then_client"
-        : null;
-  try {
-    await db.transaction(async (tx) => {
-      const patch: {
-        workflowScenario: string;
-        approvalMode?: "simple" | "internal_then_client";
-        updatedAt: Date;
-      } = {
-        workflowScenario: scenario.id,
-        updatedAt: new Date(),
-      };
-      if (forcedApprovalMode) {
-        patch.approvalMode = forcedApprovalMode;
-      }
-      await tx
-        .update(workspaceSettingsTable)
-        .set(patch)
-        .where(eq(workspaceSettingsTable.workspaceId, auth.workspaceId));
-    });
-  } catch {
-    return { ok: false, error: "Could not apply scenario." };
-  }
-  // Revalidate every surface that renders the scenario: planning
-  // list/detail, board, settings.
-  return {
-    ok: true,
-    applied: 1,
-    ...(forcedApprovalMode !== null ? { forcedApprovalMode } : {}),
-  };
+  const outcome = await applyWorkflowScenario({ id: auth.actorId }, auth.workspaceId, scenarioId);
+  return outcome.ok
+    ? { ...outcome, forcedApprovalMode: outcome.forcedApprovalMode ?? null }
+    : outcome;
 }

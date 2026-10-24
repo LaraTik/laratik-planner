@@ -131,6 +131,14 @@
     "invitationNote": "An invitation is sent only after the agency transaction commits successfully.",
     "defaultReason": "Initial agency provisioning",
     "success": "Agency created successfully. Close this drawer to see it in the table.",
+    "errors": {
+      "sessionExpired": "Sign in again before creating an agency.",
+      "invalidInput": "Check the agency details and try again.",
+      "createFailed": "The agency could not be created. Try again or contact platform support."
+    },
+    "warnings": {
+      "adminEmailFailed": "The agency was created, but the administrator email could not be sent."
+    },
     "back": "Back",
     "continue": "Continue",
     "creating": "Creating…",
@@ -214,6 +222,7 @@
   "grantReasonPlaceholder": "On-call rotation or responsibility",
   "grantUnchanged": "That assignment was already active.",
   "grantSuccess": "Platform access added.",
+  "accessUnexpectedFailure": "The platform access change failed. Please try again.",
   "grantSubmitPending": "Adding…",
   "changeRoleAria": "Change role for {email}",
   "changeRoleTitle": "Change role for {email}",

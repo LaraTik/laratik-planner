@@ -11,7 +11,7 @@ The runbook uses `M1`–`M4.5` tags inline to anchor a procedure to a release. A
 | `M1`   | Auth + security: Google OAuth sign-in, agency cookie + HMAC, CSRF for server actions, base rate limiting, audit row for auth events.                    | pre-2026-08-19               | `progress.md` "auth/security"                                                                                          |
 | `M2`   | Workflow + publishing + AI foundations: content lifecycle, channels, brand kit, invitations, MiniMax default, per-agency `provider_secret` placeholder. | 2026-08-19                   | `progress.md` round-2 review plan; `MIGRATION_DRILL_RESULTS.md` § "2026-08-23 M2 ledger-safe rerun"                    |
 | `M3`   | AI governance + support access: per-agency `ai_provider_secret`, `support_access_grant` lifecycle, platform-only `support_session` banner.              | 2026-08-24 (merge `4a999fe`) | `progress.md` "M3 (AI governance + support access) merged"                                                             |
-| `M3a`  | Infra + deploy chain: VPS, Docker, GHCR, M3a migrator image, `deploy.yml` workflow_run gate, schema-readiness probe.                                    | 2026-08-20                   | `progress.md` "deploy chain live on `laratik-vps`"; this runbook § "Deploying a new version"                           |
+| `M3a`  | Infra + deploy chain: VPS, Docker, GHCR, M3a migrator image, manually dispatched `deploy.yml`, schema-readiness probe.                                  | 2026-08-20                   | `progress.md` "deploy chain live on `laratik-vps`"; this runbook § "Deploying a new version"                           |
 | `M3b`  | Product + docs: authenticated surfaces (workspace, content, channels, brand, design, library), E2E coverage, axe-core a11y, role-by-route matrix.       | 2026-08-22                   | This runbook § "End-to-end tests" (E2E spec table)                                                                     |
 | `M4`   | Social profile analytics: read-only Meta + TikTok per-profile metrics, AES-256-GCM envelope, 5-state staged rollout, daily cron, 25-month retention.    | 2026-08-24 (merge `0f6d552`) | `progress.md` "Social profile analytics (M4) merged"; this runbook § "Social analytics (M4)"                           |
 | `M4.5` | Per-agency social DEK + lazy platform KEK: agency-scoped DEKs wrapped by the platform KEK, `rotate-social-kek.ts` script, optional-at-boot env var.     | 2026-08-24                   | `progress.md` "Per-agency social DEK + lazy platform KEK (M4.5) merged"; this runbook § "Platform KEK rotation (M4.5)" |
@@ -91,7 +91,7 @@ When a section header in this runbook carries an M-tag, that tag is the contract
 
 11. Set up Google OAuth: in Google Cloud Console, add `https://planner.laratik.com/api/auth/callback/google` as an authorized redirect URI, then set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env` and `docker compose up -d app`.
 12. Set up Mailcow mailbox `no-reply@planner.laratik.com` (Mailcow admin → Mailboxes → Add), then set `SMTP_PASSWORD` in `.env` and `docker compose up -d app`.
-13. **GHCR credential for the deploy workflow**: the `ghcr.io/laratik/laratik-planner{-migrator}` images are private. The VPS-side `scripts/deploy.sh` does `echo "$GHCR_PAT" | docker login ghcr.io -u "$GHCR_USER" --password-stdin` before pulling, but the credential comes from the GitHub repo secrets, not from the VPS filesystem. Set them once:
+13. **Optional legacy workflow credentials**: the `ghcr.io/laratik/laratik-planner{-migrator}` images are private. The normal release path authenticates to GHCR locally and the VPS deploy account uses its read-only GHCR login. `GHCR_PAT` and `GHCR_USER` repository secrets are only needed if an operator intentionally uses the legacy GitHub Deploy workflow:
     ```bash
     # 1. https://github.com/settings/tokens?type=beta → Generate new token
     #    • Resource owner: LaraTik
@@ -105,43 +105,83 @@ When a section header in this runbook carries an M-tag, that tag is the contract
     The PAT must be kept secret — it grants read:packages on the LaraTik org. Rotate on the same cadence as the deploy SSH key (see Rotation).
 14. First sign-in: visit `https://planner.laratik.com/signin`, sign in with Google, then go to `/setup` and enter the agency name + slug + `BOOTSTRAP_SETUP_TOKEN`.
 
-## Deploying a new version
+## Local review, release, and deployment
 
-Deployment is fully automated by the M3a pipeline. CI builds the
-`laratik-planner` (app) and `laratik-planner-migrator` (migrator)
-images, tags each by the exact commit SHA, and pushes them to GHCR. A
-separate `deploy` workflow triggers on `workflow_run` CI success, checks
-out the same `head_sha`, and SSHes to the VPS to run `scripts/deploy.sh`,
-which performs `backup → migrate → recreate app → health check →
-rollback on failure` without any manual Docker commands.
+The release is reviewed and verified on the developer/operator machine.
+GitHub is the remote source and PR/merge record; do not dispatch GitHub Actions
+for routine branch checks, builds, or deployments. Keep the independent review
+and every required production-readiness gate. Record evidence against the exact
+clean commit SHA before merging. For code changes run `pnpm verify`; run the
+disposable-database integration and migration checks when required; run the
+affected browser, EN/AR accessibility, and visual checks for touched UI. A
+release candidate also runs `pnpm test:e2e:release` and the exact tracker gates.
 
-From your **local** machine:
+After local review passes, merge the change into `main` and push `main`. Build
+and publish immutable app and migrator images from that exact SHA using local
+Docker Buildx, then invoke the existing transactional deployment script over
+SSH. Never deploy `latest`, a branch name, or a short SHA.
 
-```bash
-git push origin main
-# CI: lint, typecheck, unit, integration, audit, build,
-#      Docker image + health smoke + GHCR push, SMTP cert probe,
-#      workflow/Dockerfile/shell linters. Required release-gate contract —
-# Advisory workflow: changed-line coverage + targeted Chromium on an explicit
-#      critical dispatch; strict coverage + full browser/visual matrix nightly
-#      and via release-candidate dispatch. Routine pushes run CI only.
-#      see docs/testing/strategy.md (Release gates).
-# On green CI: deploy workflow verifies the GHCR tag, SSHes to the
-#              VPS, and runs scripts/deploy.sh.
-# On red health check: the deploy script rolls back to the previous
-#                      image automatically.
-#
-# Expected wall-clock (measured 2026-08-28, post single-build change):
-#   CI green:           required gates only; advisory checks run in parallel
-#   workflow_run → deploy: ~2 s
-#   deploy (verify + ssh + deploy.sh): ~60 s
-#   Push → live:        ~10 min  (down from ~14-16 min pre-change)
-```
+From the **local** machine, confirm the tree is clean and select the full SHA:
 
 ```bash
-# Manual deploy — only when CI is unavailable:
-ssh laratik-vps 'cd /opt/laratik-planner && sudo ./scripts/deploy.sh'
+git status --short
+DEPLOY_SHA="$(git rev-parse HEAD)"
+git show -s --format='%H %s' "$DEPLOY_SHA"
 ```
+
+Log in to GHCR locally with an account that can publish the two LaraTik
+packages. Build and push both images for the VPS platform. Build timestamps are
+metadata; the commit SHA is the immutable deployment identity.
+
+```bash
+docker login ghcr.io
+APP_BUILD_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+docker buildx build --platform linux/amd64 \
+  --build-arg "APP_VERSION=$DEPLOY_SHA" \
+  --build-arg "APP_BUILD_AT=$APP_BUILD_AT" \
+  --tag "ghcr.io/laratik/laratik-planner:$DEPLOY_SHA" \
+  --push .
+docker buildx build --platform linux/amd64 \
+  --build-arg "APP_VERSION=$DEPLOY_SHA" \
+  --build-arg "APP_BUILD_AT=$APP_BUILD_AT" \
+  --target migrator \
+  --tag "ghcr.io/laratik/laratik-planner-migrator:$DEPLOY_SHA" \
+  --push .
+docker buildx imagetools inspect "ghcr.io/laratik/laratik-planner:$DEPLOY_SHA"
+docker buildx imagetools inspect "ghcr.io/laratik/laratik-planner-migrator:$DEPLOY_SHA"
+```
+
+The VPS deploy account also needs read access to GHCR. Authenticate that
+account with the read-only package token using an interactive `docker login`
+before deployment; do not put the token in a command argument, source file, or
+shell history. The local operator machine then selects the exact source SHA on
+the VPS and runs its transactional deployment script:
+
+```bash
+ssh laratik-vps
+cd /opt/laratik-planner
+git status --short
+# Stop if the checkout has changes that need to be preserved.
+DEPLOY_SHA="<paste the full SHA printed on your local machine>"
+git fetch origin "$DEPLOY_SHA"
+git checkout --detach "$DEPLOY_SHA"
+./scripts/deploy.sh "$DEPLOY_SHA"
+exit
+```
+
+The script refuses a missing, short, or non-SHA tag. It runs the provider
+preflight, pulls both SHA-tagged images, creates and verifies a pre-migration
+backup, runs migrations, recreates the app, and checks readiness. If readiness
+fails, it restores the previous application image; database migrations are
+forward-only, so investigate the migration result and deploy a forward fix if
+needed. Confirm the release from outside the VPS:
+
+```bash
+curl -fsS https://planner.laratik.com/api/health
+```
+
+The returned `version` should match the first seven characters of `DEPLOY_SHA`,
+with `db: "up"` and `schema: "ready"`.
 
 If `pnpm` is missing on the VPS (fresh install), one-shot:
 `corepack enable && corepack prepare pnpm@10.10.0 --activate`.
@@ -173,12 +213,13 @@ image — no manual operator action is required for a health-check
 rollback. The migrator runs in a separate container and aborts the
 deploy on any non-zero exit; it never suppresses migration errors.
 
-For a manual rollback of a bad release that passed health but is
-otherwise broken, push a revert (or the last known-good commit) to
-`main` and let the automated pipeline re-apply the previous image.
-The Postgres schema is forward-only — Drizzle migrations are
-append-only, so reverting application code is safe as long as the
-revert's migration set has already been applied to the DB.
+For a manual rollback of a bad release that passed health but is otherwise
+broken, select the last known-good full SHA and invoke
+`./scripts/deploy.sh <last-known-good-full-sha>` from the VPS after confirming
+that both images exist. No workflow dispatch is needed. The Postgres schema is
+forward-only — Drizzle
+migrations are append-only, so reverting application code is safe only when
+the older binary is compatible with the migrations already applied.
 
 ## Backup
 
@@ -308,41 +349,17 @@ pnpm test:affected -- --since origin/main --layer browser
 PLAYWRIGHT_BASE_URL=http://localhost:3100 pnpm test:e2e:smoke
 ```
 
-### CI vs. local E2E
+### Local release verification
 
-The authoritative deploy-gate workflow is `.github/workflows/ci.yml`.
-It runs the complete unit/integration and release contract:
-
-- full unit, migration-drill, and integration suites — local hooks select
-  only the affected unit/integration checks for faster feedback;
-- `pnpm audit --prod` (zero critical/high production findings);
-- production build, Docker image build, a `/api/health` smoke
-  against the built image, **and the GHCR push** (app + migrator
-  with the `<sha>` and `latest` tags) — the single source of
-  the production image as of the 2026-08-28 single-build change;
-- SMTP cert probe (deploy-blocker);
-- workflow / Dockerfile / shell linters (actionlint + zizmor +
-  hadolint + shellcheck).
-
-Format, lint, and typecheck run in the local hooks. Local E2E is explicit:
-`pnpm test:affected -- --layer browser` selects affected Chromium contracts,
-while `pnpm test:e2e:release` runs the complete local browser and visual
-release-candidate matrix. `.github/workflows/advisory-quality.yml` runs the
-targeted Chromium check only on an explicit critical dispatch, against the
-exact selected SHA.
-
-The full 5-browser E2E matrix and visual matrix run nightly and through
-the release-candidate dispatch. Their artifacts and structured result
-reports are retained for diagnosis, but they never block the normal
-`main` deployment.
-
-The 2026-08-28 single-build change also removed the duplicate
-`next build` + `docker build` from `.github/workflows/deploy.yml`:
-CI's `build-smoke` job is now the single source of the GHCR push,
-and the deploy job just verifies the tag exists in the registry
-before SSHing to the VPS to pull + run migrations + restart. This
-shaves ~270s off every deploy (deploy.yml's `Build + push image`
-job ran for 4.5 min on the previous 8 successful deploys).
+The local machine is authoritative for review and release evidence. Run
+`pnpm verify`, the full local integration suite, and the migration drill for
+database changes. Run affected browser checks plus bilingual accessibility
+and visual checks for touched UI. A release candidate runs
+`pnpm test:e2e:release`. Before image publication, run the local production
+audit, Docker image startup/liveness smoke, SMTP certificate probe, and the
+applicable workflow/container/shell linters. GitHub Actions are legacy
+maintenance tooling and are not part of the normal release path; details are
+in ADR 0021.
 
 #### Local E2E recipes
 
@@ -394,6 +411,9 @@ preserving the migration ledger, applies migrations before starting Playwright,
 and injects deterministic test-only `AUTH_SECRET`, `AGENCY_COOKIE_SECRET`,
 `AUTH_URL`, and `NEXTAUTH_URL` values. This is why a missing
 `TEST_DATABASE_URL` is a configuration error rather than a test skip.
+On non-CI hosts with at least 32 GiB of memory it also uses an 8 GiB Node heap
+for the dev server; set `LARATIK_E2E_MAX_OLD_SPACE_SIZE` in MiB to override it.
+An existing `NODE_OPTIONS` heap setting takes precedence.
 
 The affected runner is the normal development loop. It uses the Git working
 tree plus upstream changes, selects unit tests through Vitest's import graph,
@@ -402,18 +422,17 @@ Use `pnpm test:area <domain>` when you want to check one domain deliberately.
 Its browser path runs Chromium and only adds affected accessibility or visual
 selectors. Shared or unknown changes escalate to full relevant coverage.
 
-Pre-push runs affected unit and integration checks for the pushed commit range,
+Pre-push runs local unit and integration checks for the pushed commit range,
 not the staging index, so a normal push after committing cannot silently skip
 those checks. It does not run E2E. Run `pnpm test:affected -- --layer browser`
 for normal local browser feedback or `pnpm test:e2e:release` for a release
-candidate. `SKIP_INTEGRATION=1` and `git push --no-verify` remain explicit
-escape hatches, and CI remains authoritative.
+candidate. Hook skips require a documented reason; local evidence is the
+release authority.
 
 #### Local integration setup
 
-The pre-push hook selects affected integration tests on the pushed range.
-CI still runs the complete integration suite as the deploy-gate audit, so
-local selection is fast feedback and CI remains the authoritative result.
+The pre-push hook runs the configured local integration checks on the pushed
+range. Run the complete `pnpm test:integration` suite locally before release.
 
 The integration runner requires a disposable Postgres database that
 contains the substring `test` or `ci` in the URL
@@ -509,10 +528,14 @@ touchable.
 3. They do not bypass authorization in production — they simply do not exist.
 4. They never accept or return secrets; the seed uses the same Drizzle inserts the real bootstrap path uses.
 
-### Running on CI
+### Legacy GitHub Actions workflows
 
-`ci.yml` is the only workflow that runs on every push and PR to
-`main`. The 5-browser matrix and the visual run are local-only:
+GitHub Actions are not part of the normal branch review or release process.
+Do not dispatch these workflows for routine feature checks, image publication,
+deployment, or release tagging. Use the local commands and exact-SHA evidence
+described in the testing strategy and this runbook. The workflow files remain
+available only for exceptional maintenance or recovery and must not be treated
+as the authoritative release record.
 
 ```yaml
 # .github/workflows/ci.yml  (deploy-gate, post 2026-08-26 plan)
@@ -536,30 +559,24 @@ pnpm test:affected -- --layer browser
 pnpm test:e2e:release
 ```
 
-The deploy workflow (`deploy.yml`) fires on `workflow_run: CI success`
-and SSHes to the VPS for the production rollout. The deploy
-workflow does not re-run any test against the VPS. See the **CI vs.
-local E2E** section above and
-[`../testing/strategy.md`](../testing/strategy.md) (Release gates)
-for the full contract.
+The workflow definitions describe the previous hosted release path. ADR 0021,
+the **Local review, release, and deployment** section above, and
+[`../testing/strategy.md`](../testing/strategy.md) define the current contract.
 
 ## Patching a dependency advisory
 
-A published advisory blocks the deploy gate (`pnpm audit --prod --audit-level
-high` in `ci.yml`) as soon as the next commit is pushed, even if that commit
-touched none of the affected code. This is expected: the advisory database
-changes on someone else's schedule.
+A published production advisory blocks release until the local audit
+(`pnpm audit --prod --audit-level high`) is clean, even if the affected
+dependency is outside the current code change.
 
 **"Fixed the audit" is a snapshot, not a state.** Advisories keep arriving —
 patching one batch only buys time until the next lands. Never record an audit
-as clean and stop; re-run the exact CI command immediately before pushing, and
-treat the nightly issue as the standing source of truth.
+as clean and stop; re-run the exact CI command before deployment and review
+the advisory issue before dispatching a release.
 
-**Who sees it first.** The nightly `Advisory quality` workflow runs the audit at
-`06:00 UTC` and opens an issue instead of failing the deploy, so an advisory
-normally surfaces _before_ it can block a push. If you are reading this because a
-push was blocked, the nightly issue should be open too — check it, because it
-lists the advisory links and the patched ranges.
+**Who sees it first.** The release operator runs the audit locally and reviews
+current advisories before production deployment. GitHub Actions are not
+required for this check.
 
 **Check whether the package is direct or transitive first.** The fix differs:
 
@@ -623,7 +640,7 @@ pnpm test:unit
 | `db: down` in `/api/health`                                         | `docker compose logs postgres`                     | Check `pgdata` volume, `POSTGRES_PASSWORD` in `.env`                                                                           |
 | `ok: false` in `/api/health`                                        | Same as above                                      |                                                                                                                                |
 | Health check passes but UI is broken                                | `docker compose logs --tail=200 app`               | Likely a code issue — pull logs and diagnose                                                                                   |
-| Stuck deploy                                                        | `docker compose ps` + `docker image ls`            | `docker image prune -f`, then `./scripts/deploy.sh` again                                                                      |
+| Stuck deploy                                                        | `docker compose ps` + `docker image ls`            | Diagnose the failed step first; retry only with the same verified full SHA using `./scripts/deploy.sh <full-sha>`              |
 | Out of disk                                                         | `df -h /`                                          | `disk-cleanup.sh apply` (see above)                                                                                            |
 | Magic link not arriving                                             | Mailcow queue: `https://mail.laratik.com/` → Queue | Check `SMTP_USER` + `SMTP_PASSWORD`, then `docker compose logs app                                                             | grep email` |
 | Google OAuth fails                                                  | Google Cloud Console → OAuth client                | Check `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`, redirect URI must be `https://planner.laratik.com/api/auth/callback/google` |
@@ -637,7 +654,7 @@ We hit this on **2026-08-22** when the Let's Encrypt E7 cert for `mail.laratik.c
 
 ### Health check (gating)
 
-The CI job [`check-smtp-cert`](../../.github/workflows/ci.yml) runs `scripts/vps/check-smtp-cert.sh` against `mail.laratik.com:465` on every push to `main`, every PR, and once per day via `cron: "0 6 * * *"`. Exit codes:
+The CI job [`check-smtp-cert`](../../.github/workflows/ci.yml) runs `scripts/vps/check-smtp-cert.sh` against `mail.laratik.com:465` only when CI is manually dispatched. Exit codes:
 
 | Exit | Days remaining | Behavior                                                                                 |
 | ---- | -------------- | ---------------------------------------------------------------------------------------- |
@@ -944,32 +961,57 @@ sudo /opt/laratik-planner/scripts/vps/outbox-dispatch.sh   # one-off manual run
 
 The expected response shape is `{ "ok": true, "processed": <int>, "durationMs": <int> }`. A non-JSON response or an HTTP non-2xx indicates the secret rotated, the route is down, or the dispatcher threw. The in-app dispatcher writes failures to `outbox_events.last_error` / `attempt_count`; the email dispatcher writes `email_last_error` / `email_attempt_count` and per-recipient records in `notification_email_delivery` so a stuck address is observable without resending successful recipients.
 
+## Content deadline reminders
+
+`GET|POST /api/cron/deadline-reminders` scans open content scheduled within
+the next 24 hours and queues the localized deadline event through the shared
+notification outbox. It uses the same `CRON_SECRET` bearer check as the other
+cron routes. A transaction-scoped PostgreSQL advisory lock prevents overlapping
+ticks from creating duplicate events; an existing deadline event for the item
+within 24 hours is also treated as already queued. The owner and designer each
+receive one event, with duplicate assignee IDs collapsed.
+
+`scripts/vps/install-cron.sh` installs the job hourly at minute 15 UTC. The
+caller reads `CRON_SECRET` from `/opt/laratik-planner/.env`, posts to the local
+route with a 60-second timeout, and never prints the secret. To validate the
+installed chain on the VPS:
+
+```bash
+grep deadline-reminders /etc/cron.d/laratik-planner
+sudo /opt/laratik-planner/scripts/vps/deadline-reminders.sh
+tail -n 40 /var/log/laratik-planner-deadline-reminders.log
+```
+
+The response reports `{ ok, scanned, enqueued, skipped, durationMs }`. A
+`skipped` result means another instance holds the scheduler lock; it is a
+successful no-op because that instance is processing the same candidate set.
+
 ### Why a 1-minute cadence (not 5 or 15)
 
 The bell counter is the user's primary signal that something needs their attention. Five minutes of latency on a `comment_created` mention would feel broken on a chatty day. The route is cheap — at most 50 single-row transactions per tick, no external calls in v1 — so the cost of a 1-minute cadence is negligible against the cost of "the bell doesn't update for 5 minutes". The integration test `tests/integration/discussions.test.ts` exercises the same `dispatchOutboxOnce` entry point directly, so the worker code is covered without depending on the cron.
 
 ## Repository protection (GitHub Settings)
 
-The deploy chain is gated in two places: the `ci.yml` workflow (which is code) and the GitHub repository's protection rules (which are configured in the GH UI, not in code). This section is the canonical reference so a new maintainer can reproduce the production posture from a fresh checkout + the runbook.
+GitHub protects the `main` source history and records the independent PR
+review. Verification and deployment are local per ADR 0021; do not require a
+GitHub Actions status check for merge or deployment.
 
-| Surface                  | Setting                                                               | Where                                      |
-| ------------------------ | --------------------------------------------------------------------- | ------------------------------------------ |
-| `main` branch            | Require CI green (`.github/workflows/ci.yml`) before merge            | Branch protection rules                    |
-| `main` branch            | Require 1 review from `@LaraTik/laratik-planner-maintainers`          | Branch protection rules                    |
-| `main` branch            | Require linear history (no merge commits)                             | Branch protection rules                    |
-| `main` branch            | No force-push                                                         | Branch protection rules                    |
-| `main` branch            | No branch deletion                                                    | Branch protection rules                    |
-| `main` branch            | Require CODEOWNERS review on touched paths (via `.github/CODEOWNERS`) | Branch protection rules                    |
-| `production` environment | Require 1 approval from `@LaraTik/laratik-planner-maintainers`        | Environments → production                  |
-| `production` environment | No wait timer (deploys are time-bounded; the CI gate is the wait)     | Environments → production                  |
-| `production` environment | Restrict to `main` branch only                                        | Environments → production                  |
-| Repository secrets       | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_PAT`, `GHCR_USER`        | Settings → Secrets and variables → Actions |
-| Secret rotation          | GHCR PAT, VPS SSH key: every 90 days (see `OPS-001` evidence)         | Calendar reminder                          |
-| Workflow file            | Top-level `permissions: contents: read` (default deny)                | All 3 workflows                            |
-| `deploy.yml` job         | `permissions: contents: read, packages: read`                         | `deploy.yml` deploy job                    |
-| `lint-meta` job          | Required for deploy (errors fail the gate)                            | `ci.yml` lint-meta job                     |
+| Surface                  | Setting                                                                                      | Where                                      |
+| ------------------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `main` branch            | Require 1 review from `@LaraTik/laratik-planner-maintainers`                                 | Branch protection rules                    |
+| `main` branch            | Require linear history (no merge commits)                                                    | Branch protection rules                    |
+| `main` branch            | No force-push                                                                                | Branch protection rules                    |
+| `main` branch            | No branch deletion                                                                           | Branch protection rules                    |
+| `main` branch            | Require CODEOWNERS review on touched paths (via `.github/CODEOWNERS`)                        | Branch protection rules                    |
+| `main` branch            | No required Actions status checks; exact-SHA local evidence is reviewed before merge         | Branch protection rules                    |
+| `production` environment | Not used by the local deployment path; retain only for legacy workflow recovery              | Environments → production                  |
+| Repository secrets       | Not required for the local release path; legacy workflow secrets may be removed after review | Settings → Secrets and variables → Actions |
+| Secret rotation          | GHCR PAT, VPS SSH key: every 90 days (see `OPS-001` evidence)                                | Calendar reminder                          |
+| Workflow file            | Top-level `permissions: contents: read` (default deny; legacy workflows only)                | GitHub Actions configuration               |
+| `deploy.yml` job         | Legacy recovery tooling; not used for routine releases                                       | `deploy.yml` deploy job                    |
+| `lint-meta` job          | Run applicable linters locally before release                                                | `ci.yml` lint-meta job definitions         |
 
-These rules are set in the GH web UI; the in-repo artifacts (`CODEOWNERS`, `dependabot.yml`, `zizmor.yml`, top-level `permissions:` blocks) only enforce what they can. The branch-protection + environment-protection + secret-rotation rules must be configured manually on a fresh repo.
+These rules are set in the GH web UI; the in-repo artifacts (`CODEOWNERS`, `dependabot.yml`, `zizmor.yml`, top-level `permissions:` blocks) only enforce what they can. Configure branch review/history protection and secret handling on a fresh repo. The production Actions environment is legacy because normal deployment starts locally.
 
 ### Code-side enforcement already in place
 

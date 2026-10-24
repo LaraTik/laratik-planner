@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
-import { archiveMediaFolder, MediaPermissionError, renameMediaFolder } from "@/lib/media/service";
+import { archiveMediaFolder, renameMediaFolder } from "@/features/media/server";
+import { MediaPermissionError } from "@/features/media/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

@@ -14,7 +14,7 @@ import {
   parseAnalyticsSelection,
   type ComparisonView,
   type AnalyticsDashboardChannel,
-} from "@/lib/social/analytics-dashboard";
+} from "@/features/social-analytics";
 import {
   calculateGrowth,
   seriesInWindow,

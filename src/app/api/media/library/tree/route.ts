@@ -2,14 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
-import { listMediaFoldersTree, MediaPermissionError } from "@/lib/media/service";
+import { listMediaFoldersTree, MediaPermissionError } from "@/features/media/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const Query = z.object({
-  agencyId: z.string().uuid(),
-  workspaceId: z.string().uuid(),
+  agencyId: z.string().guid(),
+  workspaceId: z.string().guid(),
 });
 
 /**

@@ -140,14 +140,18 @@ describe("structural: activeAgencyId() removed from non-bootstrap callsites", ()
     expect(src).toMatch(/resolveActiveAgencyContext\s*\(\s*\{\s*actor\s*\}\s*\)/);
   });
 
-  it("w/[slug]/ai-settings + w/[slug]/planning/[id] use resolveActiveAgencyContext", () => {
+  it("workspace AI settings use URL workspace scope and planning detail uses active agency context", () => {
     const a = readSrc("app/(app)/app/a/[agencySlug]/w/[slug]/ai-settings/page.tsx");
     const b = readSrc("app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/page.tsx");
-    for (const src of [a, b]) {
-      expect(src).not.toMatch(/activeAgencyId\s*\(\s*\)/);
-      expect(src).toMatch(/currentActor\s*\(\s*\)/);
-      expect(src).toMatch(/resolveActiveAgencyContext/);
-    }
+    expect(a).not.toMatch(/activeAgencyId\s*\(\s*\)/);
+    expect(a).toMatch(/currentActor\s*\(\s*\)/);
+    expect(a).toMatch(/getAccessibleWorkspaceAtPath\(actor,\s*agencySlug,\s*slug\)/);
+    expect(a).toMatch(/getWorkspaceAiSettings\(actor,\s*workspace\)/);
+    expect(a).not.toMatch(/resolveActiveAgencyContext/);
+
+    expect(b).not.toMatch(/activeAgencyId\s*\(\s*\)/);
+    expect(b).toMatch(/currentActor\s*\(\s*\)/);
+    expect(b).toMatch(/resolveActiveAgencyContext/);
   });
 
   it("api/ai/generate/route.ts uses resolveActiveAgencyContext + currentActor", () => {

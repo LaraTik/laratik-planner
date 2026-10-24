@@ -27,6 +27,7 @@ type DrizzleState = {
   deleteCalls: { table: unknown; where: unknown }[];
   executeCalls: { sql: unknown }[];
   transactionCalls: number;
+  rowLockModes: string[];
 };
 
 function thenableProxy(target: Record<string, unknown>): Record<string, unknown> {
@@ -50,7 +51,10 @@ function makeSelectChain(): Record<string, unknown> {
   chain.innerJoin = vi.fn(() => chain);
   chain.where = vi.fn(() => thenableProxy(chain));
   chain.orderBy = vi.fn(() => thenableProxy(chain));
-  chain.for = vi.fn(() => chain);
+  chain.for = vi.fn((mode: string) => {
+    state.rowLockModes.push(mode);
+    return chain;
+  });
   chain.limit = vi.fn(() => {
     const rows = state.selectResults.shift() ?? [];
     return Promise.resolve(rows);
@@ -95,7 +99,7 @@ const executeFn = vi.fn((sqlArg: unknown) => {
 const transactionFn = vi.fn(async (cb: (tx: Record<string, unknown>) => Promise<unknown>) => {
   state.transactionCalls += 1;
   const txSelect = vi.fn(() => makeSelectChain());
-  const txInsert = vi.fn(() => insertChain);
+  const txInsert = vi.fn(() => dbMock.insert());
   const txUpdate = vi.fn(() => updateChain);
   const txApi = {
     select: txSelect,
@@ -148,6 +152,7 @@ beforeEach(() => {
     deleteCalls: [],
     executeCalls: [],
     transactionCalls: 0,
+    rowLockModes: [],
   };
   policyMock.hasWorkspaceRole.mockReset();
   policyMock.hasWorkspaceRole.mockResolvedValue(true);
@@ -192,6 +197,7 @@ describe("createCampaign", () => {
     state.insertReturningIds.push({ id: "campaign-1" });
     const out = await createCampaign(actor, workspaceId, { name: "Test", status: "draft" });
     expect(out.id).toBe("campaign-1");
+    expect(state.transactionCalls).toBe(1);
     // The first insert is the campaign row, the second is the activity event.
     expect(state.insertCalls.length).toBe(2);
     const campaignInsert = state.insertCalls[0]!.values as Record<string, unknown>;
@@ -212,6 +218,8 @@ describe("archiveCampaign", () => {
   it("updates the row + writes an activity event", async () => {
     state.selectResults.push([{ id: "campaign-1", name: "Test", archivedAt: null }]);
     await archiveCampaign(actor, workspaceId, "campaign-1");
+    expect(state.transactionCalls).toBe(1);
+    expect(state.rowLockModes).toContain("update");
     const update = state.updateCalls[0]!;
     expect(update.set).toMatchObject({
       status: "archived",
@@ -227,7 +235,8 @@ describe("archiveCampaign", () => {
 });
 
 // ─── pillars ──────────────────────────────────────────────────────────────
-const { CreatePillarSchema, createPillar, archivePillar } = await import("@/lib/planning/pillars");
+const { CreatePillarSchema, createPillar, archivePillar, restorePillar } =
+  await import("@/lib/planning/pillars");
 
 describe("CreatePillarSchema", () => {
   it("accepts a name", () => {
@@ -239,10 +248,17 @@ describe("CreatePillarSchema", () => {
 });
 
 describe("createPillar", () => {
+  it("requires workspace_manager or content_planner", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValueOnce(false);
+    await expect(createPillar(actor, workspaceId, { name: "Product" })).rejects.toThrow(
+      /Permission denied/,
+    );
+  });
   it("inserts the pillar row + activity", async () => {
     state.insertReturningIds.push({ id: "pillar-1" });
     const out = await createPillar(actor, workspaceId, { name: "Product" });
     expect(out.id).toBe("pillar-1");
+    expect(state.transactionCalls).toBe(1);
     expect(state.insertCalls[0]!.values).toMatchObject({
       name: "Product",
       workspaceId,
@@ -275,7 +291,23 @@ describe("archivePillar", () => {
   it("is a no-op when already archived", async () => {
     state.selectResults.push([{ id: "p-1", name: "X", archivedAt: new Date() }]);
     await archivePillar(actor, workspaceId, "p-1");
+    expect(state.transactionCalls).toBe(1);
+    expect(state.rowLockModes).toContain("update");
     expect(state.updateCalls.length).toBe(0);
+  });
+});
+
+describe("restorePillar", () => {
+  it("restores the row and logs the event within a locked transaction", async () => {
+    state.selectResults.push([{ id: "p-1", name: "X", archivedAt: new Date() }]);
+    await restorePillar(actor, workspaceId, "p-1");
+    expect(state.transactionCalls).toBe(1);
+    expect(state.rowLockModes).toContain("update");
+    expect(state.updateCalls[0]!.set).toMatchObject({ archivedAt: null });
+    expect(state.insertCalls[state.insertCalls.length - 1]!.values).toMatchObject({
+      kind: "update",
+      summary: 'Restored pillar "X"',
+    });
   });
 });
 
@@ -295,6 +327,16 @@ describe("CreateTemplateSchema", () => {
 });
 
 describe("createTemplate", () => {
+  it("requires workspace_manager or content_planner", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValueOnce(false);
+    await expect(
+      createTemplate(actor, workspaceId, {
+        name: "Quote card",
+        format: "static_post",
+        defaultChannelIds: [],
+      }),
+    ).rejects.toThrow(/Permission denied/);
+  });
   it("inserts the template row", async () => {
     state.insertReturningIds.push({ id: "tpl-1" });
     const out = await createTemplate(actor, workspaceId, {
@@ -303,6 +345,7 @@ describe("createTemplate", () => {
       defaultChannelIds: [],
     });
     expect(out.id).toBe("tpl-1");
+    expect(state.transactionCalls).toBe(1);
     const values = state.insertCalls[0]!.values as Record<string, unknown>;
     expect(values["name"]).toBe("Quote card");
     expect(values["format"]).toBe("static_post");
@@ -314,6 +357,8 @@ describe("archiveTemplate", () => {
   it("updates the row to archived", async () => {
     state.selectResults.push([{ id: "tpl-1", name: "Quote card", archivedAt: null }]);
     await archiveTemplate(actor, workspaceId, "tpl-1");
+    expect(state.transactionCalls).toBe(1);
+    expect(state.rowLockModes).toContain("update");
     expect(state.updateCalls[0]!.set).toMatchObject({ archivedAt: expect.any(Date) });
   });
 });

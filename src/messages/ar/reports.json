@@ -29,6 +29,16 @@
   "generateCta": "إنشاء PDF",
   "downloadCta": "تنزيل PDF",
   "successReady": "التقرير {id} جاهز.",
+  "errors": {
+    "invalidInput": "تحقق من تفاصيل التقرير ثم أعد المحاولة.",
+    "templateUnavailable": "قالب التقرير هذا غير متاح.",
+    "signInRequired": "سجّل الدخول لإنشاء تقرير.",
+    "agencyUnavailable": "اختر وكالة نشطة ثم أعد المحاولة.",
+    "agencyAdminRequired": "يمكن لمديري الوكالة فقط إنشاء التقارير.",
+    "selectionChanged": "تغيّر تحديد التقرير. حدّث الصفحة ثم أعد المحاولة.",
+    "invalidDateRange": "اختر نطاقاً زمنياً صالحاً.",
+    "generationFailed": "تعذّر إنشاء التقرير. أعد المحاولة."
+  },
   "historyTitle": "التقارير الأخيرة",
   "historyBlurb": "آخر 100 تقرير أنشأها مدراء هذه الوكالة. يتم تدوير التقارير القديمة تلقائيًا.",
   "historyEmpty": "لا توجد تقارير بعد",

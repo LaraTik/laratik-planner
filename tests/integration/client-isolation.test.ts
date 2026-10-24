@@ -8,8 +8,8 @@ process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
 describe("client workspace isolation", () => {
   let getAccessibleWorkspace: typeof import("@/lib/workspaces/context").getAccessibleWorkspace;
   let getClientWorkspace: typeof import("@/lib/workspaces/context").getClientWorkspace;
-  let getContentItem: typeof import("@/lib/content/service").getContentItem;
-  let listWorkspaceContent: typeof import("@/lib/content/service").listWorkspaceContent;
+  let getContentItem: typeof import("@/features/content/server").getContentItem;
+  let listWorkspaceContent: typeof import("@/features/content/server").listWorkspaceContent;
   let updateWorkspaceSettings: typeof import("@/lib/workspaces/settings-service").updateWorkspaceSettings;
 
   let workspaceId: string;
@@ -20,7 +20,7 @@ describe("client workspace isolation", () => {
 
   beforeAll(async () => {
     ({ getAccessibleWorkspace, getClientWorkspace } = await import("@/lib/workspaces/context"));
-    ({ getContentItem, listWorkspaceContent } = await import("@/lib/content/service"));
+    ({ getContentItem, listWorkspaceContent } = await import("@/features/content/server"));
     ({ updateWorkspaceSettings } = await import("@/lib/workspaces/settings-service"));
   });
 

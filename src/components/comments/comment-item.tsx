@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { CheckCircle, Reply } from "lucide-react";
-import { resolveCommentAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import { useLocaleCode } from "@/components/i18n/locale-provider";
 import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
 import { LinkifyText } from "@/components/ui/linkify-text";
@@ -42,6 +41,11 @@ export type CommentRoleFlags = {
 };
 
 export interface CommentItemProps {
+  onResolve: (input: {
+    workspaceSlug: string;
+    commentId: string;
+    resolved: boolean;
+  }) => Promise<{ error?: string; ok?: true }>;
   comment: CommentRecord;
   workspaceSlug: string;
   currentUserId: string;
@@ -68,6 +72,7 @@ export interface CommentItemProps {
  * new surface that lists comments.
  */
 export function CommentItem({
+  onResolve,
   comment: c,
   workspaceSlug,
   currentUserId,
@@ -143,7 +148,7 @@ export function CommentItem({
             {canResolve ? (
               <form
                 action={async () => {
-                  const result = await resolveCommentAction({
+                  const result = await onResolve({
                     workspaceSlug,
                     commentId: c.id,
                     resolved: !c.resolvedAt,

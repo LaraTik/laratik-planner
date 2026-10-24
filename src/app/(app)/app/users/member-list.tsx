@@ -200,9 +200,11 @@ export function MemberList({
                           );
                         })}
                         {assignedWorkspaceIds.length > 3 ? (
-                          <Badge variant="default" className="font-normal">
-                            +{assignedWorkspaceIds.length - 3}
-                          </Badge>
+                          <li>
+                            <Badge variant="default" className="font-normal">
+                              +{assignedWorkspaceIds.length - 3}
+                            </Badge>
+                          </li>
                         ) : null}
                       </ul>
                     ) : m.isAgencyAdmin && active ? (
@@ -247,6 +249,12 @@ export function MemberList({
                           setError(null);
                           const result = await toggleDeactivationAction(m.id, active);
                           if ("error" in result && result.error) setError(result.error);
+                          else if (
+                            "errorCode" in result &&
+                            result.errorCode === "reactivate_failed"
+                          ) {
+                            setError(t("users.memberList.reactivateFailed"));
+                          }
                         });
                       }}
                       aria-label={

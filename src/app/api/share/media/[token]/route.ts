@@ -1,8 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
-import { fetchStorageObject } from "@/lib/storage/read-service";
-import { downloadFilename } from "@/lib/media/contract";
-import { publicMediaAssetForToken } from "@/lib/media/service";
+import { publicMediaAssetForToken, publicShareAssetResponse } from "@/features/media/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -43,35 +41,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
 
   const row = await publicMediaAssetForToken(token);
   if (!row) return unavailable();
-  const remote = await fetchStorageObject({
-    agencyId: row.asset.agencyId,
-    workspaceId: row.asset.ownerWorkspaceId,
-    objectId: row.object.id,
-    expiresInSeconds: 60,
-    ...(req.headers.get("range") ? { headers: { Range: req.headers.get("range")! } } : {}),
-  });
-  if (!remote) return unavailable();
-
-  const download = req.nextUrl.searchParams.get("download") === "1";
-  const headers = new Headers({
-    "Content-Type": row.object.mimeType,
-    "Cache-Control": "no-store, max-age=0",
-    "X-Content-Type-Options": "nosniff",
-    "X-Robots-Tag": "noindex, nofollow, noarchive",
-    "Content-Security-Policy": "default-src 'none'",
-    "Content-Disposition": download
-      ? `attachment; filename*=UTF-8''${encodeURIComponent(downloadFilename(row.asset.title, row.object.originalName, row.object.mimeType))}`
-      : "inline",
-  });
-  for (const name of [
-    "content-length",
-    "content-range",
-    "accept-ranges",
-    "etag",
-    "last-modified",
-  ]) {
-    const value = remote.headers.get(name);
-    if (value) headers.set(name, value);
-  }
-  return new NextResponse(remote.body, { status: remote.status, headers });
+  const response = await publicShareAssetResponse(req, row);
+  return response ?? unavailable();
 }

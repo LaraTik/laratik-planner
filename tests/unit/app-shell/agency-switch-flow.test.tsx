@@ -59,11 +59,39 @@ vi.mock("@/lib/auth/agency-actions", () => ({
 function makeProps(agencyId: string, agencyName: string) {
   return {
     user: { name: "Lara", isAdmin: true },
-    workspaces: [{ id: `ws-${agencyId}-1`, name: `${agencyName} WS1`, slug: `ws-${agencyId}-1` }],
+    workspaces: [
+      {
+        id: `ws-${agencyId}-1`,
+        name: `${agencyName} WS1`,
+        slug: `ws-${agencyId}-1`,
+        agencySlug: agencyName.toLowerCase().replaceAll(" ", "-"),
+      },
+    ],
+    agencySwitcher: {
+      active: {
+        id: agencyId,
+        name: agencyName,
+        slug: agencyName.toLowerCase().replaceAll(" ", "-"),
+        isAdmin: true,
+      },
+      options: [
+        {
+          id: agencyId,
+          name: agencyName,
+          slug: agencyName.toLowerCase().replaceAll(" ", "-"),
+          isAdmin: true,
+        },
+      ],
+    },
     workspaceAccess: { [`ws-${agencyId}-1`]: "internal" as const },
     workspaceCanCreateContent: { [`ws-${agencyId}-1`]: true },
     workspaceSwitcherOptions: [
-      { id: `ws-${agencyId}-1`, name: `${agencyName} WS1`, slug: `ws-${agencyId}-1` },
+      {
+        id: `ws-${agencyId}-1`,
+        name: `${agencyName} WS1`,
+        slug: `ws-${agencyId}-1`,
+        agencySlug: agencyName.toLowerCase().replaceAll(" ", "-"),
+      },
     ],
     canCreateWorkspace: true,
     platformAccess: {

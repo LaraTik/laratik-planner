@@ -81,10 +81,15 @@ export function InvitationList({
                   });
                   start(async () => {
                     const result = await resendInviteAction(inv.id);
-                    if (result.error) {
+                    if (result.error || result.errorCode) {
                       setRowMessages((m) => ({
                         ...m,
-                        [inv.id]: { kind: "error", text: result.error! },
+                        [inv.id]: {
+                          kind: "error",
+                          text: result.errorCode
+                            ? t(`users.invitationList.errors.${result.errorCode}`)
+                            : result.error!,
+                        },
                       }));
                     } else {
                       setRowMessages((m) => ({
@@ -111,10 +116,15 @@ export function InvitationList({
                   });
                   start(async () => {
                     const result = await revokeInviteAction(inv.id);
-                    if (result.error) {
+                    if (result.error || result.errorCode) {
                       setRowMessages((m) => ({
                         ...m,
-                        [inv.id]: { kind: "error", text: result.error! },
+                        [inv.id]: {
+                          kind: "error",
+                          text: result.errorCode
+                            ? t(`users.invitationList.errors.${result.errorCode}`)
+                            : result.error!,
+                        },
                       }));
                     } else {
                       setRowMessages((m) => ({

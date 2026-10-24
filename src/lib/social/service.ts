@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { securityAuditEvents, socialConnections } from "@/lib/db/schema";
 import { isAgencyAdmin, type Actor } from "@/lib/auth/policy";
 import { captureError } from "@/lib/observability/sentry";
+import { logError } from "@/lib/observability/logger";
 import {
   DekAlreadyEnabledError,
   DekNotEnabledError,
@@ -73,6 +74,20 @@ export class SocialServiceError extends Error {
   }
 }
 
+/** Keep expected domain copy while preventing unknown exceptions from crossing
+ * the API or server-action boundary. The body shape matches existing callers.
+ */
+export function toSocialFailureResponse(err: unknown) {
+  if (err instanceof SocialServiceError) {
+    return {
+      body: { error: err.message, code: err.code },
+      status: err.status,
+    };
+  }
+  logError("social.unexpected_failure", { err });
+  return { body: { error: "Unexpected error" }, status: 500 };
+}
+
 /**
  * Map a key-management error to a SocialServiceError. Returns the
  * error so the caller can `throw` it.
@@ -107,9 +122,10 @@ function translateKeyManagementError(err: unknown): SocialServiceError {
       { code: err.code },
     );
   }
+  logError("social.key_management_failed", { err });
   return new SocialServiceError(
     "social.dek-rotation-failed",
-    err instanceof Error ? err.message : "Unknown error",
+    "Unable to complete the social encryption-key operation.",
     500,
   );
 }

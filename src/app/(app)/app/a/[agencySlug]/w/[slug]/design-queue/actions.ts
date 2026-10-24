@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth/config";
-import { bulkArchiveContentItems, BulkArchiveSchema } from "@/lib/content/service";
+import { PermissionDeniedError } from "@/lib/auth/policy";
+import { logError } from "@/lib/observability/logger";
+import { bulkArchiveContentItems, BulkArchiveSchema } from "@/features/content/server";
 
 /**
  * Design-queue bulk actions (FEAT-14, GAP-FULL-REVIEW-2026-08-25).
@@ -15,26 +17,21 @@ import { bulkArchiveContentItems, BulkArchiveSchema } from "@/lib/content/servic
  * selection and re-validates the schema + role gate.
  */
 
-async function requireSession() {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error("Not signed in");
-  return { id: session.user.id };
-}
+export type BulkArchiveDesignQueueErrorCode =
+  "unauthenticated" | "invalidSelection" | "forbidden" | "failed";
 
-export async function bulkArchiveDesignQueueAction(input: {
-  workspaceId: string;
-  contentItemIds: string[];
-}) {
-  const actor = await requireSession();
+export async function bulkArchiveDesignQueueAction(input: unknown) {
+  const session = await auth();
+  if (!session?.user?.id) return { errorCode: "unauthenticated" as const };
   const parsed = BulkArchiveSchema.safeParse(input);
-  if (!parsed.success) {
-    return { error: parsed.error.issues.map((i) => i.message).join("; ") };
-  }
+  if (!parsed.success) return { errorCode: "invalidSelection" as const };
   try {
-    const result = await bulkArchiveContentItems(actor, parsed.data);
+    const result = await bulkArchiveContentItems({ id: session.user.id }, parsed.data);
     revalidatePath(`/app`);
     return { ok: true, ...result };
   } catch (err) {
-    return { error: err instanceof Error ? err.message : "Bulk archive failed" };
+    if (err instanceof PermissionDeniedError) return { errorCode: "forbidden" as const };
+    logError("design_queue.bulk_archive_failed", { err, workspaceId: parsed.data.workspaceId });
+    return { errorCode: "failed" as const };
   }
 }

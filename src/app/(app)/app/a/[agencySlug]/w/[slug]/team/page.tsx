@@ -1,7 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import {
   Clock,
   Filter as FilterIcon,
@@ -354,13 +354,8 @@ export default async function WorkspaceTeamPage({
             and(
               eq(securityAuditEvents.targetType, "user"),
               inArray(securityAuditEvents.targetId, Array.from(allMembers.keys())),
-              inArray(securityAuditEvents.action, [
-                "member_roles_update",
-                "member_promote_admin",
-                "member_demote_admin",
-                "member_deactivate",
-                "member_reactivate",
-              ]),
+              eq(securityAuditEvents.action, "member_roles_update"),
+              sql`${securityAuditEvents.metadata}->'workspaceIds' ? ${workspace.id}`,
             ),
           )
           .orderBy(desc(securityAuditEvents.createdAt))

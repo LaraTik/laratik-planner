@@ -2,27 +2,27 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CommandCenterRefresh } from "@/components/workspace/command-center-refresh";
-import { refreshWorkspaceSocialDataAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/actions";
 
 const refresh = vi.fn();
+const refreshAction = vi.fn(async (slug: string) => ({
+  success: true,
+  synced: slug === "studio" ? 1 : 0,
+  failed: 0,
+}));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh }),
 }));
 
-vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/actions", () => ({
-  refreshWorkspaceSocialDataAction: vi.fn(async () => ({ success: true, synced: 1, failed: 0 })),
-}));
-
 describe("CommandCenterRefresh", () => {
   it("runs the manager-only refresh action and reports a partial result", async () => {
     const user = userEvent.setup();
-    const action = vi.mocked(refreshWorkspaceSocialDataAction);
-    action.mockResolvedValueOnce({ success: false, synced: 1, failed: 1 });
+    refreshAction.mockResolvedValueOnce({ success: false, synced: 1, failed: 1 });
 
     render(
       <CommandCenterRefresh
         slug="studio"
+        refreshAction={refreshAction}
         labels={{
           refresh: "Refresh data",
           refreshing: "Refreshing…",
@@ -35,7 +35,7 @@ describe("CommandCenterRefresh", () => {
 
     await user.click(screen.getByTestId("command-center-refresh"));
 
-    expect(action).toHaveBeenCalledWith("studio");
+    expect(refreshAction).toHaveBeenCalledWith("studio");
     expect(await screen.findByRole("status")).toHaveTextContent(
       "Updated 1; 1 account(s) need attention",
     );

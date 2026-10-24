@@ -5,7 +5,7 @@ import {
   countUnreadNotifications,
   listNotificationsForUser,
   type NotificationRow,
-} from "@/lib/notifications/service";
+} from "@/lib/notifications/inbox";
 
 /**
  * R9 — cache the bell's two server reads.

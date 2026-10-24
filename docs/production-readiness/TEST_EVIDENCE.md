@@ -1,5 +1,1001 @@
 # Test and coverage evidence
 
+## Workspace AI Assistant — exact-code local release verification — 2026-10-24
+
+Exact clean application code SHA: `68a63d5a43773deb43e4e7773b3f543bd51fc923`.
+This is a validation-only code change requiring evidence-backed findings,
+recommendations, and proposed changes. It changes no database schema or
+migration. On this exact clean commit:
+
+| Check                             | Result                                                                                                                                                                                                                                                        |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                     | Pass: formatting, lint, typecheck, 617 unit files / 5,301 tests, and production build.                                                                                                                                                                        |
+| Full PostgreSQL integration suite | Pass: all 50 integration files, including Workspace Assistant 12/12, on disposable `planner_test`; no files skipped.                                                                                                                                          |
+| Release state                     | PR #44 is still open. Independent approval is not recorded on the PR. Full browser release coverage, MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback remain open. This evidence does not authorize merge or deployment. |
+
+The documentation-only synchronization commit that follows retains this
+application SHA as its code evidence. No application code or migration is
+changed by that documentation update.
+
+## Workspace AI Assistant — release candidate full local verification — 2026-10-24
+
+Exact clean application code SHA: `3c43f49b6e15bc131b62032536d28d665a340ac0`.
+The pre-push fallback on this SHA ran both complete local suites against the
+disposable `planner_test` database. It ran the full unit suite because the
+changed hook contract test had not yet been added to test ownership. The
+subsequent test-selection-only commit `7e7df4beb6cd9e809efb0fad42a7ac9ad91eea64`
+adds that ownership mapping; it does not change application runtime code or
+migrations.
+
+| Check                                | Result                                                                                                                                                                                                                                           |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm verify`                        | Pass: format, lint, typecheck, 617 unit files / 5,300 tests, and production build.                                                                                                                                                               |
+| Full PostgreSQL integration suite    | Pass on `planner_test`, including Workspace Assistant integration 12/12. No integration tests were skipped.                                                                                                                                      |
+| Focused test-selection mapping check | Pass on `7e7df4b`: architecture area, 4 files / 51 tests; no integration files selected.                                                                                                                                                         |
+| Release state                        | PR #44 remains open and requires independent approval. The full release browser matrix, MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback remain open. This evidence does not authorize merge or deployment. |
+
+## Workspace AI Assistant — incomplete provider usage reconciliation — 2026-10-24
+
+Exact clean code SHA: `8d6d92cf754e19ed00cf223a7c3722f7eb3ae1ab`.
+The tool orchestrator now returns token totals only when every provider round
+reports them. If a request fails after partial usage reports, the route uses
+the complete reservation for any dimension with incomplete reports, avoiding
+an unsupported refund of unknown provider usage.
+
+| Check                                                       | Result                                                                                                                                                                                                                                      |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Focused Assistant, tool orchestrator, and budget unit tests | Pass: 3 files / 49 tests.                                                                                                                                                                                                                   |
+| Targeted ESLint, Prettier, TypeScript                       | Pass.                                                                                                                                                                                                                                       |
+| Affected unit checks on push                                | Pass: 2 files / 30 tests.                                                                                                                                                                                                                   |
+| Affected PostgreSQL integration checks on push              | Pass: 7 files / 38 tests.                                                                                                                                                                                                                   |
+| Release state                                               | PR #44 remains open and needs independent approval. Full release browser matrix, MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback remain open. This checkpoint does not authorize merge or deployment. |
+
+## Workspace AI Assistant — incremental usage accounting and local test loop — 2026-10-24
+
+Exact clean code SHA: `c2ef7c4cb9cfde142b9868b9acf238347c2c53ee`.
+The local pre-push hook passed for this pushed range. It now runs affected
+core checks (unit and integration) and does not launch the full integration
+suite for each code push. The full suite remains a local release-candidate
+gate. The speed plan is documented in
+[`../operations/local-test-speed-plan.md`](../operations/local-test-speed-plan.md).
+
+| Check                                                           | Result                                                                                                                                                                                                                                                 |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Affected unit selection                                         | Pass: 27 files / 280 tests.                                                                                                                                                                                                                            |
+| Direct AI budget, tool orchestration, and Assistant route tests | Pass: 3 files / 47 tests.                                                                                                                                                                                                                              |
+| Affected PostgreSQL integration selection                       | Pass: 7 files / 38 tests, including incremental tool-round reservations.                                                                                                                                                                               |
+| Formatting and whitespace                                       | Pass: Prettier on changed source/docs/tests; `git diff --check` clean.                                                                                                                                                                                 |
+| Release state                                                   | PR #44 remains open and requires independent approval. Full cross-browser release matrix, MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback evidence remain open. Do not merge or deploy on this checkpoint alone. |
+
+## Workspace AI Assistant — local release policy and focused exact-code checks — 2026-10-24
+
+The release workflow policy is now explicit: feature-branch review and
+validation happen locally; all GitHub workflow jobs run only when manually
+dispatched from `main`. Normal changes use affected browser checks and require
+bilingual accessibility and visual evidence for touched screens. The full
+five-browser and visual matrix remains the release-candidate gate and applies
+to broad shared-surface changes. Database integration checks must not run
+concurrently with browser suites against the same disposable database.
+
+The application code tested below is commit
+`2aa393fa978f5faaceeb3d1b7b65df132b550107`; the focused runs occurred while
+the documentation-only branch head was `e626cff6`.
+
+| Command / check                            | Result                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Commit hook unit suite                     | Pass on `2aa393fa`: 617 files / 5,296 tests.                                                                                                                                                                                                                                                                                                                                                              |
+| Pre-push unit + integration gates          | Pass on `2aa393fa`: full local PostgreSQL `planner_test` integration suite completed before push; Workspace Assistant integration 12/12.                                                                                                                                                                                                                                                                  |
+| `actionlint` and Prettier checks           | Pass on workflow and documentation changes; `git diff --check` clean.                                                                                                                                                                                                                                                                                                                                     |
+| Focused Assistant browser checks           | Pass 8/8 on the isolated disposable database: Arabic RTL settings, skill governance/mobile, model preference, knowledge revisions, prompt library, reference resolution, streaming, and Arabic assistant controls.                                                                                                                                                                                        |
+| Assistant visual checks                    | Pass 3/3 suites: workspace AI settings Arabic RTL, agency AI settings Arabic RTL, and Workspace Assistant Arabic RTL; each covered five responsive viewports with snapshot and accessibility assertions.                                                                                                                                                                                                  |
+| Full browser release attempt               | Incomplete: 172 Chromium cases passed before the Next.js process exhausted its 16 GB heap; 42 planned cases did not run. Locale assertions observed during concurrent database use passed when rerun in isolation. No full-matrix pass is claimed.                                                                                                                                                        |
+| Focused five-project Assistant browser run | Chromium passed the 7 Assistant cases. Firefox launch failed before test execution on this macOS host: `sandbox_extension_issue_file_to_process: Operation not permitted`, followed by Playwright's 180-second launch timeout. No Firefox assertion result is claimed.                                                                                                                                    |
+| PR / release state                         | PR #44 is open with no independent review. GitHub `main` protection is active: PR required, one approval from someone other than the latest pusher, stale approvals dismissed, conversations resolved, linear history, and no force-push/delete. Main-only CI, MiniMax account/model/tool and privacy verification, separated-account UAT, production backup/rollback, and deployment remain outstanding. |
+
+### Migration drill — exact clean SHA `e8d779f2d757628fd309db9b24271b7533456e6c`
+
+Command: `TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test NODE_ENV=test pnpm migration-drill`.
+Result: pass on the disposable PostgreSQL 16 database, all five scenarios:
+from-zero migration (103/103), skipped-migration repair, in-place upgrade,
+backup/restore (103 ledger rows restored), and failed-migration abort. The
+drill drops and recreates only the guarded `planner_test` database.
+
+The focused checks demonstrate the changed Assistant experience. They do not
+replace the full release-candidate matrix or independent and external
+production-readiness gates. Do not merge or deploy on this evidence alone.
+
+## Local integration validation policy — 2026-10-24
+
+Policy change commit: `d8d5ecd8e8129ec2a3ae4ff0586ba63627748d88`.
+The GitHub deploy-gate workflow no longer runs the full integration suite.
+Code pushes run the full suite locally in the pre-push hook against the
+disposable PostgreSQL `planner_test` database; docs-only pushes do not need a
+database. The local suite remains a required release gate and has no
+`SKIP_INTEGRATION` bypass. GitHub CI still runs the migration drill, unit and
+static checks, security audit, and build/smoke gates.
+
+| Command / check                                                                                             | Result                                                                                                                                                                                                                                                                     |
+| ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                                                               | Pass on clean exact SHA `d8d5ecd8e8129ec2a3ae4ff0586ba63627748d88`: formatting, ESLint, strict TypeScript, 616 unit files / 5,295 tests, and production build.                                                                                                             |
+| Code-push pre-push validation                                                                               | Pass on exact SHA `d8d5ecd8e8129ec2a3ae4ff0586ba63627748d88`: full unit selection and the full disposable-Postgres integration suite completed before the push succeeded.                                                                                                  |
+| Code-push pre-push validation — current code SHA `f11f7bcf`                                                 | Pass — affected unit selection and the complete local integration suite exited 0 before push; includes MCP HTTP boundary (1/1) and Workspace Assistant integration (12/12).                                                                                                |
+| Workflow syntax / hook                                                                                      | Pass: `actionlint` on CI/deploy workflows; `sh -n .husky/pre-push`.                                                                                                                                                                                                        |
+| GitHub deploy-gate run — [40075013221](https://github.com/LaraTik/laratik-planner/actions/runs/40075013221) | Pass on exact SHA `339933a0cad10562e6f4c7ad5d171f09b1d58e6f`: unit, migration drill, audit, Docker app/migrator builds, health smoke, Trend sidecar, SMTP, and workflow linters. No full integration-test job or step ran. GHCR publication was skipped for the PR branch. |
+
+This changes where the full integration suite runs, not whether it is required.
+Do not merge or deploy without recorded local exact-SHA integration evidence
+and all other release gates below.
+
+## Workspace Assistant and remote MCP separation — 2026-10-24
+
+The in-app Assistant remains a separate, authenticated application feature.
+This change documents its conversation, prompt, knowledge, run, and proposal
+API surface in `docs/api/README.md`; it does not add a remote MCP tool, token
+scope, credential, or transport behavior. The remote MCP reference and
+evaluation catalog now state this boundary explicitly.
+
+| Command / check                                                                                                             | Result                                                                                                                                                                                                                           |
+| --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm exec vitest run tests/unit/workspace-assistant-mcp-boundary.test.ts tests/unit/community-production-contract.test.ts` | Pass — 5/5.                                                                                                                                                                                                                      |
+| `TEST_DATABASE_URL=… NODE_ENV=test pnpm test:integration tests/integration/mcp-http-smoke.test.ts`                          | Pass — authenticated initialize, tools/list, scoped tools/call, token revocation, and no Assistant-specific tool in the actual remote catalog (1/1).                                                                             |
+| Current PR-head full integration run                                                                                        | Pass on code SHA `f11f7bcf` through `.husky/pre-push` against disposable `planner_test`; the complete suite exited 0 before push. GitHub CI will be dispatched on the final evidence SHA and continues to omit full integration. |
+
+## Workspace AI Assistant release-gate follow-up — 2026-10-24
+
+Working-tree changes: corrected the platform-only redirect assertions to match
+`/app/platform/overview` and enlarged the sign-in remember checkbox to 24px so
+axe's WCAG 2.2 target-size check passes. These results are working-tree
+evidence; exact-clean-SHA CI and the full release matrix are still required.
+
+| Command / check                                                                                           | Result                                                                                                                                                                                                                                                                              |
+| --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Focused Chromium: `tests/e2e/a11y-routes.spec.ts` and `tests/e2e/a11y.spec.ts`                            | Pass — 49/49 on disposable PostgreSQL 16 `planner_test`, one worker.                                                                                                                                                                                                                |
+| `pnpm verify`                                                                                             | Pass — formatting, ESLint, strict TypeScript, 616 unit files / 5,295 tests, and production build.                                                                                                                                                                                   |
+| `TEST_DATABASE_URL=… CI=1 NODE_OPTIONS=--max-old-space-size=4096 pnpm test:e2e:release`                   | Not pass — stopped during the Chromium project's 299-case run after `/app/w/[slug]/planning` timed out at `page.goto` while Next.js logged a memory-threshold restart. The remaining Chromium cases, other browser projects, and visual matrix were not completed.                  |
+| Manual GitHub CI — [run 40067492020](https://github.com/LaraTik/laratik-planner/actions/runs/40067492020) | Pass on clean commit `b7698dbbf2fccbe5e26c8ba9c5321f192923be28`: format, lint, typecheck, unit, migration drill, integration, audit, Trend sidecar, SMTP, workflow linters, app/migrator Docker builds, and health smoke. GHCR image push skipped because the ref is the PR branch. |
+| Manual GitHub CI — [run 40069336694](https://github.com/LaraTik/laratik-planner/actions/runs/40069336694) | Pass on clean commit `0b3aa71f` with the same quality, migration, integration, audit, image-build, and health-smoke gates. GHCR image push skipped on the PR branch.                                                                                                                |
+| Independent review, MiniMax model/tool and privacy UAT, separated-account UAT, production backup/rollback | Open.                                                                                                                                                                                                                                                                               |
+
+The two deterministic failures seen during the earlier full run are fixed and
+covered by the successful focused Chromium suite. The broader rerun still
+reproduced a planning-route timeout during a server restart; do not merge or
+deploy until the full matrix and all other required release gates pass.
+
+## Workspace AI Assistant full browser attempt — 2026-10-24
+
+Code SHA under test: `149b5d643d18ca617aa7d4e197dfe9ed6c9fc0c4` (the current
+branch head `461e842b2fcee35b1fc2f05859b9fba23e78c5c1` adds readiness
+documentation only; no application code changed).
+
+| Command / check                                                                                           | Result                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TEST_DATABASE_URL=$TEST_DATABASE_URL CI=1 NODE_OPTIONS=--max-old-space-size=4096 pnpm test:e2e:release`  | Started against the isolated PostgreSQL 16 `planner_test` database and ran serially (`1 worker`, 299 planned cases). Manually stopped before completion after at least eight failures; this is not a passing release result.                                                                                                                                                |
+| Manual GitHub CI — [run 40064207664](https://github.com/LaraTik/laratik-planner/actions/runs/40064207664) | Pass on clean commit `82aef037d948a387aebea829962c1b730fff7efc`: formatting, lint, typecheck, unit, migration, integration, audit, Trend sidecar, SMTP, workflow linters, Docker app/migrator builds, and health smoke. GHCR publish correctly skipped on this PR branch.                                                                                                   |
+| Next.js dev server stability                                                                              | The dev server repeatedly logged that it was approaching its memory threshold and restarted. This caused route navigation timeouts and a `chrome-error` during unrelated E2E journeys.                                                                                                                                                                                      |
+| Other failures observed                                                                                   | The platform-only route test still expects `/app/platform` although the current route redirects to `/app/platform/overview`; `/signin` has an axe `target-size` violation on `#signin-remember`. Advertising reporting, agency switching, planning route, storage settings, not-found boundary, and content-flow tests also timed out or errored during server instability. |
+| Workspace Assistant focused Chromium                                                                      | Pass — 7/7 on the disposable database (recorded in the Workspace AI Assistant evidence below).                                                                                                                                                                                                                                                                              |
+| Full visual and cross-browser release matrix                                                              | Open — this interrupted run does not satisfy the gate.                                                                                                                                                                                                                                                                                                                      |
+
+The broad result confirms a release-suite stability and maintenance issue beyond
+the Assistant's focused journeys. Keep the feature unmerged and undeployed until
+the full required matrix passes, the independent review and external MiniMax
+gates are recorded, and production backup/rollback evidence is available.
+
+## Platform landing redirect — 2026-10-23
+
+Implementation SHA: `f8fa15d12ad78922fe4d6aa621837db38c60cd37` (clean at run; deployed).
+
+| Command / check                                                                                                | Result                                                                                                                                          |
+| -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                                                                  | Pass — formatting, lint, strict TypeScript, 606 unit files / 5,228 tests, and production build. Exit code 0.                                    |
+| Pre-push affected core checks                                                                                  | Pass — full unit suite and selected disposable-Postgres integration tests.                                                                      |
+| `pnpm test:e2e:isolated tests/e2e/platform-overview.spec.ts --project=chromium`                                | Pass — both authenticated platform overview gate journeys. Uses the disposable `planner_test` database.                                         |
+| `pnpm test:affected -- --layer browser`                                                                        | Browser suite could not start because `TEST_DATABASE_URL` was not exported; the focused Chromium suite above passed with the explicit test URL. |
+| Manual GitHub CI — [run 39962463524](https://github.com/LaraTik/laratik-planner/actions/runs/39962463524)      | Pass — format, lint, typecheck, unit, migration drill, integration, audit, workflow checks, Docker build, health smoke, and GHCR push.          |
+| Manual VPS deployment — [run 39966255430](https://github.com/LaraTik/laratik-planner/actions/runs/39966255430) | Pass — deployed this exact SHA; `/api/health` reports `f8fa15d`, DB and schema ready.                                                           |
+| Migration / persistence review                                                                                 | Not applicable — route fallback only; no schema or persistence changes.                                                                         |
+| Full browser matrix, visual review, independent review                                                         | Open.                                                                                                                                           |
+
+The architecture refactor `cd4ce270a5` changed the no-active-agency fallback in
+My Work and Workspaces from returning no content to redirecting to
+`/app/platform`. That path is a route prefix with no index page. The app shell
+allows platform administrators without tenant context, so they reached this
+invalid path. Both pages now redirect to the existing, permission-gated
+`/app/platform/overview` route. A regression guard covers both fallbacks.
+
+## Dependency security remediation — 2026-10-23
+
+Implementation SHA: `9fc2319a020de25d0de03fed7bbfed49778e7c26` (clean at run).
+
+| Command / check                        | Result                                                                                                                                        |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm audit --prod --audit-level high` | Pass — no high or critical production advisories; two moderate findings remain. Exit code 0.                                                  |
+| `pnpm verify`                          | Pass on this clean SHA — formatting, lint, strict TypeScript, 606 unit files / 5,226 tests, and Next.js 16.4.2 production build. Exit code 0. |
+| Exact-commit GitHub CI                 | Pending after push. The prior XLSX SHA failed only the dependency audit, so its image job was skipped.                                        |
+| Manual deployment                      | Pending a successful exact-commit CI run and published SHA image.                                                                             |
+
+The release audit found six production findings in Next.js 16.3.8 and Sentry
+10.70.0 (three critical, one high, two moderate). Next.js 16.4.2 and Sentry
+10.76.2 now satisfy the reported patched floors. No application data or
+database schema changes were made.
+
+## Planning XLSX export — 2026-10-23
+
+Implementation SHA: `dd91e0ef46677ceba75e4f89e4de8fb39ad995ee` (clean at run).
+
+| Command / check                                                               | Result                                                                                                                                |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                                 | Pass — formatting, lint, strict TypeScript, 606 unit files / 5,226 tests, and production build. Exit code 0.                          |
+| `pnpm test:affected -- --layer browser`                                       | Blocked before browser launch — the changed branch escalated to the full browser matrix; `TEST_DATABASE_URL` is unset. Exit code 1.   |
+| Disposable Postgres startup                                                   | Blocked — Docker Desktop endpoint did not respond to the local compose/availability checks. No browser or integration tests were run. |
+| Migration drill                                                               | Not applicable — no schema or persistence changes.                                                                                    |
+| EN/AR browser, accessibility, responsive/visual review and independent review | Open.                                                                                                                                 |
+
+The workspace Planning page now offers a server-generated XLSX with Summary
+and Schedule sheets. The export supports the displayed, current, next, and
+custom workspace-timezone date ranges, and either the active Planning filters
+or all items in range. The existing CSV path remains available. This feature
+is **Implemented**, not **Tested/Verified**, until the localized browser,
+accessibility, and visual checks run against the disposable database.
+
+## E2E runner isolation and fixture targeting — 2026-10-22
+
+Implementation SHA: `49161a5105af78c1791caf23a76a37af9948041e` (clean at run).
+
+| Command / check                                | Result                                                                                                                                                                                                                                                                     |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                  | Pass — formatting, lint, strict TypeScript, 573 unit files / 5,064 tests, and production build.                                                                                                                                                                            |
+| Affected architecture unit area                | Pass — 20/20; runner-only changes do not select unrelated integration or browser checks for the pre-push core layer.                                                                                                                                                       |
+| Targeted Chromium reruns                       | Pass — five previously failing journeys: advertising report, social comparison, degraded Trends, Trends onboarding, and multi-role user creation.                                                                                                                          |
+| Full Chromium / Firefox / visual release gates | Open — parent SHA `89cc6f2b` full Chromium run had 273/279 passes, five failures, and one expected skip; the server restarted late. Targeted reruns pass. Firefox is unavailable under the local macOS sandbox; full browser matrix and visual reconciliation remain open. |
+| Integration and migration drill                | Not applicable — this milestone changes test ownership and an E2E fixture, not persistence or migrations.                                                                                                                                                                  |
+| Independent review                             | Open.                                                                                                                                                                                                                                                                      |
+
+The multi-role E2E fixture now selects the workspace returned by its own seed
+instead of the first matching role block in a database shared across tests. A
+read-only query confirmed the earlier failure had saved both requested roles
+to a different seeded workspace; after the test fix, the journey passes 1/1.
+The other four formerly failing journeys also pass in targeted fresh-server
+runs. This does not convert the full browser run into release evidence or close
+the full route/visual review. This checkpoint is **Tested**, not **Verified**.
+
+## Architecture refinement — content detail ownership — 2026-10-22
+
+Implementation SHA: `03d4a3cd6e255f88d4418d95bd418cab5fad2ddc` (clean at run).
+
+| Command / check                                      | Result                                                                                       |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Focused content detail, inline editor, and ownership | Pass — 39/39; related task, workflow, and AI panel regressions also passed in focused runs.  |
+| `pnpm verify`                                        | Pass — formatting, lint, TypeScript, 569 unit files / 5,040 tests, and production build.     |
+| Browser, accessibility, and visual review            | Not run — `TEST_DATABASE_URL` is unset; the browser runner requires the disposable database. |
+| Integration and migration drill                      | Not applicable — no schema or persistence behavior changed.                                  |
+| Independent review                                   | Open.                                                                                        |
+
+Shared planning editors now receive route-owned actions as props; the AI
+launcher receives its route-owned content as a slot. The unused edit drawer
+was removed after the dependency graph and source search showed no callers.
+The content detail header, overview, navigation wrapper, and inline editors
+now live under `src/features/content/` and are exposed through its client-safe
+`index.ts`. The shared-component-to-route import allowlist is empty. Routes,
+permissions, workflow behavior, and persisted data are unchanged. This
+checkpoint is **Tested**, not **Verified**; route-by-route browser/visual
+review and independent review remain open.
+
+## Architecture refinement — shared action ownership — 2026-10-22
+
+Implementation SHA: `345eb4f5afcaba4deded63581d6a7e68ad6882ed` (clean at run).
+
+| Command / check                                             | Result                                                                                   |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Focused command-center, research-apply, and ownership tests | Pass — 13/13.                                                                            |
+| `pnpm verify`                                               | Pass — formatting, lint, TypeScript, 569 unit files / 5,038 tests, and production build. |
+| `pnpm test:affected -- --layer browser`                     | Escalated to full matrix; stopped before browsers because `TEST_DATABASE_URL` is unset.  |
+| Postgres integration and migration drill                    | Open; no persistence or schema change in this refactor.                                  |
+| Bilingual browser/visual review and independent review      | Open.                                                                                    |
+
+Workspace social refresh and research teardown apply now receive their server
+actions from route owners. The route actions retain the same authorization and
+workflow behavior. The shared-to-route import allowlist drops from 11 to 9.
+This checkpoint is **Tested**, not **Verified**.
+
+## Architecture refinement — agency form action ownership — 2026-10-22
+
+Implementation SHA: `374304de6b4f0f2d958fafa7ac9b5b2feaad9539` (clean at run).
+
+| Command / check                                        | Result                                                                                   |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Focused agency-settings and module-ownership tests     | Pass — 8/8.                                                                              |
+| `pnpm verify`                                          | Pass — formatting, lint, TypeScript, 568 unit files / 5,037 tests, and production build. |
+| `pnpm test:affected -- --layer browser`                | Escalated to full matrix; stopped before browsers because `TEST_DATABASE_URL` is unset.  |
+| Postgres integration and migration drill               | Open; no persistence or schema change in this refactor.                                  |
+| Bilingual browser/visual review and independent review | Open.                                                                                    |
+
+The reusable agency identity form now receives its action and result state as
+props. Agency-settings and platform route wrappers own their respective
+server actions, and the shared-to-route import allowlist drops from 12 to 11.
+Form fields, authorization, routes, and save behavior are unchanged. This
+checkpoint is **Tested**, not **Verified**.
+
+## Architecture refinement — account menu sign-out slot — 2026-10-22
+
+Implementation SHA: `ceaac8f9cce23187133c8182b23a0e5d8ebba0e9` (clean at run).
+
+| Command / check                                              | Result                                                                                                          |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Focused notification, theme-toggle, ownership tests          | Pass — 10/10.                                                                                                   |
+| `pnpm verify`                                                | Pass — formatting, lint, TypeScript, 568 unit files / 5,037 tests, and production build.                        |
+| `pnpm test:affected -- --layer browser`                      | Stopped before browser tests; changed branch scope escalated to the full matrix. `TEST_DATABASE_URL` was unset. |
+| Postgres integration and migration drill                     | Open; this change does not touch persistence or schema.                                                         |
+| Bilingual browser/visual review and independent verification | Open.                                                                                                           |
+
+The authenticated app layout supplies the existing sign-out form to the
+shared user menu through a presentation slot. Sign-out action semantics and
+menu behavior are unchanged. This checkpoint is **Tested**, not **Verified**.
+
+## Architecture refinement — theme preference action boundary — 2026-10-22
+
+Implementation SHA: `28c008641845964ffa7ebe38cd5a4dd0789543fe` (clean at run).
+
+| Command / check                                              | Result                                                                                                          |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Focused theme-toggle and ownership tests                     | Pass — 5/5; includes action success and preference rollback.                                                    |
+| `pnpm verify`                                                | Pass — formatting, lint, TypeScript, 568 unit files / 5,037 tests, and production build.                        |
+| `pnpm test:affected -- --layer browser`                      | Stopped before browser tests; changed branch scope escalated to the full matrix. `TEST_DATABASE_URL` was unset. |
+| Postgres integration and migration drill                     | Open; this change does not touch persistence or schema.                                                         |
+| Bilingual browser/visual review and independent verification | Open.                                                                                                           |
+
+The authenticated layout supplies the existing account theme action to both
+shell theme controls. Preference persistence and optimistic rollback are
+unchanged. This checkpoint is **Tested**, not **Verified**.
+
+## Architecture refinement — notification action boundary — 2026-10-22
+
+Implementation SHA: `73e612e0806667385445b707e3fb687c72f0bcdf` (clean at run).
+
+| Command / check                                              | Result                                                                                                          |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Focused notification and ownership tests                     | Pass — 8/8.                                                                                                     |
+| `pnpm verify`                                                | Pass — formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build.                        |
+| `pnpm test:affected -- --layer browser`                      | Stopped before browser tests; changed branch scope escalated to the full matrix. `TEST_DATABASE_URL` was unset. |
+| Postgres integration and migration drill                     | Open; this change does not touch persistence or schema.                                                         |
+| Bilingual browser/visual review and independent verification | Open.                                                                                                           |
+
+The authenticated app layout supplies the existing notification actions to
+shared shell presentation components. Notification permissions, optimistic
+updates, and user-visible behavior are unchanged. This checkpoint is
+**Tested**, not **Verified**.
+
+## Architecture refinement — shared comment action boundary — 2026-10-22
+
+Implementation SHA: `bb449b8721e66bf029aa66bed474a2c49e14342b` (clean at run).
+
+| Command / check                                              | Result                                                                                                          |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Focused comment, planning-shell, hook-order, ownership tests | Pass — 55/55.                                                                                                   |
+| `pnpm verify`                                                | Pass — formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build.                        |
+| `pnpm test:affected -- --layer browser`                      | Stopped before browser tests; changed branch scope escalated to the full matrix. `TEST_DATABASE_URL` was unset. |
+| Postgres integration and migration drill                     | Open; this change does not touch persistence or schema.                                                         |
+| Bilingual browser/visual review and independent verification | Open.                                                                                                           |
+
+The planning route now passes the comment create and resolve server actions
+into shared comment presentation components. No authorization, workflow,
+route, API, or data contract changed. This checkpoint is **Tested**, not
+**Verified**.
+
+## Architecture refinement — planning list action ownership — 2026-10-22
+
+Implementation SHA: `aefe97aa6bedda02d013d52ce79337dce491ea7b` (clean at run).
+
+| Command / check                                      | Result                                                                                                          |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Focused planning and ownership tests                 | Pass — 8/8.                                                                                                     |
+| `pnpm verify`                                        | Pass — formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build.                        |
+| `pnpm test:affected -- --layer browser`              | Stopped before browser tests; changed branch scope escalated to the full matrix. `TEST_DATABASE_URL` was unset. |
+| Docker availability check                            | Timed out after five seconds.                                                                                   |
+| Postgres integration, migration drill, visual review | Open; no persistence or schema changes in this refactor.                                                        |
+| Independent verification                             | Open.                                                                                                           |
+
+Planning list actions and the owner dialog now live beside their only route.
+The static shared-component-to-route import migration list is down to 17.
+Page behavior and public contracts are unchanged. This checkpoint is
+**Tested**, not **Verified**.
+
+## Architecture refinement — planning publishing UI ownership — 2026-10-22
+
+Implementation SHA: `95bba579bca646db6dd9459e0767033fade8c409` (clean at run).
+
+| Command / check                                      | Result                                                                                   |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Planning card, publication-link, and ownership tests | Pass — 23/23.                                                                            |
+| `pnpm verify`                                        | Pass — formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build. |
+| Postgres integration and migration drill             | Not applicable — no persistence or migration behavior changed.                           |
+| Route browser / visual review and independent review | Open.                                                                                    |
+
+The content-detail publishing card and its Meta publication-link dialog now
+live beside their only production caller. The shared-component-to-route
+allowlist is down to 20 existing edges. No page behavior, route, action, or
+contract changed. This checkpoint is **Tested**, not **Verified**; AD-002
+remains **In Progress**.
+
+## Legacy workspace tenant-isolation startup allowance — `9b1a6ddc`
+
+On clean SHA `9b1a6ddc`, the tenant-isolation E2E retained its agency and
+cross-tenant content assertions and allowed up to 15 seconds for the first
+overview marker after the legacy redirect on a cold Next development server.
+Chromium passed both journeys (2/2); WebKit passed both journeys (2/2). The
+runner emitted a destination-stream warning in Chromium and used its documented
+RSC browser-navigation fallback in WebKit; both runs completed successfully.
+The commit hook passed TypeScript and the focused ownership selector, 37/37
+tests. The other browser projects, full visual matrix, full `pnpm verify`, and
+independent review remain open. Status: **Tested**, not **Verified**.
+
+## Batched architecture baseline — `057677e8`
+
+On clean SHA `057677e83a9b235235562bda316164f8e8ae34e7`, `pnpm verify` passed:
+Prettier, ESLint, TypeScript, all 606 unit test files (5,226 tests), and the
+Next.js production build. The test run emitted existing expected diagnostic
+logs and React test-environment warnings; no check failed. This records the
+local baseline only. The complete five-browser and visual release matrices,
+route-by-route review, and independent verification remain open. Status:
+**Tested**, not **Verified**.
+
+## Architecture refinement — planning detail shell ownership — 2026-10-22
+
+Implementation SHA: `cb8f7cf7f2068c9ccd1812860ac4ed057faa30e5` (clean at run).
+
+| Command / check                                      | Result                                                                                   |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `tests/unit/architecture/module-ownership.test.ts`   | Pass — 3/3.                                                                              |
+| `pnpm verify`                                        | Pass — formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build. |
+| Postgres integration and migration drill             | Not applicable — no persistence or migration behavior changed.                           |
+| Route browser / visual review and independent review | Open.                                                                                    |
+
+The content-detail shell now lives beside its owning App Router page instead
+of shared presentation. The static import guard prevents new
+`src/components` → `src/app` dependencies and records the 22 current legacy
+edges for incremental migration. No page behavior, route, action, or contract
+changed. This checkpoint is **Tested**, not **Verified**; AD-002 remains **In
+Progress**.
+
+## Architecture refinement — Meta insights module — 2026-10-22
+
+Implementation SHA: `926b833cc1a1a0f49e7836749a8202d1ae2e599f` (clean at run).
+
+| Command / check                                        | Result                                                                                                                     |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| Focused Meta provider, insights, and publication tests | Pass — 70/70.                                                                                                              |
+| `pnpm verify`                                          | Pass — formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build.                                   |
+| Postgres integration and migration drill               | Not run — this provider-only refactor does not change persistence; environment lacks a reachable disposable test database. |
+| Browser / visual review and independent verification   | Open.                                                                                                                      |
+
+Meta account/media insight reads and bounded Facebook/Instagram post
+observations now live in `meta-insights.ts`. Snapshot composition remains in
+`meta.ts`; its existing public exports and provider contracts are preserved.
+This checkpoint is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## Architecture refinement — planning-library transactions — 2026-10-23
+
+Code and focused regression evidence: clean SHA
+`e888315b591bd1acf3aa250f852ac9d88928d088`.
+
+| Command / check                          | Result                                                                                                        |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                            | Pass on application-code SHA `aabd19ea0478791be9d6a564bad051936c6c0466`: 588 unit files / 5,127 tests, build. |
+| `pnpm test:integration`                  | Pass on clean test SHA `d6f3d620e453418d41b0a0435d951c6ebd9a47c7`; complete integration suite.                |
+| Planning-library transaction integration | Pass — 2/2 on `e888315b591bd1acf3aa250f852ac9d88928d088`.                                                     |
+| `NODE_ENV=test pnpm migration-drill`     | Pass — all five scenarios against local disposable PostgreSQL 17 `planner_test`.                              |
+| Current commit hook                      | Pass — typecheck and full unit suite, 588 files / 5,127 tests.                                                |
+| Browser / visual / independent review    | Open — covered by the wider AD-002 route and release gates.                                                   |
+
+The new integration test forces activity-event inserts to fail after campaign,
+pillar, and template writes, then proves the business rows roll back. It also
+overlaps archive and restore calls and asserts one audit event per actual
+transition. The full integration suite passed before this test-only commit;
+the newly added integration cases passed separately on the current code tree.
+No schema migration or application behavior change was introduced by this
+test-coverage milestone. AD-002 remains **In Progress**; this is **Tested**,
+not **Verified**.
+
+## Architecture refinement — Meta publication reads — 2026-10-22
+
+Implementation SHA: `79f8761d0278bb74939b883bb27df74a83a133a5` (clean at run).
+
+| Command / check                                       | Result                                                                                                                     |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Focused Meta provider, publication, and service tests | Pass — 62/62.                                                                                                              |
+| `pnpm verify`                                         | Pass — formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build.                                   |
+| Postgres integration and migration drill              | Not run — this provider-only refactor does not change persistence; environment lacks a reachable disposable test database. |
+| Browser / visual review and independent verification  | Open.                                                                                                                      |
+
+Meta connection and publication-history reads now have their own focused
+modules. The existing `meta.ts` public exports and provider contracts remain
+stable. This checkpoint is **Tested**, not **Verified**; AD-002 remains **In
+Progress**.
+
+## Architecture refinement — Meta connection module — 2026-10-22
+
+Implementation SHA: `8739e9d7d977ec13d423afdaf0c8d9dee3748e8e` (clean at run).
+
+| Command / check                                      | Result                                                                                                                     |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Focused Meta provider and insights tests             | Pass — 56/56.                                                                                                              |
+| `pnpm verify`                                        | Pass — formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build.                                   |
+| Postgres integration and migration drill             | Not run — this provider-only refactor does not change persistence; environment lacks a reachable disposable test database. |
+| Browser / visual review and independent verification | Open.                                                                                                                      |
+
+Meta OAuth scope selection, token exchange, and account discovery now live in
+`src/lib/social/providers/meta-connection.ts`. `meta.ts` re-exports the
+existing public symbols; call sites and provider behavior are unchanged. This
+checkpoint is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## Research access ownership refinement — 2026-10-22
+
+Implementation SHA: `40a6682b5d322c5e842547b0582c6480b9cb55bd` (clean).
+
+| Command / check                                           | Result                                                                                   |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Focused research watchlist and collection routes          | **Pass** — 10/10.                                                                        |
+| `pnpm verify`                                             | **Pass** — formatting, lint, TypeScript, 566 unit files / 5,030 tests, production build. |
+| Disposable Postgres integration                           | **Not run** — `TEST_DATABASE_URL` unset; Docker engine did not respond.                  |
+| Full browser, visual, route inventory, independent review | **Open**.                                                                                |
+
+Status: **Tested**, not **Verified**. No schema, route, role, or data contract
+changed in this ownership refactor.
+
+## Migration index-build authoring guidance — 2026-10-22
+
+Documentation now directs index builds on populated, active production tables
+to the standalone `CREATE INDEX CONCURRENTLY` runner and requires an execution
+record, index-validity check, and rollback/cleanup details. Existing deployed
+migrations were not changed.
+
+| Command / check                              | Result                                                                                   |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `tests/unit/migrate-concurrent.test.ts`      | **Pass** — 24/24.                                                                        |
+| `tests/unit/migration-journal-order.test.ts` | **Pass** — 5/5.                                                                          |
+| Database migration execution                 | **Not run** — documentation-only change; the disposable Postgres service is unavailable. |
+
+No application or schema behavior changed in this documentation pass.
+
+## Architecture review — route access and readiness — 2026-10-22
+
+Implementation SHA: `2d6aa2a081063360cc9eeba2e69045519f86673c` (clean).
+
+| Command / check                                                 | Result                                                                                   |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                   | **Pass** — formatting, lint, TypeScript, 566 unit files / 5,028 tests, production build. |
+| Focused new route and readiness regressions                     | **Pass** — 16/16 across the route/cache/readiness suites.                                |
+| Disposable Postgres integration / migration drill               | **Not run** — `TEST_DATABASE_URL` unset; Docker engine probe did not respond.            |
+| Touched-route browser, bilingual visual, and independent review | **Open**.                                                                                |
+
+Status: **Tested**, not **Verified**. The full route inventory is still in
+progress under AD-002.
+
+## Remove the legacy content service — 2026-10-22, implementation SHA `6b33f42f582ecac15814966a6c2fd5c070c5adf3`
+
+Moved the pure brief-draft merge and content-cursor helpers into
+`src/features/content/` and exported them through the feature server entry
+point. The planning action and the unit and integration callers now depend on
+the content feature instead of `src/lib/content/service.ts`; the empty legacy
+module was removed. No public behavior or data contract changed.
+
+| Check                                             | Result                                                                                                |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                     | **Pass** — formatting, ESLint, strict TypeScript, 562 unit files / 5,015 tests, and production build. |
+| Focused helper and content unit tests             | **Pass** — 81/81.                                                                                     |
+| Postgres acceptance journey + page render         | **Pass** — 33/33 across the two affected integration specs.                                           |
+| Targeted ESLint, Prettier, and `git diff --check` | **Pass**.                                                                                             |
+| Full integration + migration drill                | **Pass on preceding implementation SHA `3347bad`; not rerun for this helper-only move.**              |
+
+The source change is commit `6b33f42f582ecac15814966a6c2fd5c070c5adf3`. No
+schema, route, permission, workflow, or API contract changed. Route-by-route
+review, release browser/visual coverage, and independent verification remain
+open. AD-002 remains **In Progress**; this work is **Tested**, not **Verified**.
+
+## Content command ownership and channel isolation — 2026-10-22, implementation SHA `3347bad1d00d75c3e288039b92283487eb5e66b2`
+
+Moved the update and batch-create commands from the legacy content utility
+module into `src/features/content/`, alongside Quick Create; all three use a
+single active-channel selection check. During the move, review confirmed that
+updates could link an active channel from another workspace. The update command
+now rejects that selection before writes. Its Postgres regression confirms
+that both the item and its previous channel links remain unchanged after
+rejection. The changes preserve route, permission, workflow, and persistence
+contracts and add no migration.
+
+| Check                                             | Result                                                                                                |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                     | **Pass** — formatting, ESLint, strict TypeScript, 562 unit files / 5,015 tests, and production build. |
+| Focused content unit tests                        | **Pass** — 70/70.                                                                                     |
+| Postgres acceptance journey                       | **Pass** — 32 tests, including create and update cross-workspace channel guards.                      |
+| `TEST_DATABASE_URL=… pnpm test:integration`       | **Pass** — every integration spec completed successfully.                                             |
+| `TEST_DATABASE_URL=… pnpm migration-drill`        | **Pass** — 5/5 scenarios; from-zero and restored ledgers are 90/90.                                   |
+| Targeted ESLint, Prettier, and `git diff --check` | **Pass**.                                                                                             |
+
+The feature-boundary migration is commit `5a8558c`; the separate tenant fix
+is commit `3347bad1d00d75c3e288039b92283487eb5e66b2`. All full gates above
+passed on the clean tenant-fix implementation commit. Manual route review,
+release browser/visual coverage, and independent verification remain open.
+AD-002 remains **In Progress**; this work is **Tested**, not **Verified**.
+
+## Quick Create workspace-channel isolation — 2026-10-22, implementation SHA `09d1ab9ff427f0ef7cca8bcf7474f380cf9d935a`
+
+Quick Create now validates every explicit channel selection against the
+active, unarchived channels in the requested workspace. Previously the
+database's independent content-item and social-channel foreign keys allowed
+a caller with write access in workspace A to link a channel from workspace
+B. The command rejects the selection before inserting any rows. The database
+schema and public API contract are unchanged.
+
+| Check                                             | Result                                                                                                |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                     | **Pass** — formatting, ESLint, strict TypeScript, 562 unit files / 5,015 tests, and production build. |
+| Focused Quick Create unit suite                   | **Pass** — 65 tests, including rejection before insert.                                               |
+| Postgres acceptance journey                       | **Pass** — 31 tests, including a second-workspace channel attempt and no-item-created assertion.      |
+| `TEST_DATABASE_URL=… pnpm test:integration`       | **Pass** — every integration spec completed successfully.                                             |
+| `TEST_DATABASE_URL=… pnpm migration-drill`        | **Pass** — 5/5 scenarios; from-zero and restored ledgers are 90/90.                                   |
+| Targeted ESLint, Prettier, and `git diff --check` | **Pass**.                                                                                             |
+
+The fix is committed as `09d1ab9ff427f0ef7cca8bcf7474f380cf9d935a` and was
+verified on that clean implementation commit. No migration or provider UAT
+was needed. Full route review, release browser/visual coverage, and independent
+review remain open. AD-002 remains **In Progress**; this work is **Tested**,
+not **Verified**.
+
+## Content Quick Create feature ownership — 2026-10-22, implementation SHA `1b072f169c9287a2878357dea9a0dc05bd4af896`
+
+Moved `QuickCreateSchema`, `QuickCreateInput`, and
+`quickCreateContentItem` from the legacy content library service into
+`src/features/content/quick-create.server.ts`, exposed via the content
+feature server entry point. The planning action and MCP command now use the
+feature boundary. Authorization, transaction boundaries, workspace defaults,
+active channel selection, structured payload validation, and trend/research
+provenance behavior are preserved. No route, API, permission, workflow, or
+schema contract changed.
+
+| Check                                         | Result                                                                                                |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                 | **Pass** — formatting, ESLint, strict TypeScript, 562 unit files / 5,014 tests, and production build. |
+| Focused Quick Create unit tests               | **Pass** — 69 tests across content service and update-schema suites.                                  |
+| Focused Postgres acceptance tests             | **Pass** — 30 journey tests and 1 page-render regression.                                             |
+| `TEST_DATABASE_URL=… pnpm test:integration`   | **Pass** — every integration spec completed successfully.                                             |
+| `TEST_DATABASE_URL=… pnpm migration-drill`    | **Pass** — 5/5 scenarios; from-zero and restored ledgers are 90/90.                                   |
+| Targeted lint, format, and `git diff --check` | **Pass**.                                                                                             |
+
+The implementation commit is `1b072f169c9287a2878357dea9a0dc05bd4af896`.
+Other content commands remain in the incremental review queue. Full route
+review, the complete release browser/visual matrix, and independent review
+remain open. AD-002 remains **In Progress**; this work is **Tested**, not
+**Verified**.
+
+## Content deadline reminder activation — 2026-10-21, implementation SHA `98c7040ca1327000283d2b6eeba8aaa379ca8d6a`
+
+Moved the unused deadline dispatcher into the content feature boundary and
+added the authenticated cron route and hourly VPS caller. The dispatch
+transaction locks scheduling work, selects open items due within 24 hours,
+checks the 24-hour event dedupe window, and queues recipient events
+transactionally. The owner and designer are deduplicated when they are the
+same user. No schema migration was needed.
+
+| Check                                                                              | Result                                                                                                           |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                                      | **Pass** — formatting, ESLint, strict TypeScript, unit suite, and production build.                              |
+| `TEST_DATABASE_URL=… pnpm test:integration`                                        | **Pass** — every integration spec completed successfully, including all three new deadline-reminder regressions. |
+| `TEST_DATABASE_URL=… pnpm migration-drill`                                         | **Pass** — 5/5 scenarios; from-zero and restored Drizzle ledgers are 90/90.                                      |
+| Focused cron route-auth and ownership unit suites                                  | **Pass** — authorization, success, sanitized failure, and affected-test ownership checks.                        |
+| Cron installer dry-run, targeted lint/format, shell syntax, and `git diff --check` | **Pass**.                                                                                                        |
+
+The implementation was committed as `98c7040ca1327000283d2b6eeba8aaa379ca8d6a`;
+the verification ran against that implementation tree. No schema or public
+route response contract changed. The VPS cron still requires installation
+through the normal operations procedure. Full five-browser release coverage,
+complete visual reconciliation, route-by-route manual review, and independent
+review remain open. AD-002 remains **In Progress**; this implementation is
+**Tested**, not **Verified**.
+
+## Media planning-folder lifecycle ownership — 2026-10-21, exact clean implementation SHA `a8ddbd2b6b84744ae7b7cc8e341edde80c1cc13e`
+
+Moved planning-folder path creation and content-item folder reconciliation
+from the broad media service into
+`src/lib/media/planning-folder-lifecycle.ts`. The media feature server entry
+point exposes the feature-owned operations; the shared content service imports
+the focused platform module directly to preserve the rule that `src/lib` does
+not depend on `src/features`. Added Postgres regressions for a valid
+single-linked move and for shared/cross-tenant assets that must remain
+unchanged. No route, API, permission, workflow, or schema contract changed.
+
+| Check                                             | Result                                                                                                           |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                     | **Pass** — formatting, repository ESLint, strict TypeScript, 562 unit files / 5,010 tests, and production build. |
+| Full `pnpm test:integration`                      | **Pass** — all integration specs against disposable `planner_test`; every suite completed successfully.          |
+| Disposable Postgres media-sharing integration     | **Pass** — 20/20, including move audit details and shared/cross-tenant denial.                                   |
+| `NODE_ENV=test pnpm migration-drill`              | **Pass** — 5/5 scenarios; from-zero and restored Drizzle ledgers are 90/90.                                      |
+| Focused media and module-ownership unit suites    | **Pass** — 22/22.                                                                                                |
+| Targeted ESLint, Prettier, and `git diff --check` | **Pass**.                                                                                                        |
+
+The full database suite and migration drill ran against the source at SHA
+`a8ddbd2b6b84744ae7b7cc8e341edde80c1cc13e`; only documentation commits have
+been added since, and the current source tree remains identical to that SHA.
+
+The repository pre-commit hook expanded its affected selection to the full
+unit suite because this change included `src/lib/db/schema/media.ts`, which is
+intentionally classified as a global test path. The expansion is retained as
+a safety check. Full five-browser release coverage, complete visual
+reconciliation, manual review of every route, and independent review remain
+open. AD-002 remains **In Progress**.
+
+## Media asset listing/access ownership — 2026-10-21, exact clean implementation SHA `7ea8c7991de28d7f95fc30b607cfac2fa532ea46`
+
+Media listing, pagination counts, related-content projection, page-size
+selection, and descendant-folder filtering now live behind the media feature
+server entry point. Client presentation uses a serializable row type. Asset
+access is isolated in a focused shared media query module for the feature and
+existing same-domain collection service. The unreferenced media filter helper
+was removed. The remaining legacy media service handles derived folder paths
+and content-item folder reconciliation.
+
+| Check                                                                  | Result                                                                   |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Disposable Postgres media integration                                  | **Pass** — 18/18, including owner/outsider access and list/count parity. |
+| Page-size, registration-recovery, collection, and ownership unit tests | **Pass** — 21/21.                                                        |
+| `pnpm typecheck`                                                       | **Pass** — no TypeScript errors.                                         |
+| Targeted ESLint, Prettier, and `git diff --check`                      | **Pass**, zero lint warnings.                                            |
+
+Full `pnpm verify`, repository-wide integration, migration drill, route review,
+release browser matrix, and independent review remain open. AD-002 remains
+**In Progress**.
+
+## Media query/link ownership and pagination correction — 2026-10-21, exact clean implementation SHA `9a4c8adb4c51c799bb56d97c0284bd2aac78c51d`
+
+Duplicate advisory reads now belong to the media feature query module. Content-item
+asset linking and linked-target projection now belong to the server-only media
+feature boundary. Listing and pagination count share the same scope and filter
+builder. A regression first reproduced the old undercount for agency-shared
+assets; the correction also aligns descendant-folder, kind, text, visibility,
+and asset-id filters. No schema migration or route/API contract changed.
+
+| Check                                                 | Result                                                                                                       |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Disposable Postgres media integration                 | **Pass** — 17/17, including duplicate advisory, link idempotency, shared pagination count, and folder count. |
+| Registration recovery and module-ownership unit tests | **Pass** — 9/9.                                                                                              |
+| `pnpm typecheck`                                      | **Pass** — no TypeScript errors.                                                                             |
+| Targeted ESLint, Prettier, and `git diff --check`     | **Pass**, zero lint warnings.                                                                                |
+
+Full `pnpm verify`, repository-wide integration, migration drill, route review,
+release browser matrix, and independent review remain open. AD-002 remains
+**In Progress**.
+
+## Media manager command ownership — 2026-10-21, exact clean implementation SHA `b8323114d288665b6f1f5ef40c0eca0cbfa83655`
+
+Moved single-asset rename and visibility changes into
+`src/features/media/library-commands.server.ts` and centralized the manager
+lookup/authorization used by single-asset tag, rename, and visibility commands.
+The route contracts and manager-only permission rule are unchanged.
+
+| Check                                             | Result                                                                      |
+| ------------------------------------------------- | --------------------------------------------------------------------------- |
+| Focused media and module-ownership unit tests     | **Pass** — 18/18.                                                           |
+| Disposable Postgres media integration             | **Pass** — 14/14, including authorized changes and denial for non-managers. |
+| `pnpm typecheck`                                  | **Pass** — no TypeScript errors.                                            |
+| Targeted ESLint, Prettier, and `git diff --check` | **Pass**, zero lint warnings.                                               |
+
+Full `pnpm verify`, repository-wide integration, migration drill, route
+review, release browser matrix, and independent review remain open. AD-002
+remains **In Progress**.
+
+## Media Postgres read and registration follow-up — 2026-10-21, exact clean implementation SHA `d25e25af9b6c45d7b49b22941d0bd73a837d5dd5`
+
+The disposable database was verified to be planner_test. The media integration
+suite passed 14/14 on this exact clean SHA. It now covers inaccessible
+same-agency folder-audit denial, authorized tag/uploader facets, and
+idempotent upload registration with the persisted status contract, in addition
+to the existing media sharing, folders, lifecycle, and bulk command cases.
+
+| Check                                  | Result                                               |
+| -------------------------------------- | ---------------------------------------------------- |
+| Disposable Postgres media integration  | **Pass** — 14/14; migration runner completed.        |
+| Focused media and ownership unit tests | **Pass** — 15/15 in the previous feature checkpoint. |
+
+This resolves the pending media integration notes below for their current
+feature set. Full repository integration, pnpm verify, migration drill, route
+review, release browser matrix, and independent review remain open. AD-002
+remains **In Progress**.
+
+## Media upload registration ownership — 2026-10-21, exact clean implementation SHA ab66308ed0c9383376e7cb5d11f8e5f4be4b6901
+
+Moved registerUploadedMediaAsset, its return projection, and transient
+validation retry policy into src/features/media/asset-registration.server.ts.
+Public media imports now reuse the feature-owned command. The feature facade
+exports the stable command and result type; existing folder-path and
+content-item linking helpers remain temporary imports from the legacy media
+service.
+
+| Check                                                         | Result                                                                           |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Registration, folder-import, and module-ownership unit suites | **Pass** — 14/14, including six registration recovery cases.                     |
+| pnpm typecheck                                                | **Pass** — no TypeScript errors.                                                 |
+| Targeted ESLint, Prettier, and git diff --check               | **Pass**.                                                                        |
+| Disposable Postgres integration                               | **Pending** — TEST_DATABASE_URL is unavailable and local Docker did not respond. |
+
+Full pnpm verify, disposable-Postgres integration, route review, release
+browser matrix, and independent review remain open. AD-002 remains **In Progress**.
+
+## Media library query ownership — 2026-10-21, exact clean implementation SHA `9cb1187f212a7b5cba285e077e70fc7c1f256aed`
+
+Moved media filter-facet and folder-reconciliation audit reads from their API
+route handlers into `src/features/media/library-queries.server.ts`. The feature
+module now owns workspace authorization, tenant-scoped queries, and response
+projection. Routes retain authentication, query parsing, HTTP status mapping,
+and cache headers. Response shapes and SQL predicates are preserved.
+
+| Check                                                | Result                                                                                                                                                                                                                                                       |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Focused media route/query and module-ownership tests | **Pass** — 12/12.                                                                                                                                                                                                                                            |
+| `pnpm typecheck`                                     | **Pass** — no TypeScript errors.                                                                                                                                                                                                                             |
+| Targeted ESLint, Prettier, and `git diff --check`    | **Pass**.                                                                                                                                                                                                                                                    |
+| Disposable Postgres media integration                | **Pending** — test database URL was not configured; the local Docker status request did not return. A same-agency, cross-workspace regression was added to `tests/integration/media-sharing.test.ts` and must run once the disposable database is available. |
+
+Full `pnpm verify`, the route review, release browser matrix, and independent
+review remain open. AD-002 remains **In Progress**.
+
+## Media folder audit workspace authorization — 2026-10-21, exact clean implementation SHA `ad7a9956e65c42d094901c3ade55f42dec2bf3d2`
+
+The folder-audit route now uses the shared workspace-access policy before
+reading reconciliation metadata. An agency member without access to the
+requested workspace receives 403 and cannot query that workspace's audit log.
+The API response and persistence contract are unchanged.
+
+| Check                                                              | Result                                                 |
+| ------------------------------------------------------------------ | ------------------------------------------------------ |
+| `pnpm exec vitest run tests/unit/media/folder-audit-route.test.ts` | **Pass** — 1/1; verifies denial and no database query. |
+| Targeted ESLint, Prettier, and `git diff --check`                  | **Pass**.                                              |
+
+The full repository verification, route review, release browser matrix, and
+independent review remain open. AD-002 remains **In Progress**.
+
+## Media library command ownership and confirmed defect fixes — 2026-10-21, exact clean implementation SHA `6ba5c4c7ea1d5678705e170e58f2757dc330ee29`
+
+Media bulk move, tag, visibility, and duplication commands now belong to
+`src/features/media/library-commands.server.ts`, behind the existing
+server-only feature entry point. The broad `src/lib/media/service.ts` no
+longer owns those commands or the media-tag sanitizer. Duplication creates
+separate R2 objects through the storage upload-intent lifecycle, preserving
+the unique media-to-object invariant, quota reservation, object verification,
+and cleanup on partial failure. Folder moves now reject a target folder from
+another workspace. No schema migration, route, permission, or response-shape
+change was made.
+
+| Check                                                  | Result                                                                                                                                                                                               |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Focused media, storage, and module-boundary unit tests | **Pass** — 34/34. Includes R2 copy request encoding, quota reservation, upload verification, cleanup, tag normalization, and ownership imports.                                                      |
+| Focused disposable-Postgres media integration          | **Pass** — 11/11. Covers bulk library operations, cross-workspace move denial, and duplication to a distinct storage-object record. The storage provider is stubbed for this database contract test. |
+| `pnpm verify`                                          | **Pass** — formatting, zero-warning ESLint, strict TypeScript, 558 unit files / 4,991 tests, and production build on this exact clean SHA.                                                           |
+| Full integration suite                                 | **Pass** — all repository integration files passed against disposable `planner_test` on the pre-commit implementation snapshot; the focused media integration was repeated on this exact SHA.        |
+| `NODE_ENV=test pnpm migration-drill`                   | **Pass** — 5/5 scenarios; from-zero and restored Drizzle ledgers are 90/90 on this exact SHA.                                                                                                        |
+
+R2 provider copy behavior is covered by adapter-command tests but has not yet
+received production R2 UAT. Manual review of every page/route, the full
+five-browser release matrix, and independent review remain open. AD-002 remains
+**In Progress**.
+
+## Media route feature-entry migration — 2026-10-21, exact clean implementation SHA `9c2b728771aeae8e8d2f63a9511364dfb4c3d42d`
+
+All media App Router pages and API handlers now consume
+`src/features/media/server.ts`; no route imports the broad
+`src/lib/media/service.ts` directly. The server-only feature entry point
+provides explicit compatibility exports while implementations continue to
+move by responsibility. An architecture regression prevents media app routes
+from bypassing this boundary. No route behavior, API shape, permission, or
+database contract changed.
+
+| Check                                                 | Result                                                                                                                                             |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Focused media, architecture, and affected-test suites | **Pass** — 209/209; covers all 38 media unit files plus module ownership and test selection.                                                       |
+| `pnpm verify`                                         | **Pass** — formatting, zero-warning ESLint, strict TypeScript, 558 unit files / 4,988 tests, and Next.js production build on this exact clean SHA. |
+
+This import-only migration changes no rendered behavior, so it required no
+visual or database gate. The manual review of every route, full five-browser
+release matrix, and independent review remain open. AD-002 remains **In Progress**.
+
+## Media trash lifecycle ownership split — 2026-10-21, exact clean implementation SHA `05f3a301e756c0de3e2bb07c080ad976797d53eb`
+
+Single and bulk trash/restore operations and expired-trash cleanup now belong
+to `src/features/media/trash-lifecycle.server.ts`. The asset routes and
+storage-cleanup cron use the media feature entry point. Existing role checks,
+30-day retention, per-item results, storage soft-delete order, and quota
+release behavior are preserved. No schema migration was added.
+
+| Check                                       | Result                                                                                                                                                                                      |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Focused unit checks                         | **Pass** — 21/21 across media expiry, media routes, cron authorization, and module ownership.                                                                                               |
+| Focused media database integration          | **Pass** — 8/8; includes manager-only single trash/restore, retention window, bulk idempotency and denial reporting, transactional original/preview soft deletion, and released-byte count. |
+| `pnpm verify`                               | **Pass** — formatting, zero-warning ESLint, strict TypeScript, 558 unit files / 4,988 tests, and Next.js production build on the exact clean SHA.                                           |
+| `TEST_DATABASE_URL=… pnpm test:integration` | **Pass** — all repository integration files passed against disposable `planner_test`.                                                                                                       |
+| `NODE_ENV=test pnpm migration-drill`        | **Pass** — all five scenarios; ledger 90/90.                                                                                                                                                |
+
+The full five-browser release matrix, manual review of every route, and
+independent review remain open. AD-002 remains **In Progress**.
+
+## Media import workflow ownership split — 2026-10-21, exact clean implementation SHA `277c5af88d4cd3b8f0ba0e1fd6637152cc2cfb20`
+
+Single-file public import and bounded folder-import orchestration now live in
+server-only media feature modules. The API routes use the feature entry point;
+the browser imports only the serializable batch report types. Existing URL
+safety, workspace write checks, storage-intent cleanup, per-item error mapping,
+and API responses are preserved. Asset registration remains in the legacy
+media service as a shared persistence primitive. No schema migration was added.
+
+| Check                                                                        | Result                                                                                                                                               |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Focused import batching, module ownership, and affected-test selection tests | **Pass** — 26/26; strict TypeScript and formatting passed.                                                                                           |
+| `pnpm verify`                                                                | **Pass** — formatting, zero-warning ESLint, strict TypeScript, 558 unit files / 4,988 tests, and Next.js production build on this exact clean SHA.   |
+| `TEST_DATABASE_URL=… pnpm test:integration`                                  | **Pass** — all repository integration files passed against disposable `planner_test`; no database schema changes in this milestone.                  |
+| `NODE_ENV=test pnpm migration-drill`                                         | **Pass** — 5/5 scenarios, including from-zero, skipped-migration repair, in-place upgrade, backup/restore, and failed-migration abort; ledger 90/90. |
+
+This service ownership move does not change page behavior, so no new visual
+comparison was required. The full five-browser release matrix, manual review of
+every route, and independent review remain open. AD-002 remains **In Progress**.
+
+## Media folder management ownership split — 2026-10-21, exact clean implementation SHA `19983639fe39e869b8be6e640a34181e7da987ac`
+
+Folder listing, tree projection, creation, rename, and cascade archive now
+belong to the server-only media feature module. App pages and API adapters
+consume the feature entry point; route, permission, and response contracts
+remain unchanged. No migration was added.
+
+| Check                                                  | Result                                                                                                                                                    |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                          | **Pass** — formatting, zero-warning ESLint, strict TypeScript, 558 unit files / 4,988 tests, and Next.js production build; exit 0 on the exact clean SHA. |
+| Focused media-sharing integration                      | **Pass** — 5/5 disposable-Postgres tests, including folder create/rename/tree count/cascade archive, asset unassignment, and non-member denial.           |
+| Focused read-path batching integration                 | **Pass** — 11/11 disposable-Postgres tests; folder list/tree query budget remains covered.                                                                |
+| Focused architecture, ownership, and folder unit tests | **Pass** — 23/23.                                                                                                                                         |
+| `NODE_ENV=test pnpm migration-drill`                   | **Pass** — 5/5 scenarios: from-zero, skipped-migration repair, in-place upgrade, backup/restore, and failed-migration abort; ledger 90/90.                |
+
+No route visual behavior changed in this service ownership move. The full
+five-browser release matrix, manual review of every route, and independent
+review remain open. AD-002 remains **In Progress**.
+
+## Media service responsibility split — 2026-10-21, exact clean implementation SHA `a016d98b683235f803891155e405ea7f46a1a4e8`
+
+Public media sharing and single-asset folder assignment now have a feature-owned
+server boundary. The route URLs, authorization contract, share token behavior,
+transaction/audit handling, and JSON responses are unchanged.
+
+| Check                                                                                                            | Result                                                                                                                                                      |
+| ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                                                                    | **Pass** — formatting, zero-warning ESLint, strict TypeScript, 558 unit files / 4,988 tests, and Next.js production build; exit 0 on the exact clean SHA.   |
+| `TEST_DATABASE_URL=… rtk pnpm exec tsx scripts/run-integration-tests.ts tests/integration/media-sharing.test.ts` | **Pass** — 4/4 disposable-Postgres tests on the exact clean SHA, including share rotation, hashed tokens, public lookup, revocation, and non-member denial. |
+| `NODE_ENV=test rtk pnpm migration-drill`                                                                         | **Pass** — all five migration-pipeline scenarios; from-zero and restored ledger each contained 90/90 entries. No schema migration was added by this change. |
+
+The full five-browser release matrix and manual review of every route remain
+open. This checkpoint does not promote AD-002 to `Tested` or `Verified`.
+
+## Architecture refinement checkpoint — 2026-10-21, exact clean implementation SHA `7e4e4b13c590d31f080ff71480903addd33d10ea`
+
+This checkpoint records the architecture-refinement milestone on its clean
+implementation commit. Database checks ran on the disposable `planner_test`
+database against the same source tree immediately before commit; no schema
+migration was added.
+
+| Check                                               | Result                                                                                                                                                                                                                                              |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                       | **Pass** — formatting, ESLint, strict TypeScript, 557 unit files / 4,985 tests, and Next.js production build; exit 0 on the exact implementation SHA.                                                                                               |
+| `TEST_DATABASE_URL=… pnpm test:integration`         | **Pass** — complete integration suite on disposable Postgres against the identical source tree; exit 0.                                                                                                                                             |
+| `NODE_ENV=test pnpm migration-drill`                | **Pass** — 5/5 scenarios: from-zero, skipped-migration repair, in-place upgrade, backup/restore, and failed-migration abort; exit 0.                                                                                                                |
+| Focused visual suite via `scripts/run-e2e-tests.ts` | **Pass** — 18/18 strict Chromium comparisons: AI settings, workspace settings, and media at 375/768/1024/1280/1440px in English/LTR, plus each page's Arabic/RTL full-width matrix. Accessibility and overflow checks ran within the suite; exit 0. |
+
+The focused visual run was executed after commit `7e4e4b13` and compared against
+the committed baselines. The complete five-browser release matrix, manual
+review of every route, and independent review remain open. This evidence does
+not promote AD-002 to `Tested` or `Verified`.
+
+Reproduction command (replace the placeholder with a disposable test database
+URL; do not use production credentials):
+
+```sh
+TEST_DATABASE_URL='<disposable planner_test URL>' rtk pnpm exec tsx scripts/run-e2e-tests.ts -- tests/e2e/visual-regression.spec.ts --project=visual-chromium --grep='responsive /app/w/acme/(ai-settings|media) @|responsive /app/w/acme/settings @|workspace ai-settings renders Arabic RTL|workspace settings render Arabic RTL|workspace media renders Arabic RTL'
+```
+
 ## Safe Graph API version migration — 2026-10-14, exact clean implementation SHA `3a518784a4e977ddf54f08d9f03c314f01bc0c9e`
 
 The advertising admin surface now supports migrating an existing explicit Meta
@@ -1203,3 +2199,2051 @@ password yet. No schema, migration, or production-data change is involved.
 Status remains `READY FOR INDEPENDENT REVIEW`. This evidence does not validate
 real Google OAuth or SMTP delivery and does not promote the login row to
 `Verified`; those remain external/independent review responsibilities.
+
+## 2026-10-21 — Content structured-creative feature extraction
+
+Implementation SHA: `e5b238f38830d6729b986261a0277dc9017df9e5`
+
+| Check                                                     | Result                                                                                                                          |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm exec vitest run tests/unit/content-service.test.ts` | Pass — 57/57 tests, including format-payload normalization, activity key-set audit, and designer production-field restrictions. |
+| `pnpm typecheck`                                          | Pass.                                                                                                                           |
+| Targeted ESLint                                           | Pass — zero warnings.                                                                                                           |
+| Targeted Prettier check and `git diff --check`            | Pass.                                                                                                                           |
+
+This was an ownership-only extraction with no schema, route, permission, or
+workflow changes. Full `pnpm verify`, repository-wide integration, migration
+drill, browser release matrix, and independent review remain open for the
+architecture program.
+
+## 2026-10-21 — Audience-copy content feature extraction
+
+Implementation SHA: `4ad0f0473d5d001096390757cf60bf47cd69e68a`
+
+| Check                                              | Result                                                               |
+| -------------------------------------------------- | -------------------------------------------------------------------- |
+| Focused content/materiality/ownership Vitest batch | Pass — 103/103 tests, including feature server-boundary enforcement. |
+| `pnpm typecheck`                                   | Pass.                                                                |
+| Targeted ESLint                                    | Pass — zero warnings.                                                |
+| Targeted Prettier check and `git diff --check`     | Pass.                                                                |
+
+The initial commit attempt exposed the missing `server-only` marker and an
+unmapped root-level content test; both were corrected before commit. The
+successful pre-commit run passed. Full `pnpm verify`, repository-wide
+integration, migration drill, browser release matrix, and independent review
+remain open for the architecture program.
+
+## 2026-10-21 — Content read paths and MCP feature boundaries
+
+Implementation SHA: `975c9f468bd419b65ce3e04c998ed3383f07182c`
+
+| Check                                                        | Result                                                                                                                                                                                                                      |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm test:affected -- --staged --layer unit`                | Pass — escalated to the full unit suite because `repro-page-render.test.ts` was unmapped: 562 files / 5,003 tests passed. The missing content ownership mapping was then added and its selection/architecture tests passed. |
+| Focused content, MCP, workflow-scenario, and ownership batch | Pass — 114/114 tests; the final ownership-map check passes 21/21.                                                                                                                                                           |
+| `pnpm typecheck`                                             | Pass.                                                                                                                                                                                                                       |
+| Targeted ESLint, Prettier, and `git diff --check`            | Pass.                                                                                                                                                                                                                       |
+
+The workflow-scenario command test covers manager denial, unknown scenarios,
+and the `two_gate_client` approval-mode side effect. No schema migration was
+introduced. Database integration is pending because `TEST_DATABASE_URL` is
+unavailable and the local Docker daemon did not respond. Full `pnpm verify`,
+repository integration, migration drill, browser release matrix, and
+independent review remain open for this architecture program.
+
+## Content workflow-transition extraction
+
+Implementation SHA: `88b23a41d52628d965d6da7de023b8f620314013`
+
+| Check                                                                  | Result        |
+| ---------------------------------------------------------------------- | ------------- |
+| Focused content-service, workflow-scenario, and module-ownership tests | Pass — 63/63. |
+| `pnpm typecheck`                                                       | Pass.         |
+| Targeted ESLint, Prettier, and `git diff --check`                      | Pass.         |
+| Commit hook                                                            | Pass.         |
+
+Database-backed integration and full `pnpm verify` remain pending. No schema
+migration was introduced. Evidence is recorded against the exact code SHA;
+independent verification remains open.
+
+## Content assignment extraction
+
+Implementation SHA: `488c3273165c0efbb57635edefdc5fed8699e06f`
+
+| Check                                              | Result        |
+| -------------------------------------------------- | ------------- |
+| Focused content-service and module-ownership tests | Pass — 60/60. |
+| `pnpm typecheck`                                   | Pass.         |
+| Targeted ESLint, Prettier, and `git diff --check`  | Pass.         |
+| Commit hook                                        | Pass.         |
+
+The feature extraction preserves role gates, assignment history, activity,
+notifications, and workflow side effects. Database-backed integration and
+full `pnpm verify` remain pending. No schema migration was introduced.
+
+## Atomic designer self-claim fix
+
+Implementation SHA: `e2f50c62d7f9bfbc75d92c710dabe70a8212eeae`
+
+| Check                                             | Result                                         |
+| ------------------------------------------------- | ---------------------------------------------- |
+| Focused content-service tests                     | Pass — 60/60, including the losing-claim case. |
+| `pnpm typecheck`                                  | Pass.                                          |
+| Targeted ESLint, Prettier, and `git diff --check` | Pass.                                          |
+| Commit hook                                       | Pass.                                          |
+
+No database schema changed. Integration and full `pnpm verify` remain open.
+
+## Content archive lifecycle extraction
+
+Implementation SHA: `5e780a58651f9518e5fe5e718cebbcd21b5db840`
+
+| Check                                              | Result        |
+| -------------------------------------------------- | ------------- |
+| Focused content-service and module-ownership tests | Pass — 62/62. |
+| `pnpm typecheck`                                   | Pass.         |
+| Targeted ESLint, Prettier, and `git diff --check`  | Pass.         |
+| Commit hook                                        | Pass.         |
+
+Added schema and authorization coverage for archive/restore; bulk archive
+coverage remains in the content-service suite. Database-backed integration and
+full `pnpm verify` remain pending. No schema migration was introduced.
+
+## Content rescheduling extraction
+
+Implementation SHA: `6f928e093874bc8690e65738279a34db27fc5041`
+
+| Check                                              | Result        |
+| -------------------------------------------------- | ------------- |
+| Focused content-service and module-ownership tests | Pass — 66/66. |
+| `pnpm typecheck`                                   | Pass.         |
+| Targeted ESLint, Prettier, and `git diff --check`  | Pass.         |
+| Commit hook                                        | Pass.         |
+
+Added input validation, authorization, and unchanged-date coverage. The media
+folder reconciliation remains best-effort. Database integration and full
+`pnpm verify` remain pending. No schema migration was introduced.
+
+## Batched repository verification
+
+Implementation SHA: `65cec551460865b9a1ca3c2f508ea61570884093`
+
+| Check               | Result                          |
+| ------------------- | ------------------------------- |
+| `pnpm format:check` | Pass.                           |
+| `pnpm lint`         | Pass with zero warnings.        |
+| `pnpm typecheck`    | Pass.                           |
+| `pnpm test:unit`    | Pass — 562 files / 5,009 tests. |
+| `pnpm build`        | Pass.                           |
+
+The stale read-path guard allowlist was corrected for the moved workflow
+transition command; the full verification rerun passed on this SHA. Database
+integration and migration drill are pending because `TEST_DATABASE_URL` is not
+configured and Docker is unavailable. No schema migration was introduced.
+Manual route review, release browser matrix, and independent verification
+remain open.
+
+## Designer claim action error boundary — `baa77c1144bf317335e3b879a48e3fcef9f15c44`
+
+The claim action now returns stable claim-error codes and localized English and
+Arabic copy for expected failures. Unexpected persistence failures are logged
+through the sanitized logger and return generic safe copy. Focused claim and
+action-state tests passed 76/76. On this clean SHA, `pnpm verify` passed
+formatting, ESLint, TypeScript, all 599 unit files / 5,173 tests, and the
+production build. The pre-commit hook also passed TypeScript and all 599 unit
+files / 5,173 tests. No database schema or claim transaction logic changed.
+Browser/accessibility/responsive/visual route checks, full browser matrix, and
+native Arabic editorial review remain open. The PostgreSQL 16 disposable
+container could not be verified: Docker returned HTTP 500, and `127.0.0.1:5432`
+resolves to a separate Homebrew PostgreSQL 17 instance, which was not used for
+integration or migration evidence. This change is **Tested**, not **Verified**;
+AD-002 remains **In Progress**.
+
+## Design-queue bulk archive error boundary — `479437bc2f863041359f249c884c120477960221`
+
+The bulk archive action now returns stable codes for unauthenticated,
+invalid-selection, forbidden, and unexpected failures; diagnostics use the
+credential-scrubbing logger. The client translates failures in English and
+Arabic and never displays thrown error text. The action regressions passed
+5/5; the publishing area passed 214/214. On this clean SHA, `pnpm verify`
+passed formatting, ESLint, TypeScript, all 598 unit files / 5,169 tests, and
+the production build. Successful archive results, authorization policy, and
+persisted-data behavior are unchanged. Route browser/accessibility/responsive/
+visual checks, full browser matrix, and independent verification remain open.
+This work is **Tested**, not **Verified**.
+
+## Workspace Settings AI suggestion error boundary — `273dc281e84b70b21f4a06693e5831d0369cd39e`
+
+The lead-time and monthly-target suggestion actions now return stable error
+codes instead of provider exception text, with credential-scrubbed diagnostics
+in structured logs. The lead-time action validates approval mode at runtime.
+Errors render in English and Arabic. Three action regressions and the Arabic
+lead-time form regression passed; the workspace-pages unit area passed 584/584.
+On this clean SHA, `pnpm verify` passed formatting, ESLint, TypeScript, all 597
+unit files / 5,164 tests, and the production build. No permission, route,
+suggestion success, or persistence behavior changed. Browser, accessibility,
+responsive and visual checks for the route, full browser matrix, and independent
+verification remain open, as does native Arabic editorial review. This work is
+**Tested**, not **Verified**.
+
+## Bulk reset audit failure privacy — `d056a8ccbdd0f2b46710a1648a77fc924455735a`
+
+The reset-all ideas action now stores stable `permission_denied` and
+`persistence_failure` codes in audit metadata rather than raw permission or
+database exception text. Focused reset-all and ownership-selection tests passed
+34/34; the affected commit-hook set passed 15/15. On this clean SHA,
+`pnpm verify` passed formatting, ESLint, TypeScript, all 595 unit files / 5,155
+tests, and the production build. Disposable-Postgres integration and migration
+checks could not run because `TEST_DATABASE_URL` is unset and Docker is
+unavailable. Full browser/visual checks, route-by-route review, Firefox, and
+independent verification remain open. No schema, permission, destructive
+workflow, or successful result changed. This work is **Tested**, not
+**Verified**.
+
+## Brand Kit and social-action failure privacy — implementation commits `fa4859e`–`1ffec617`
+
+Brand Kit profile, pillar, publishing-template, and AI suggestion actions now
+return stable safe copy for unexpected errors and log sanitized diagnostics
+through a feature-owned helper. Existing duplicate handling remains intact.
+The Brand Kit action suite passed 51/51, the profile-action regression passed
+1/1, and commit hooks passed TypeScript and affected tests. Social account
+picker finalization also sanitizes unexpected transaction errors while
+preserving the existing quota-limit message; the related affected set passed
+34/34 and its direct route-action regression passed 1/1. Each regression uses
+a credential-shaped fake database URL or a provider error and confirms that
+unexpected details are absent from the response.
+
+These implementation commits follow the previously green full `pnpm verify`
+on `4b8ca2611550a71a34aeee4b37f7c0fba485ebcd`; exact-HEAD grouped verification
+is still pending. No schema, route, permission, successful write, or persisted
+data behavior changed.
+
+## Brand Kit template failure privacy — `4b8ca2611550a71a34aeee4b37f7c0fba485ebcd`
+
+The focused Brand Kit action suite passed 48/48, including a fake Postgres URL
+with a credential that is absent from the returned action state. The commit
+hook passed TypeScript and 90 affected tests. On this clean SHA,
+`pnpm verify` passed formatting, ESLint, TypeScript, 592 unit files / 5,146
+tests, and production build. Unexpected publishing-template failures now
+return stable safe copy and are recorded through the sanitized logger. No
+success or duplicate-template behavior changed. Browser/visual checks, route
+review, Firefox, disposable-Postgres evidence for unrelated outstanding
+database items, and independent verification remain open.
+
+## Assignment-target authorization fix
+
+Implementation SHA: `2bf99cb39238ee122f9f92e3e31be8cee9b1d02e`
+
+| Check                                             | Result                                              |
+| ------------------------------------------------- | --------------------------------------------------- |
+| Focused content-service tests                     | Pass — 64/64, including non-designer target denial. |
+| `pnpm typecheck`                                  | Pass.                                               |
+| Targeted ESLint, Prettier, and `git diff --check` | Pass.                                               |
+| Commit hook                                       | Pass.                                               |
+
+## Final `pnpm verify`
+
+Implementation SHA: `2bf99cb39238ee122f9f92e3e31be8cee9b1d02e`
+
+| Check                | Result                          |
+| -------------------- | ------------------------------- |
+| Formatting           | Pass.                           |
+| Repository-wide lint | Pass with zero warnings.        |
+| TypeScript           | Pass.                           |
+| Unit suite           | Pass — 562 files / 5,010 tests. |
+| Production build     | Pass.                           |
+
+Database integration and migration drill could not run: `TEST_DATABASE_URL`
+was not configured, and the local Docker daemon did not respond. No schema
+migration was introduced. Full manual route/visual review and independent
+verification remain open.
+
+## Architecture review release-check follow-up — 2026-10-21
+
+The code under test is unchanged at implementation SHA
+`2bf99cb39238ee122f9f92e3e31be8cee9b1d02e`; the recorded run started from clean
+HEAD `2bf9854f9f94c0c5ed30ae332280dfe00c638e75`.
+
+| Check                              | Result                                                                                                                               |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Full Postgres integration suite    | Pass.                                                                                                                                |
+| Migration drill                    | Pass — 5/5 scenarios.                                                                                                                |
+| Chromium E2E project               | 272/278 passed; six timed out.                                                                                                       |
+| Focused content/research E2E rerun | Pass — 4/4.                                                                                                                          |
+| Firefox browser launch             | Blocked by macOS denying Firefox `plugin-container`; a test-only `MOZ_DISABLE_CONTENT_SANDBOX=1` attempt did not recover the launch. |
+| Visual regression suite            | 208/264 passed; 56 screenshot comparisons failed.                                                                                    |
+
+The six initial Chromium failures were the advertising-view save, unauthenticated
+`/app` redirect, community-route responsive sweep, two Quick Create journeys,
+and research watchlist assignment. The four focused content/research journeys
+passed on rerun after the application had compiled those routes. Treat those
+initial failures as cold-start or interaction timeouts unless a later focused
+reproduction confirms a product defect.
+
+The visual diff artifacts are under ignored `test-results/`. They include
+content-state differences (for example, social analytics now renders the valid
+“No connected channels yet” state while its expected image shows “Workspace
+unavailable”) and page-height differences on Settings, Brand Kit, Client,
+Media, and platform surfaces. No snapshot baselines were rewritten: the
+visual-parity instructions require an upstream Stitch change before a refresh.
+Reconcile these route states and screenshots with the approved design source
+before treating visual verification as green.
+
+This evidence does not complete the five-browser release gate. The full run
+stopped at Firefox startup after Chromium completed. Manual review of all 91
+routes, route-state reconciliation, independent review, and exact clean-SHA
+release evidence remain open. `AD-002` remains **In Progress**; do not assign
+**Verified** based on these local checks.
+
+## MCP diagnostics registration boundary — 2026-10-22
+
+Implementation SHA: `8130b71cbdfbfbb32856e514acf6094198b30e6a`
+
+The five application-error diagnostics tools now register from
+`src/features/mcp/diagnostic-tools.ts`. The MCP server factory supplies shared
+authorization and response helpers. Tool names, input/output schemas, scopes,
+and response behavior are unchanged.
+
+| Check                        | Result        |
+| ---------------------------- | ------------- |
+| MCP diagnostics unit suite   | Pass — 30/30. |
+| TypeScript                   | Pass.         |
+| Targeted ESLint and Prettier | Pass.         |
+| `git diff --check`           | Pass.         |
+
+This is focused implementation evidence, not full release evidence. MCP
+integration, route/browser checks, and independent verification remain
+separate gates; status remains **Tested**, not **Verified**.
+
+## Structured logging cleanup — 2026-10-22
+
+Implementation SHA: `6aa65de380335b2d66dbef358d3c34e19b64d919`
+
+Caught server-side failures and operational warnings in content delivery,
+account preferences, mentions, email, brand profiles, secret fallback,
+storage, media cleanup/preview, and planning edit now use the shared
+sanitizing logger. Tests assert that unconfigured SMTP logs omit recipient
+addresses and that malformed storage paths are not copied into logs. Existing
+stable action error codes and user-visible behavior are unchanged.
+
+| Check                                                                  | Result        |
+| ---------------------------------------------------------------------- | ------------- |
+| Focused observability, email, secret, storage, brand, and media suites | Pass — 78/78. |
+| TypeScript                                                             | Pass.         |
+| Targeted ESLint, Prettier, and diff check                              | Pass.         |
+
+This is focused evidence; the full repository verification and route/browser
+release gates remain pending. The remaining direct console output is recorded
+in `PRODUCTION_READINESS_TRACKER.md` and is limited to bootstrap, development,
+and browser-side paths.
+
+## Concurrent index migration guard — 2026-10-22
+
+Implementation SHA: `488ada20bbebf81b624f91cb30a6f0fcf1c62a7a`
+
+The dedicated runner now accepts only external `.sql` files containing one
+`CREATE [UNIQUE] INDEX CONCURRENTLY` command per Drizzle statement breakpoint.
+It resolves paths before checking them, rejects files inside the Drizzle
+migration journal, and validates SQL before connecting to Postgres. The
+historic journal was not edited.
+
+| Check                                       | Result        |
+| ------------------------------------------- | ------------- |
+| Concurrent migration helper unit suite      | Pass — 22/22. |
+| TypeScript                                  | Pass.         |
+| Targeted ESLint, Prettier, and shell syntax | Pass.         |
+| `git diff --check`                          | Pass.         |
+| Database integration and migration drill    | Not run.      |
+
+Database gates could not be run because `TEST_DATABASE_URL` is missing; the
+Docker availability probe stalled. No schema migration was introduced. The
+full repository and browser release gates remain open.
+
+## Brand Kit MCP registration boundary — 2026-10-22
+
+Implementation SHA: `e4f56f7ba3ce1831cb211283bfe6486bc23f217b`
+
+Brand Kit export/import schemas, conflict strategy, logo-transfer helpers, and
+tool registrations now live in `src/features/mcp/brand-kit-tools.ts`. Shared
+MCP context, response format, errors, and result envelopes are centralized in
+`src/features/mcp/tool-contracts.ts`. The 34-tool catalog and existing tool
+contracts are unchanged.
+
+| Check                                     | Result        |
+| ----------------------------------------- | ------------- |
+| MCP tool-catalog and diagnostics suite    | Pass — 30/30. |
+| TypeScript                                | Pass.         |
+| Targeted ESLint, Prettier, and diff check | Pass.         |
+| Brand Kit Postgres integration suite      | Not run.      |
+
+The Brand Kit integration suite requires `TEST_DATABASE_URL`, which is
+currently missing. No schema migration or API contract change was introduced.
+Full repository and browser release gates remain open.
+
+## MCP registration architecture batch — 2026-10-22
+
+Exact clean implementation HEAD: `d383413bdb256e17a505c34b0d3db2389110ad58`
+
+The MCP server now composes feature registrars for workspace access, tasks,
+planning content, research, social analytics, Brand Kit, and diagnostics.
+Shared context, scope, error, and response contracts live in
+`src/features/mcp/tool-contracts.ts`. The 34-tool catalog retains its names
+and registration order. This refactor changes no route, API, permission,
+workflow, schema, or persisted data.
+
+| Command / check                                   | Result                                                                          |
+| ------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `pnpm verify`                                     | Pass — format, lint, typecheck, 562 unit files / 5,018 tests, production build. |
+| Focused MCP task/catalog suites                   | Pass — 37/37.                                                                   |
+| `git status --short --branch` before verification | Clean at `d383413bdb256e17a505c34b0d3db2389110ad58`.                            |
+| Database integration and migration drill          | Not applicable; no persistence or migration behavior changed.                   |
+
+This records `Tested` evidence for the code batch. MCP production smoke,
+full route/browser/visual review, and independent verification remain separate
+release gates; the architecture goal remains **In Progress**.
+
+## Operator logging privacy refinement — 2026-10-22
+
+Exact clean implementation HEAD: `b23fc604529056b1b8be497b101d1e41d9082efb`
+
+The local-upload migration no longer prints a workspace ID or user-supplied
+filename when it preserves a file changed during cleanup; its JSON summary
+continues to report the aggregate `localCleanupSkipped` count. Concurrent-index
+migration errors retain a validated error class and code but omit raw database
+message/detail, which may contain data values after a failed unique index
+build. No migration or stored data changed.
+
+| Command / check                                      | Result                                  |
+| ---------------------------------------------------- | --------------------------------------- |
+| Focused migration report and concurrent runner tests | Pass — 26/26.                           |
+| TypeScript                                           | Pass.                                   |
+| Targeted ESLint and Prettier                         | Pass.                                   |
+| `git diff --check`                                   | Pass.                                   |
+| Disposable database integration / migration drill    | Not applicable; no persistence changed. |
+
+This narrow batch is **Tested**, not **Verified**. Full repository
+verification, route/browser/visual review, and independent review remain
+separate open gates; AD-002 remains **In Progress**.
+
+## Architecture review verification milestone — 2026-10-22
+
+Exact clean HEAD: `92da4ed981e983374666611db696202ed35dd342`
+
+| Command / check           | Result                                                                                  |
+| ------------------------- | --------------------------------------------------------------------------------------- |
+| `pnpm verify`             | Pass — formatting, lint, typecheck, 562 unit files / 5,020 tests, and production build. |
+| `git status` before run   | Clean at the exact HEAD above.                                                          |
+| E2E test database         | Not available; `TEST_DATABASE_URL` is unset.                                            |
+| Docker availability probe | Did not respond; the CLI was interrupted after 16 seconds.                              |
+
+This verifies the current code and build at the recorded clean HEAD. The full
+disposable-Postgres integration/migration drill, release browser and visual
+matrix, route-by-route review, and independent review remain open. This is
+**Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## Route review tenant and behavior corrections — 2026-10-22
+
+Implementation commits:
+
+- `97cbe92` — agency-resolved Trends configuration and workspace-scoped Team
+  audit activity metadata.
+- `48acf8a` — Account workspace count scoped to the displayed agency.
+- `30f928a` — preserve calendar filters when switching to Workload view.
+- `5ba4a00` — offset pagination for the merged workspace activity feed.
+- `fa9e86a` — shared IANA timezone validation and workspace timezone picker.
+
+| Command / check                                           | Result                                                                                   |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `pnpm verify` on combined implementation tree             | **Pass** — formatting, lint, TypeScript, 563 unit files / 5,022 tests, production build. |
+| Focused timezone validation and combobox tests            | **Pass** — 8/8.                                                                          |
+| Targeted ESLint, TypeScript, Prettier, `git diff --check` | **Pass**.                                                                                |
+| Member-role audit metadata integration assertion          | Added; **not run** because `TEST_DATABASE_URL` is unset and Docker returned HTTP 500.    |
+| Browser and visual checks for touched routes              | **Open**.                                                                                |
+
+This is candidate evidence for the route review pass. Re-run the required
+checks on the exact clean commit before assigning `Tested`; database, browser,
+visual, route-inventory, and independent review gates remain open. AD-002
+remains **In Progress**; do not mark this pass **Verified**.
+
+## Architecture refinement — shared planning workflow model — 2026-10-22
+
+Implementation SHA: `769a531a46fe2f4ef1f108fc01393655ea6ac984` (clean at run).
+
+| Command / check                                      | Result                                                                                           |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Focused workflow rail and stepper tests              | Pass — 12/12.                                                                                    |
+| `pnpm verify`                                        | Pass — formatting, lint, TypeScript, 566 unit files / 5,030 tests, and production build.         |
+| Postgres integration and migration drill             | Not run — `TEST_DATABASE_URL` is unset and the Docker engine is unavailable in this environment. |
+| Browser / visual review and independent verification | Open.                                                                                            |
+
+The planning detail route now sends one serializable workflow model to both
+the mobile sheet and desktop rail. No user contract changed. This checkpoint
+is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## Architecture refinement — centralized task access — 2026-10-22
+
+Implementation SHA: `292da39ed09f6b0f464c630b62c3283d69c6ab29` (clean at run).
+
+| Command / check                                      | Result                                                                                   |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Focused task access, workflow, and time tests        | Pass — 13/13.                                                                            |
+| `pnpm verify`                                        | Pass — formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build. |
+| Task authorization integration regression            | Added; not run because `TEST_DATABASE_URL` is unset and Docker did not respond.          |
+| Browser / visual review and independent verification | Open.                                                                                    |
+
+Creator, assignee, agency-admin, and active-member task access is now resolved
+through `src/lib/tasks/access.ts` and reused by task updates, detail flags,
+and attachment writes. The ADR 0016 behavior is unchanged. This checkpoint
+is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## Architecture refinement — publishing, notification, and AI workflows
+
+Implementation SHA: `f85506fc1aa18d47717eac15d7fba990416919bc` (clean at run).
+
+| Command / check                     | Result                                                                                  |
+| ----------------------------------- | --------------------------------------------------------------------------------------- |
+| `pnpm verify`                       | Pass — formatting, lint, typecheck, 587 unit files / 5,124 tests, and production build. |
+| Focused planning library tests      | Pass — 25 tests.                                                                        |
+| Focused notification dispatch tests | Pass — 46 tests.                                                                        |
+| Postgres integration and drill      | Not run — `TEST_DATABASE_URL` is unset and the local Docker API returned HTTP 500.      |
+| Browser and visual release gates    | Open — full browser matrix, route review, and visual reconciliation remain outstanding. |
+| Independent verification            | Open — no independent `Verified` status assigned.                                       |
+
+The monthly planning route now uses a feature-owned transaction to claim the
+proposal, create content, and persist both final states atomically. The AI
+generation route rejects unauthorized actors before loading workspace
+research or brand context. Planning library writes now serialize archive and
+restore operations and record their audit events in the same transaction.
+Email dispatch claims each outbox event under a row lock to avoid competing
+workers sending the same event; delivery remains at-least-once if a process
+crashes after SMTP acceptance and before its database commit. A database-backed
+concurrent-dispatch regression test was added but could not run without the
+disposable database. AD-002 remains **In Progress**; this is **Tested**, not
+**Verified**.
+
+## Architecture refinement — media folder import error handling — 2026-10-22
+
+Implementation SHA: `aabd19ea0478791be9d6a564bad051936c6c0466` (clean).
+
+| Command / check                          | Result                                                                                               |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                            | Pass — formatting, lint, TypeScript, 588 unit files / 5,127 tests, and production build.             |
+| Focused folder-import unit tests         | Pass — 8/8 across service and route regression suites.                                               |
+| Commit-hook typecheck and affected tests | Pass — 33 files / 259 tests, plus the 8 directly changed tests.                                      |
+| Postgres integration / migration drill   | Not applicable to this error-response-only change; prior transactional DB checks remain outstanding. |
+| Browser, visual, and independent review  | Open — part of the broader AD-002 release and route-review gates.                                    |
+
+Unknown persistence and provider implementation errors now return safe fixed
+copy in item reports and route-level failures. Known sanitized
+`MediaSourceError` guidance remains visible, and a late workspace permission
+denial returns 403. No schema or successful-import behavior changed. This
+checkpoint is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## Account MCP scope issuance — focused regression evidence
+
+Working-tree evidence (not exact clean-SHA evidence):
+
+| Command                                                       | Result        |
+| ------------------------------------------------------------- | ------------- |
+| `pnpm vitest run tests/unit/account-mcp-token-action.test.ts` | Pass — 10/10. |
+
+Review found that invalid or empty scope input could silently issue
+`content:read`. The action now rejects invalid and empty submissions. The
+account MCP scope-issuance path is reviewed; other account contracts and the
+full route, browser, and visual checks remain open. Independent **Verified**
+status is not assigned.
+
+## Platform agency creation result boundary — focused regression evidence
+
+Working-tree evidence (not exact clean-SHA evidence):
+
+| Command                                                                                                                                                        | Result        |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `pnpm vitest run tests/unit/platform/create-agency-action.test.ts tests/unit/platform/add-agency-drawer.test.tsx tests/unit/platform-agencies-service.test.ts` | Pass — 13/13. |
+
+The action no longer serializes internal exception or raw validation messages.
+It returns stable codes for the client to translate, and the administrator
+email warning uses the English/Arabic catalogs. This does not certify the
+platform route family's full browser, responsive, keyboard, axe, editorial,
+or visual behavior. Independent **Verified** status is not assigned.
+
+The combined route-fix checkpoint then passed 58/58 across the account scope
+action, platform agency action/form/service, catalog parity, and affected-test
+ownership suites. Prettier and `git diff --check` also pass for the touched
+files. These remain working-tree results pending the final exact-clean-SHA
+release checks.
+
+## Agency provider settings — focused route evidence
+
+Working-tree evidence (not exact clean-SHA evidence):
+
+| Command                                                                                                                                                                                                                                       | Result        |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `pnpm vitest run tests/unit/agency-settings/provider-config-card.test.tsx tests/unit/agency-settings/social-provider-actions.test.ts tests/unit/agency-settings/provider-config-loading.test.tsx tests/unit/feedback/screen-loading.test.tsx` | Pass — 23/23. |
+
+The route uses a shared secret-free client DTO, derives action identity from the
+session, and now has a loading surface matching its card/form layout. Full
+route browser, bilingual runtime, accessibility, visual, and independent
+verification evidence remain open.
+
+## Agency AI settings — focused action and secret-status evidence
+
+Working-tree evidence (not exact clean-SHA evidence):
+
+| Command                                                                                                                                                                                | Result        |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `pnpm vitest run tests/unit/agency-settings/ai-actions.test.ts tests/unit/agency-settings/ai-page.test.tsx tests/unit/ai-provider-secret.test.ts tests/unit/secret-encryption.test.ts` | Pass — 62/62. |
+| Prettier and `git diff --check`                                                                                                                                                        | Pass.         |
+
+The AI settings actions now return stable result codes instead of internal
+exception or validation text. The managed-secret screen localizes those codes
+and receives only encryption warning classifications; raw filesystem errors
+stay server-side. The development fallback no longer claims a key file exists.
+Full bilingual browser, keyboard/axe, responsive visual, exact-clean-SHA, and
+independent verification evidence remain open; AD-002 remains **In Progress**.
+
+## Agency Settings overview entitlement fallback — focused evidence
+
+Working-tree evidence (not exact clean-SHA evidence):
+
+| Command                                                                                                                                                                              | Result        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
+| `pnpm vitest run tests/unit/agency-settings/page.test.tsx tests/unit/community/plan-access.test.ts tests/unit/entitlement-merge.test.ts tests/unit/m2-entitlement-hardening.test.ts` | Pass — 56/56. |
+| Prettier and `git diff --check`                                                                                                                                                      | Pass.         |
+
+The overview delegates to a server-only feature helper that treats only a
+missing entitlement row as unavailable; unexpected lookup failures reach the
+route error boundary. This does not replace the
+route's bilingual browser, keyboard/axe, responsive visual, exact-clean-SHA,
+or independent verification evidence. AD-002 remains **In Progress**.
+
+## Agency support-access decisions — focused action evidence
+
+Working-tree evidence (not exact clean-SHA evidence):
+
+| Command                                                                                                                                                                                                          | Result      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `pnpm exec vitest run tests/unit/agency-settings/support-decisions.test.ts`                                                                                                                                      | Pass — 6/6. |
+| `TEST_DATABASE_URL=postgresql://planner@127.0.0.1:5432/planner_test NODE_ENV=test pnpm exec vitest run --config vitest.integration.config.ts tests/integration/support-access.test.ts`                           | Pass — 9/9. |
+| `TEST_DATABASE_URL=postgresql://planner@127.0.0.1:5432/planner_test pnpm test:e2e:isolated --project=chromium tests/e2e/a11y-routes.spec.ts tests/e2e/locale-rtl.spec.ts --grep='agency support request review'` | Pass — 2/2. |
+| Prettier and `git diff --check`                                                                                                                                                                                  | Pass.       |
+
+The agency-admin action verifies active-agency role, rate limit, stable results,
+and tenant-scoped service arguments. Integration verifies an admin cannot
+decide a request outside the active agency and that no grant is created. The
+browser checks cover the English empty-state accessibility contract and Arabic
+RTL rendering. Responsive visual, full browser matrix, exact-clean-SHA, and
+independent verification remain open.
+
+## Notification retry failure privacy — `b5166d983e8b1cf470b57d78e1741eb813532913`
+
+Email and in-app outbox failures now persist stable
+`email_delivery_failed`, `email_dispatch_failed`, and
+`outbox_dispatch_failed` codes instead of raw provider or database exception
+messages. Diagnostics use the credential-scrubbing structured logger. The
+focused notifications/discussions unit area passed 152/152. The Postgres DLQ
+regression now uses credential-shaped SMTP failure text and asserts a stable
+dead-letter value, but could not run because `TEST_DATABASE_URL` is unset and
+Docker is unavailable. On this clean SHA, `pnpm verify` passed formatting,
+ESLint, TypeScript, all 595 unit files / 5,157 tests, and the production build.
+No schema, retry, delivery-state, route, or user-facing response contract
+changed. Browser/visual checks, route review, Firefox, and independent
+verification remain open. This work is **Tested**, not **Verified**.
+
+## Planning-pack action error boundary — `c9d4906684d61d0fa56b8a8f049eadb6f43e55e3`
+
+The agency planning-pack action now returns stable error codes instead of raw
+Zod or persistence exception text. Unexpected failures are logged; the form
+renders the error codes in English and Arabic. Authentication, admin denial,
+validation, and not-found states remain distinct. The focused action regressions
+passed 3/3; the AI unit area passed 248/248. On this clean SHA, `pnpm verify`
+passed formatting, ESLint, TypeScript, all 596 unit files / 5,160 tests, and
+the production build. English/Arabic route browser, axe, responsive and visual
+checks remain pending, along with the full browser matrix and independent
+verification. No authorization, route, persistence, or successful save
+contract changed. This work is **Tested**, not **Verified**.
+
+## Batched isolated Chromium run — 2026-10-22
+
+Working-tree evidence (not exact clean-SHA release evidence):
+
+| Command                                                                                                    | Result                                                                                                                                        |
+| ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TEST_DATABASE_URL=postgresql://planner@127.0.0.1:5432/planner_test pnpm test:affected -- --layer browser` | Full suite selected: 277/281 passed, 3 failed while the local Next server repeatedly hit its memory threshold and restarted, 1 expected skip. |
+| Focused rerun of the three failed cases in `research-teardown.spec.ts` and `users/add-directly.spec.ts`    | Pass — 3/3.                                                                                                                                   |
+
+The failures coincided with `ECONNRESET`, early response-stream closure, and
+seed-request socket hang-up errors from the restarted local server. All three
+cases passed when rerun in isolation. The full browser gate remains open because
+the full run was not green; focused reruns do not replace it. This result
+supports batching focused checks during implementation and running the full
+browser matrix once against a stable final candidate. Visual comparison, exact
+clean-SHA release evidence, remaining route review, and independent review
+remain open; AD-002 stays **In Progress**.
+
+## Password-reset anti-enumeration — working-tree evidence
+
+| Check                                                                                                                                                                | Result        |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `pnpm exec vitest run tests/unit/auth/password-reset-request.test.ts tests/unit/testing/test-affected-core.test.ts tests/unit/architecture/module-ownership.test.ts` | Pass — 32/32. |
+| `TEST_DATABASE_URL=postgresql://planner@127.0.0.1:5432/planner_test pnpm test:e2e:isolated --project=chromium tests/e2e/password-reset-enumeration.spec.ts`          | Pass — 1/1.   |
+| Prettier and `git diff --check`                                                                                                                                      | Pass.         |
+
+The server action catches token lookup, profile-locale lookup, and mail delivery
+errors after rate limiting. The browser receives the same confirmation URL for
+unknown addresses and provider failures; warning logs omit the address and
+provider exception. The action uses the saved locale when present and the
+active interface locale otherwise. These are working-tree results, not exact
+clean-SHA release evidence; broader release gates and independent review remain
+open.
+
+## Trend source settings read boundary — working-tree evidence
+
+| Check                                                                                                                                                | Result      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| Focused Trend Sources page authorization, view-model, UI, and module ownership suites                                                                | Pass — 8/8. |
+| `TEST_DATABASE_URL=postgresql://planner@127.0.0.1:5432/planner_test pnpm test:e2e:isolated --project=chromium tests/e2e/trends-sources-page.spec.ts` | Pass — 1/1. |
+| Prettier and `git diff --check`                                                                                                                      | Pass.       |
+
+The admin denial now occurs before agency AI/source reads. The feature query
+selects only safe display data and does not send provider error messages or
+secret references to the browser. The existing admin source-management journey
+still passes. These are working-tree results; exact clean-SHA and full release
+evidence remain open.
+
+## Agency Reports tenant-scope enforcement — working-tree evidence
+
+| Check                                                                                                                                            | Result        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
+| `TEST_DATABASE_URL=postgresql://planner@127.0.0.1:5432/planner_test pnpm test:integration tests/integration/reports-tenant-isolation.test.ts`    | Pass — 4/4.   |
+| `pnpm typecheck`                                                                                                                                 | Pass.         |
+| Report action, channel-picker, and period unit regressions                                                                                       | Pass — 12/12. |
+| Report PDF cross-agency and member-access route tests                                                                                            | Pass — 2/2.   |
+| `TEST_DATABASE_URL=postgresql://planner@127.0.0.1:5432/planner_test pnpm test:e2e:isolated --project=chromium tests/e2e/reports-builder.spec.ts` | Pass — 2/2.   |
+| Ownership and affected-test selector suites                                                                                                      | Pass — 27/27. |
+| Targeted Prettier check and `git diff --check`                                                                                                   | Pass.         |
+
+The action rejects foreign workspaces and channels before rendering or saving;
+the aggregate query also requires the active agency and restricts metric reads
+to its scoped channel set. Missing or invalid custom dates now return a
+translated validation code without reaching PDF generation. Server Action
+errors are translated from the English and Arabic catalogs. The history list
+resolves client translations through the locale provider, and foreign report
+IDs receive the same 404 response as missing IDs. These are working-tree
+results; full verification, exact clean-SHA and release evidence, and
+independent verification remain open.
+
+## Account multi-agency membership context — working-tree evidence
+
+| Check                                                                                                                          | Result        |
+| ------------------------------------------------------------------------------------------------------------------------------ | ------------- |
+| Multi-agency account Chromium regression (`tests/e2e/account-theme.spec.ts`, disposable `planner_test`)                        | Pass — 1/1.   |
+| Account accessibility and theme journeys (`a11y-routes.spec.ts`, `account-theme.spec.ts`, Chromium, disposable `planner_test`) | Pass — 4/4.   |
+| `pnpm typecheck`                                                                                                               | Pass.         |
+| Architecture ownership and affected-test selector suites                                                                       | Pass — 27/27. |
+| Targeted Prettier check and `git diff --check`                                                                                 | Pass.         |
+
+The regression seeds two agencies for one user and verifies both membership
+rows appear while only the signed active agency is marked current. The broader
+Arabic runtime, responsive visual release checks, exact clean-SHA evidence,
+and independent verification remain open.
+
+## Unresolved agency-context recovery — working-tree evidence
+
+| Check                                                                                                                                                | Result        |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| Multi-agency no-cookie recovery and canonical workspace landing (`tests/e2e/agency-switcher.spec.ts`, Chromium, disposable `planner_test`) — EN + AR | Pass — 2/2.   |
+| No active membership access state (`tests/e2e/agency-switcher.spec.ts`, Chromium, disposable `planner_test`)                                         | Pass — 1/1.   |
+| Agency-context cookie, architecture ownership, affected-test selector suites                                                                         | Pass — 43/43. |
+| `pnpm typecheck`                                                                                                                                     | Pass.         |
+| Targeted Prettier check and `git diff --check`                                                                                                       | Pass.         |
+
+The user explicitly selects an active membership through the shared switcher;
+the server rechecks membership, writes the signed cookie, and returns the
+canonical workspace URL. These are working-tree checks. Arabic no-membership
+runtime, keyboard/axe, responsive visual release gates, exact clean-SHA
+evidence, and independent verification remain open.
+
+## Platform-only tenant landing states — working-tree evidence
+
+| Check                                                                                                           | Result        |
+| --------------------------------------------------------------------------------------------------------------- | ------------- |
+| Platform owner with unresolved multi-agency context visits `/app` and `/app/workspaces` (`a11y-routes.spec.ts`) | Pass — 1/1.   |
+| `pnpm typecheck`                                                                                                | Pass.         |
+| Architecture ownership and affected-test selector suites                                                        | Pass — 27/27. |
+| Targeted Prettier check and `git diff --check`                                                                  | Pass.         |
+
+Both tenant pages now send a platform-only context to the platform console
+instead of rendering an empty page. No tenant data is exposed. Full route
+browser/visual release evidence, exact clean-SHA, and independent verification
+remain open.
+
+## AI budget and usage-event corrections — working-tree evidence
+
+| Check                                                                  | Result                                |
+| ---------------------------------------------------------------------- | ------------------------------------- |
+| Affected AI unit area (`pnpm test:affected -- --area ai --layer unit`) | Pass — 242/242 tests across 21 files. |
+| Architecture ownership and affected-test selection suites              | Pass — 28/28 tests.                   |
+| AI governance integration against disposable `planner_test`            | Pass — 5/5 tests.                     |
+| `pnpm typecheck`                                                       | Pass.                                 |
+| Targeted Prettier and `git diff --check`                               | Pass.                                 |
+
+The AI governance entry now owns shared token reservation refunds and usage
+event persistence. Monthly planning validates before reserving, releases
+estimated tokens after pre-provider failures, records usage metadata, maps
+budget limits to 429, and sanitizes provider errors. Standard generation no
+longer refunds reconciled provider usage after later failures, and the
+Community Test Lab uses the same refund helper. No schema or migration changed.
+These checks are against the working tree, not an exact clean SHA. Full
+Full Postgres integration, `pnpm verify`, browser/visual release gates, and
+independent verification remain open.
+
+## Agency report download contract — working-tree evidence
+
+| Check                                          | Result      |
+| ---------------------------------------------- | ----------- |
+| `tests/unit/report-download-route.test.ts`     | Pass — 2/2. |
+| Targeted Prettier check and `git diff --check` | Pass.       |
+
+The PDF route no longer performs an unused agency-admin lookup; the
+documentation now accurately describes the existing same-agency member read
+contract. Download permissions and report storage are unchanged. These checks
+are against the working tree, not an exact clean SHA. Full route browser/visual
+release evidence and independent verification remain open.
+
+## Report history retention cleanup — working-tree evidence
+
+| Check                                                              | Result      |
+| ------------------------------------------------------------------ | ----------- |
+| Report storage and download suites                                 | Pass — 3/3. |
+| 101-report retention regression in an isolated temporary directory | Pass.       |
+| Targeted Prettier and `git diff --check`                           | Pass.       |
+
+The adapter now unlinks PDF files when their history entries leave the
+100-report window. This check is against the working tree, not an exact clean
+SHA. Full repository and release evidence remain open.
+
+## Grouped architecture pass validation — 2026-10-22
+
+| Check                                                                   | Result                                                                                                                                                                                                                                                                            |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                           | Pass: Prettier, ESLint, TypeScript, 587 unit files / 5,117 tests, production build.                                                                                                                                                                                               |
+| Full disposable-Postgres integration suite                              | All reported test files passed against `planner_test`; no schema changed in the latest report-route/storage edits.                                                                                                                                                                |
+| `NODE_ENV=test TEST_DATABASE_URL=… pnpm migration-drill`                | Pass — all 5 scenarios.                                                                                                                                                                                                                                                           |
+| `test:e2e:release` browser phase                                        | 276/289 passed; 11 failed under the one-worker run while Next reported memory-threshold restarts. Ten of the 11 failed cases passed in an isolated rerun; the remaining advertising report case passed after its route stopped doing dashboard-only work for client presentation. |
+| Visual compare                                                          | Current attempt stopped at 23/264 after repeated early reference mismatches; the previously completed full capture remains 207/264 with 57 known differences.                                                                                                                     |
+| Targeted advertising client report Chromium case after route adjustment | Pass — 1/1.                                                                                                                                                                                                                                                                       |
+
+The functional failures were rerun as a focused group instead of repeating the
+full suite; the advertising route was then checked separately after the
+performance change. The full browser release matrix and visual reconciliation
+are still open. These are working-tree checks, not evidence for an exact clean
+commit. No independent reviewer has assigned **Verified**.
+
+## Browser shard follow-up — 2026-10-22
+
+| Check                          | Result                                                                                                                                   |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Chromium shard 1/3             | 96 passed; the advertising reporting timeout passed in a focused rerun after its test-local timeout adjustment.                          |
+| Chromium shard 2/3             | 95 passed, 1 skipped because authenticated MCP E2E requires `MCP_ACCESS_TOKEN`.                                                          |
+| Chromium shard 3/3             | 94 passed; the research teardown suite passed 4/4 in a focused rerun.                                                                    |
+| YouTube paid-source regression | Pass — 1/1 after updating the stale test to assert the current missing-key error, disabled status, and configuration affordance.         |
+| Firefox shard 1/3              | Incomplete — `/app` accessibility case failed, then Firefox remained at full CPU without progress; stopped after more than five minutes. |
+
+Chromium coverage was reconciled through shards plus targeted reruns. The
+Firefox, WebKit, mobile Chrome, and mobile Safari release checks remain open;
+the five-browser gate is not green. No visual snapshots were updated. These
+are working-tree checks and do not satisfy clean-SHA or independent
+verification requirements.
+
+## Advertising timestamp hydration and WebKit follow-up — working tree
+
+| Check                                               | Result                                                                                                                      |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                       | Pass — formatting, lint, typecheck, 587 unit files / 5,117 tests, and production build.                                     |
+| Advertising reporting, English + Arabic RTL, WebKit | Pass — 2/2; both journeys assert no hydration warning.                                                                      |
+| WebKit shard 1/3                                    | 96 passed, 1 failed. The Brand Kit administration case reproduced an RSC fallback navigation interruption when rerun alone. |
+| Firefox plain-page launch                           | Blocked — a minimal `data:` page hangs at full CPU before application code loads.                                           |
+
+The advertising dashboard now formats its last-sync value through the shared
+deterministic locale formatter and workspace timezone. The Brand Kit failure
+is not classified as a product defect; the Firefox problem is isolated to the
+local browser runtime. WebKit shards 2/3 and 3/3, mobile-browser coverage, and
+visual reconciliation remain open. These working-tree checks are not
+independent verification or exact clean-SHA evidence.
+
+## Mobile browser reconciliation — working tree
+
+| Check                                        | Result                                                                                                      |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Mobile Chrome shard 3/3                      | 90 passed, 6 failed on desktop-only or non-mobile navigation selectors.                                     |
+| Mobile Chrome focused responsive group       | Pass — 19 passed, 3 desktop-only skips across workspace and analytics route cases.                          |
+| Mobile Safari shard 1/3                      | 96 passed, 1 Brand Kit route-transition failure; replaced with isolated route cases and rerun below.        |
+| Mobile Safari shard 2/3                      | 95 passed, 1 environment-gated MCP skip.                                                                    |
+| Mobile Safari shard 3/3                      | 93 passed, 3 desktop-only skips.                                                                            |
+| Brand Kit rule/resource cases, mobile Safari | Pass — 2/2 after splitting publishing-rule creation and linked-resource creation into separate route tests. |
+| Brand Kit rule/resource cases, WebKit        | Pass — 2/2.                                                                                                 |
+
+The six mobile Chrome failures were mismatched test selectors: the application
+uses a mobile context header and More sheet, while the test asserted desktop
+sidebar controls. The refreshed responsive assertions passed in a focused
+rerun. The Brand Kit case had combined two routes while a server-action refresh
+was still settling; isolated route cases pass in both Safari engines. These
+are working-tree results. Firefox, the visual release gate, exact clean-SHA
+evidence, and independent verification remain open.
+
+## Final grouped working-tree validation — 2026-10-22
+
+| Check                                    | Result                                                                                                                    |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                            | Pass — Prettier, ESLint, TypeScript, 587 unit files / 5,117 tests, and production build.                                  |
+| Full disposable-Postgres integration     | Pass — full integration command exited successfully against `planner_test`.                                               |
+| `pnpm migration-drill`                   | Pass — all five scenarios: from-zero, skipped migration repair, in-place upgrade, backup/restore, failed-migration abort. |
+| Mobile browser shards and focused reruns | Reconciled as documented above; no unresolved mobile-only failure remains from these runs.                                |
+| `git diff --check`                       | Pass.                                                                                                                     |
+
+No schema or migration changed in this batch. Results are against the working
+tree and do not establish an exact clean-SHA release check. Firefox remains
+unavailable in the local runtime, the visual matrix retains 57 known reference
+differences, and manual route review plus independent **Verified** status are
+open. This batch is not release-ready or commit/push evidence.
+
+## Agency AI capability localization and RTL coverage — 2026-10-22
+
+The agency AI catalog omitted the `advertising_recommendations` capability,
+causing its label and description to render as raw keys. Added English and
+Arabic catalog entries, a metadata regression for every agency-facing
+capability, and a route-specific deterministic visual fixture. Added the
+agency AI Arabic/RTL responsive matrix at 375, 768, 1024, 1280, and 1440px;
+it asserts the localized heading/label, no horizontal overflow, and no
+critical/serious axe findings.
+
+| Check                                                             | Result                                                                                                                               |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Focused AI capability metadata unit suite                         | Pass — 19/19.                                                                                                                        |
+| Agency AI English exact, responsive, and Arabic/RTL visual checks | Pass — 5/5; Arabic check covers all five documented widths.                                                                          |
+| Full visual matrix rerun                                          | Stopped at 96/265 before the final responsive-fixture correction; known unrelated reference drift reproduced, so not a release pass. |
+| `git diff --check`                                                | Pass before this evidence update; rerun with the final grouped checks.                                                               |
+
+The agency AI references were refreshed only for the affected page after
+reviewing the before/after application capture. This does not approve the page
+against the active Stitch design; the full visual reconciliation, Firefox,
+route review, clean exact-SHA evidence, and independent **Verified** status
+remain open.
+
+## Grouped architecture pass revalidation — 2026-10-22, current worktree
+
+| Check                                      | Result                                                                                                                                                 |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm verify`                              | Pass — formatting, ESLint, TypeScript, 587 unit files / 5,118 tests, and production build.                                                             |
+| Full disposable-Postgres integration suite | Pass against `planner_test`; all integration files completed.                                                                                          |
+| `NODE_ENV=test pnpm migration-drill`       | Pass — all five scenarios. No migration changed in this batch.                                                                                         |
+| Focused agency AI visual checks            | Pass — 5/5 after the localized copy and fixture change.                                                                                                |
+| Full visual matrix                         | Stopped at 96/265 before the final responsive-fixture correction; previously observed unrelated reference differences recurred, so not a release pass. |
+| `git diff --check`                         | Pass after evidence updates.                                                                                                                           |
+
+These are working-tree results, not exact clean-SHA evidence. Firefox, full
+visual reconciliation, route-by-route manual review, and independent review
+remain open. Do not advance the production-readiness status from **Tested**.
+
+### Firefox runtime diagnostic follow-up — 2026-10-22
+
+The repository-pinned Playwright 1.62.1 Firefox 1538 binary hangs even on a
+plain `data:` page, with `RenderCompositorSWGL failed mapping default
+framebuffer` followed by sustained CPU use. Disabling WebRender did not change
+the result. The installed branded Firefox 158 exits before Playwright can
+attach its Juggler protocol, and the local Docker service returned an API 500
+before a containerized browser could be started. These are environment
+diagnostics; Firefox release coverage remains open and no application-level
+Firefox pass is claimed.
+
+## Full visual run and harness corrections — 2026-10-22
+
+The grouped full visual run reached all 265 cases: 215 passed and 50 failed.
+Forty-eight failures were screenshot differences against the current
+references. Two failures were confirmed harness issues: the Trends setup used
+the legacy workspace route and could redirect to `/app` before readiness; the
+Arabic workspace AI assertion matched both its sidebar item and its capability
+card. The Trends setup now uses the canonical tenant route, and the AI
+assertion scopes to the capability card. Both affected cases pass in a focused
+rerun (2/2), including the five-width Arabic/RTL sweep. The 48 reference
+differences still need visual review; no broad snapshot refresh was performed.
+
+This focused rerun is after the implementation commit and against a dirty
+working tree. It is not exact-clean-SHA release evidence. Firefox coverage,
+visual reconciliation, route-by-route manual review, and independent
+**Verified** review remain open. Keep AD-002 **In Progress**.
+
+## Exact clean-SHA verification — `3d0612a249b980bc9fc232859444889122df70ed`
+
+On this clean commit, `pnpm verify` passed formatting, ESLint, TypeScript, all
+587 unit files / 5,118 tests, and the production build. The focused visual
+rerun also passed both affected cases (2/2): the Trends exact reference and
+the five-width Arabic/RTL workspace AI check. The full 265-case visual result
+remains 215/265 because 48 references still differ. Disposable-Postgres
+integration and migration-drill results are recorded for the implementation
+commit `cd4ce270a53a7381b2debd69da059028769fd821`; the intervening commit only
+changed visual test setup and evidence documentation. Firefox and route review
+remain open, so this does not clear the full release gates or assign
+**Verified** status.
+
+## Platform visual fixture isolation — 2026-10-22
+
+Platform-route visual tests now use dedicated fixture accounts. This prevents
+concurrent ordinary visual seeds from revoking the platform role on a shared
+default account. The responsive platform-errors test also asserts the
+authorized page heading before taking its screenshot. The previous references
+contained 13 `ChunkLoadError` rows that are not part of the current fixture;
+the route's verified current state is the empty state.
+
+| Check                               | Result                                                                                  |
+| ----------------------------------- | --------------------------------------------------------------------------------------- |
+| Platform-errors reference refresh   | Updated only mobile, tablet, and wide captures after reviewing the current empty state. |
+| Strict platform-errors visual rerun | Pass — 3/3 at mobile, tablet, and wide.                                                 |
+
+This is focused working-tree evidence, not a full visual release pass or
+exact-clean-SHA evidence. Brand Kit root parity and the remaining visual
+differences are still open.
+
+## Exact clean-SHA checks — `aa61956414666b2777c814d11862ffcdb2e9421a`
+
+On the clean commit, `pnpm verify` passed formatting, ESLint, TypeScript, all
+587 unit files / 5,118 tests, and the production build. The strict visual
+comparison for platform-errors passed 3/3 at mobile, tablet, and wide widths.
+This does not clear the complete visual matrix, Firefox, manual route review,
+or independent verification.
+
+## Media folder import diagnostics — `e41d18784543791c077363a7ba3c29913e183a15`
+
+The grouped `pnpm verify` passed on the application tree committed at this SHA:
+formatting, ESLint, TypeScript, all 588 unit files / 5,127 tests, and the
+production build. The focused folder-import service and route tests passed
+8/8; the commit hook passed TypeScript and 259 affected unit tests. Unexpected
+server errors are logged through the existing sanitized structured logger,
+while responses remain generic and known permission denials remain unlogged
+as errors. No schema or persisted-data contract changed. Full browser/visual
+release coverage, manual route review, Firefox, and independent verification
+remain open; this is not final production-readiness sign-off.
+
+## Public media response contract — `f93d3d51947732099fc51603bd47ee96b670f2f1`
+
+On this clean SHA, `pnpm verify` passed formatting, ESLint, TypeScript, all 589
+unit files / 5,129 tests, and the production build. The focused shared response
+contract passed 2/2, and the commit hook passed 255 affected unit tests. The
+single-asset and collection-asset routes now use one server-only feature
+adapter for storage streaming, range forwarding, download naming, and security
+headers. Route-specific token and rate-limit behavior is unchanged. Full
+browser/visual release coverage, manual route review, Firefox, and independent
+verification remain open.
+
+## Media feature entry-point migration — `f0a5c0dab05480f613b4e6c9f39b1a3d20b9a113`
+
+On this clean SHA, `pnpm verify` passed formatting, ESLint, TypeScript, all 589
+unit files / 5,129 tests, and production build. The focused share-collection
+route and module-ownership tests passed 9/9; the commit hook passed TypeScript
+and 253 affected unit tests. Media App Router callers now use the feature
+server entry point for share-collection operations, with the legacy service
+retained behind the adapter. No route or persisted-data contract changed.
+Manual route review, release browser/visual evidence, Firefox, and independent
+verification remain open.
+
+## Sign-in callback boundary — `04c8bea93023bb7b75eafe914464dae2b91272d6`
+
+On this clean SHA, `pnpm verify` passed formatting, ESLint, TypeScript, all 590
+unit files / 5,137 tests, and the production build. The focused callback,
+sign-in action, and auth page tests passed 18/18. The commit hook also passed
+the full unit suite and TypeScript. The shared callback validator runs both at
+page construction and inside each server action. Review of the installed
+Auth.js redirect callback found no confirmed external redirect exploit; this
+change is boundary hardening. No provider, permission, or valid same-origin
+callback contract changed.
+
+## MCP brand-kit failure privacy — `b10bfd6380826287c814e9a3d694783de58b3e42`
+
+The MCP brand-kit integration suite passed 10/10 on the disposable
+`planner_test` database. Its source-fetch failure case includes a fake access
+token in the thrown network error and verifies that the token is redacted in
+the structured server log and absent from the returned item summary. On this
+clean SHA, `pnpm verify` passed formatting, ESLint, TypeScript, all 590 unit
+files / 5,137 tests, and the production build. The commit hook passed the 51
+MCP-related unit tests. No MCP tool contract or persisted-data behavior
+changed.
+
+## Cron failure privacy — `b7ec99a3bc721021d129a10833fa092ec0e8224`
+
+On this clean SHA, formatting, ESLint, and TypeScript passed. The full unit
+run passed 5,140/5,141 tests across 590 passing files and one timed-out file;
+the unrelated report-retention test exceeded its 5-second limit under suite
+load, then passed alone in 782 ms. The cron route and manual Run Now failure
+regressions passed in the full run. `pnpm build` passed separately on the same
+SHA. `pnpm verify` is recorded as not fully green because of the suite timeout,
+not as a passing gate. No schema or persisted-data behavior changed. This
+evidence does not clear browser/visual release checks, full route review,
+Firefox, or independent verification.
+
+## Notification email worker ownership — `be867104f611965e34c9ec6f9a1d0431aba3dc9e`
+
+On this clean SHA, `pnpm verify` passed formatting, ESLint, TypeScript, all 591
+unit files / 5,141 tests, and the production build. The disposable-Postgres
+`tests/integration/notifications/email-dlq.test.ts` passed 2/2, covering
+dead-letter handling and overlapping dispatcher ticks. The email dispatcher
+now lives in a dedicated server-only module, shared fallback copy lives in a
+pure module, and the cron route and focused tests use the dedicated worker
+entry point. The notification service temporarily re-exports the worker for
+compatibility. No schema, route response, notification payload, or delivery
+state contract changed. Full browser/visual checks, route review, Firefox,
+and independent verification remain open.
+
+## Inline-edit failure privacy — `91ef925fe6327efad376e48a6a6a25ab07c0cf4d`
+
+On this clean SHA, `pnpm verify` passed formatting, ESLint, TypeScript, all 591
+unit files / 5,142 tests, and the production build. Inline brief/title/date
+and production-note persistence failures now return stable safe copy and emit
+sanitized diagnostics. Post-save materiality failures explicitly retain the
+fact that the content was saved and approval history stayed unchanged. The
+regression tests use credential-shaped fake database URLs and verify they are
+absent from returned action state. Zod and format-payload validation details
+remain unchanged. The commit hook passed 75 affected unit tests. No schema,
+route, permission, or successful workflow contract changed. Full
+browser/visual checks, route review, Firefox, and independent verification
+remain open.
+
+## Social settings failure privacy — `69ee4706ef366f1a5b3e6d5034c39f071d7e29b3`
+
+The focused social service error and agency administration tests passed 19/19.
+On this clean SHA, `pnpm verify` passed formatting, ESLint, TypeScript, the
+complete unit suite, and production build. Expected `SocialServiceError`
+responses retain their established code, message, and HTTP status; unexpected
+errors are recorded through the sanitized logger and returned as stable safe
+copy. Key-management fallback errors follow the same policy. No success
+response, route, permission, or persisted-data contract changed. Full
+browser/visual checks, route review, Firefox, and independent verification
+remain open.
+
+## Destructive-action audit failure privacy — `708630e7b007a9229916a17a3f9e86218e92b7dc`
+
+The reset-idea and workspace trend-data deletion actions now record stable
+failure codes in audit metadata instead of raw permission or persistence
+exception text. Focused destructive-action tests passed 10/10. The commit hook
+escalated to the full unit suite because `tests/unit/reset-idea-action.test.ts`
+was unmapped; all 595 unit files / 5,153 tests passed, followed by a
+successful commit. The ownership gap was then closed in
+`d6b4a82424f8ac41ef8cd06ff27bc41d6f8349d0`, and its selector regression passed
+25/25. No schema or destructive-workflow behavior changed. Full `pnpm verify`
+at the final clean SHA, Postgres/browser gates, and independent verification
+remain open.
+
+## Affected test ownership refinement — `502ff1119bc092b60bc77a7d02d102c2f4db94e0`
+
+The ownership manifest now maps content-detail locale catalogs and the shared
+action-state helper to their feature-specific unit and browser contracts.
+Unknown catalogs continue to escalate. Selector regression coverage passed
+28/28; the staged commit hook passed the architecture selector and claim action
+tests, 30/30. The affected unit selection for the claim change completed. The
+browser selector chose the three Chromium content specs and stopped at the
+runner's `TEST_DATABASE_URL` guard before launching a browser. No browser or
+product behavior was skipped. This manifest-only change does not replace the
+open release browser matrix or visual checks.
+
+## Workflow transition error boundary — `6e027c36484e86b5c174da13d3de8d79d50757cc`
+
+Focused ESLint passed for the changed action, feature service, workflow rail,
+and action-error tests. `pnpm typecheck` passed. The direct action suite passed
+4/4. The commit hook's affected-unit selection passed 219 test files / 1,748
+tests and reran the directly changed workflow action suite, 4/4. No database,
+migration, browser, visual, or manual route evidence was produced by this
+change; those remain open for the final candidate. The error-boundary change
+does not alter a successful transition, authorization rule, route, or
+persisted-data contract.
+
+## Designer assignment error boundary — `4ee09b73da096416f155d6715c2b0778bd831135`
+
+The focused claim/workflow action suite passed 5/5, including a regression that
+injects a credential-shaped DB URL from designer assignment and confirms the
+returned state contains only `workflowError.failed`. Focused ESLint and
+`pnpm typecheck` passed before commit. The commit hook passed TypeScript and
+the affected selection, 27 test files / 248 tests, then reran the directly
+changed action suite, 5/5. No database, migration, browser, visual, or manual
+route evidence was produced; those gates remain open.
+
+## Approval decision error boundary — `ced7c0bce2ab5e8ee953642d13677e28d3a9a79c`
+
+The focused claim/workflow action suite passed 7/7, including stable expected
+conflict mapping and a credential-shaped persistence failure that is absent
+from returned action state. Focused ESLint and `pnpm typecheck` passed before
+commit. The commit hook passed TypeScript and 15 affected test files / 152
+tests, then reran the direct suite, 7/7. Database, migration, browser, visual,
+and manual route evidence remain open.
+
+## Content-owner assignment error boundary — `c33aa014e58ef4baf949e85af51674eb5a0d3e54`
+
+The focused action and dialog localization suites passed 13/13, including
+English and Arabic not-found copy and a credential-shaped persistence failure
+that is withheld from client state. Focused ESLint and `pnpm typecheck` passed
+before commit. The commit hook passed 220 affected test files / 1,759 tests
+and reran the 13 changed-file tests. Database, migration, browser, visual, and
+manual route evidence remain open.
+
+## Publication outcome error boundary — `ecd2220faddce5d78da5025b0fa8afae30c22f0a`
+
+Direct publication service, action, and channel-card checks passed 48/48.
+English and Arabic unit cases confirm a concurrent publication update is shown
+in the active locale. Focused ESLint and `pnpm typecheck` passed before commit.
+The commit hook passed 220 affected test files / 1,780 tests, then reran the
+direct action and localization suites, 23/23. The first hook attempt found
+four service-error message assertions; their established text was restored
+and the full affected selection passed. Database, migration, browser, visual,
+and manual route evidence remain open.
+
+## Quick-create and content-edit action error boundaries — `5a7213ba609fa3abe9e863235573a071baec7e6f`
+
+Focused action and catalog checks passed 27/27. Focused ESLint and
+`pnpm typecheck` passed. The commit hook passed TypeScript and the affected
+selection, 220 unit files / 1,761 tests, then reran the directly changed action
+suite, 13/13. Expected domain failures now map to English/Arabic stable codes;
+unexpected persistence details are logged and withheld from client state. No
+database, migration, browser, visual, or manual route evidence was produced;
+those gates remain open. No permission, route, successful-write, or stored-data
+contract changed.
+
+## Creative and audience-copy action error boundaries — `3b23ac8e2ecc9dc6ead1a4d2d65e918d8cde0423`
+
+Focused content, editor, localization, and catalog checks passed 133/133.
+Focused ESLint and `pnpm typecheck` passed. The commit hook passed TypeScript
+and 33 affected unit files / 299 tests, then reran the changed action and
+localization suites, 19/19. Expected domain errors return stable EN/AR codes;
+unexpected failures are logged and withheld from client state. Database,
+migration, browser, visual, and manual route evidence remain open. No route,
+permission, successful-write, or persisted-data contract changed.
+
+## AI draft route-workspace isolation — `bcd4053e0d7dc5ce86b2c6c19d691bbcf6af465f`
+
+Focused action and localization tests passed 22/22; focused ESLint and
+`pnpm typecheck` passed. The commit hook passed TypeScript and the affected
+selection, 12 unit files / 84 tests, then reran the changed action suite, 19/19.
+A content item outside the route workspace now returns safe not-found state
+without calling the update service. Unexpected read/update errors are logged
+and withheld from client state. Database, browser, visual, and independent
+verification remain open. Same-workspace success behavior is unchanged.
+
+## Batch-creation error boundary — `7e825366514d28d8b6fcfd65eef555f6de0c7d39`
+
+Focused action, service, UI, localization, and catalog checks passed 104/104;
+focused ESLint and `pnpm typecheck` passed. The commit hook passed TypeScript
+and the affected selection, 221 unit files / 1,771 tests, then reran the
+changed action/localization suites, 23/23. Batch validation errors now have
+English/Arabic codes; unexpected persistence details are logged and withheld.
+Batch write atomicity and successful behavior are unchanged. Database,
+browser, visual, and independent verification remain open.
+
+## Safe-by-default action failure helper — `43b59841a61c52495a7177492e56ad8d07508a45`
+
+Focused helper tests passed 8/8; focused ESLint, Prettier, and
+`pnpm typecheck` passed. The commit hook passed TypeScript and 13 affected unit
+files / 94 tests, then reran the helper suite, 8/8. Unclassified exception
+messages are no longer returned by the shared helper; explicitly classified
+public messages remain supported. No route, permission, persistence, or
+successful-workflow behavior changed. Database, browser, visual, full
+`pnpm verify`, and independent review remain open. This checkpoint is
+**Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## Invitation action error boundary — `2d0616cbc89bf1e76834dd7a5acd1d5a0e033a0d`
+
+Focused user-action tests passed 6/6; focused ESLint, Prettier, and
+`pnpm typecheck` passed. The commit hook conservatively ran all 601 unit files /
+5,201 tests because the changed test file lacked an ownership mapping; all
+passed. Unexpected resend/revoke errors now return stable codes and the
+credential-shaped secret is withheld; EN/AR invitation-list messages were
+added. No database, authorization, or successful invitation behavior changed.
+The mapping correction is on SHA
+`b412ad5655c5be48a7ebaa4bcf9a7f2270b060f3`; its selector regression passed
+29/29 and its hook selected only the architecture area. Browser, visual, full
+`pnpm verify`, and independent review remain open. This evidence is **Tested**,
+not **Verified**; AD-002 remains **In Progress**.
+
+## Planning-library action error boundaries — `b566c43d6d768dbe0cc66fd05532f8a55ad92c7d`
+
+Focused server-action regressions passed 2/2, covering an unexpected
+credential-shaped persistence error and the preserved duplicate-pillar outcome.
+The bilingual library-form checks passed 2/2; focused ESLint, Prettier, and
+`pnpm typecheck` passed. The commit hook passed 222 related unit files / 1,774
+tests and reran the direct action and ownership-selector suites, 32/32.
+Unexpected service details are logged and not returned; known permission,
+missing-record, and duplicate outcomes use localized codes. Successful writes,
+role gates, and stored data are unchanged. No migration or database change was
+made. Browser, visual, full `pnpm verify`, and independent review remain open.
+This checkpoint is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## Platform agency-edit error boundary — `5ba9ef6309093f8cea00765a88c06830e09dd30c`
+
+The focused action regression passed 1/1 and the ownership-selector suite
+passed 31/31. Focused ESLint, Prettier, and `pnpm typecheck` passed. The commit
+hook selected the platform and architecture areas, reran the changed action,
+and passed both changed test files, 32/32. Unexpected persistence messages are
+logged and withheld; typed agency-domain errors retain their public codes and
+messages. No authorization, successful update, route, or data contract changed.
+No migration was introduced. Full `pnpm verify`, browser/visual, and
+independent review remain open. This checkpoint is **Tested**, not **Verified**;
+AD-002 remains **In Progress**.
+
+## Shared agency-update action failure mapper — `4ef3ff8a6a01fcd782b4280b9cb197517e7e3486`
+
+Focused agency-admin and platform-admin action regressions passed 2/2; the
+ownership selector passed 33/33. Focused ESLint, Prettier, and `pnpm typecheck`
+passed. The commit hook selected the platform, agency-settings, and
+architecture areas, passed both action tests, then reran the changed action
+and ownership suites, 34/34. Typed agency update errors preserve their public
+codes and messages; unexpected exceptions are logged and withheld from both
+forms. Authorization, successful updates, routes, and data contracts are
+unchanged. No migration was introduced. Full `pnpm verify`, browser/database
+release checks, and independent review remain open. This checkpoint is
+**Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## Platform access action outcomes — `d7dee524f351aaa6d08223da7a416a793cff3baf`
+
+Platform access actions now map only the typed `PermissionDeniedError` to
+permission-denied feedback. Unexpected persistence failures are logged and
+return a stable `unexpected_failure` code with English/Arabic UI copy. The
+credential-shaped exception regression and localized forms passed. The commit
+hook passed TypeScript, 224 related unit files / 1,778 tests, then the direct
+action, form, and ownership-selector suites, 42/42. Authorization and
+successful access changes are unchanged; no migration or data-contract change
+was made. Full `pnpm verify`, release browser/a11y/visual evidence, and
+independent verification remain open. This is **Tested**, not **Verified**.
+
+## Member reactivation failure state — `cb74cbfaaf65101c0c8c01af07c944b2b05e82ca`
+
+The users action now catches reactivation failures, logs the internal error,
+and returns a stable code for localized inline feedback. A credential-shaped
+persistence failure is absent from the action response; the component displays
+the translated alert. Focused action/member-list checks passed 13/13. On this
+change the commit hook passed TypeScript, 224 related unit files / 1,780 tests,
+then reran the focused suites, 13/13. Successful membership changes and
+authorization are unchanged; no migration or data-contract change was made.
+Full `pnpm verify`, release browser/a11y/visual checks, and independent
+verification remain open. This is **Tested**, not **Verified**.
+
+## Community E2E plan fixture — `b5a34a94`
+
+The dev seed now creates/reuses the dedicated `e2e-community-inbox` plan with
+`community_inbox` enabled, instead of falling back to an arbitrary plan when
+`enterprise` is unavailable. The Community inbox identity journey and Trends
+workspace opt-out journey passed together, 2/2, against the disposable local
+`planner_test` database. On the same source, the commit hook passed TypeScript
+and 604 unit files / 5,215 tests. The earlier full browser run on `5c68b343`
+passed 281, failed 2, skipped 1, and left 6 unrun; one failure was this fixture
+and the other timed out during Next's dev-server memory-threshold restart. The
+visual phase did not start. Full release rerun and exact-HEAD visual evidence
+remain open; this is **Tested**, not **Verified**.
+
+## Architecture review validation batch — `b08c073681d12c006ab014141803b1b442f18c72`
+
+`pnpm verify` passed formatting, lint, typecheck, all 604 unit files / 5,215
+tests, and the production build. The full integration suite passed against the
+disposable `planner_test` database. The migration drill passed all five
+scenarios (from-zero, skipped-migration repair, in-place upgrade, backup and
+restore, and failed-migration abort) in 37.4 seconds.
+
+The isolated Chromium release project ran 290 tests in 25 minutes: 284 passed,
+five failed, and one was skipped. The Next dev server logged a memory-threshold
+restart during Trends coverage. The five failed cases passed together in a
+fresh focused run (9/9). The other browser projects did not run. The visual
+project started its 265-check matrix and was interrupted after 42 checks
+because exact-reference mismatches appeared across existing account, settings,
+platform, Brand Kit, and Client screens. This visual result is incomplete; no
+references were updated. The release matrix is not green, and this evidence is
+**Tested**, not **Verified**.
+
+## E2E memory-restart mitigation — rejected experiment
+
+The Chromium attempt on the 8 GiB heap candidate still hit Next's
+memory-threshold restart and was stopped at test 189/290. Command Center
+dark-theme accessibility and mobile calendar overflow timed out at restart
+boundaries; both passed together (2/2) on a fresh server. A follow-up
+experiment disabled Next's restart for the disposable server, but the server
+exited around test 53 and unrelated later requests failed with connection
+refused. The suppression was rolled back. The experiment's focused unit tests,
+type-check, and `pnpm verify` passed, but full Chromium did not. The current
+runner keeps the 8 GiB heap setting without restart suppression. No browser
+release pass is claimed.
+
+## Platform overview feature query — `70bcf3695be7e9b18bd73e6940abeb6778cc37d1`
+
+The platform overview page now calls a server-only feature query for the KPI
+aggregates and recent agency list. The query selects only the agency fields the
+page renders. Focused query tests cover empty and populated results, and the
+test-ownership regression keeps future changes in the platform area. The
+focused unit checks passed 37/37; the complete platform unit area passed 86/86;
+type-check passed in both the focused run and commit hook. No route, role, or
+stored-data contract changed. On clean SHA
+`0e2e74b9289503dfd52df739b902b9eb64323620`, the focused platform browser area
+passed 9/9, including responsive Platform Access, non-admin denial, and the
+authorized overview KPI surface. The full browser/visual release gate is still
+incomplete, so this is **Tested**, not **Verified**.
+
+## Account overview feature query — `865512f8cca64fa21c7aeba9bf97fb9e8721fb83`
+
+The account page now uses a server-only feature query to load its profile,
+active agency membership context, and password-present state in one profile
+read. Password hash data is removed before the profile is returned. Focused
+query and selector tests passed 38/38; the account unit area passed 3/3; the
+focused account browser batch passed 5/5 on this commit, including light/dark
+accessibility and theme-preference journeys. Type-check passed in the focused
+run and commit hook. No route, role, or stored-data contract changed. This is
+**Tested**, not **Verified**; the full release browser and visual matrices
+remain open.
+
+## Architecture review validation batch — `36aa336872859bffff560944cf9d3756b696ad9f`
+
+On this clean SHA, `pnpm verify` passed formatting, ESLint, TypeScript, all 606
+unit files / 5,225 tests, and the production build. The isolated Chromium suite
+was split into two sequential shards against the disposable `planner_test`
+database: shard 1 passed 145/145, and shard 2 passed 144 with one skipped.
+Together, 289 tests passed and one was skipped. Both shards exited successfully;
+the run emitted a Next destination-stream warning during shard 2, but the
+remaining checks completed and the runner reported success. This covers
+Chromium only: Firefox, WebKit, mobile Chromium, mobile Safari, and the full
+visual matrix remain outstanding. This is **Tested**, not **Verified**; AD-002
+remains **In Progress**.
+
+## Workspace AI Assistant — Phase 1 implementation checkpoint (working tree)
+
+The Workspace AI Assistant now has a workspace page under Produce,
+English/Arabic copy, private persistent conversations, active-agency workspace
+and role checks, bounded plan/calendar/content-mix context, deterministic
+schedule-gap findings, evidence-ID validation, and reuse of the
+agency-configured model, managed key, entitlement, rate limit, and token budget.
+The general assistant is read-only. The remote Planner MCP contract was not
+changed.
+
+`pnpm verify` passed on the implementation working tree: formatting, lint,
+TypeScript, 608 unit files / 5,236 tests, and production build. Focused
+assistant, ownership, catalog, navigation, and route suites passed. The
+affected-browser command could not start Playwright: `TEST_DATABASE_URL` is
+required and unset in this environment. No provider smoke, model/tool
+compatibility check, MiniMax subscription/data-processing review, EN/AR browser
+or visual result, or independent review was performed. This is a working-tree
+checkpoint, not exact-clean-SHA release evidence; M3.8 remains **In Progress**
+and this change is **not Verified**.
+
+### 2026-10-23 continuation — isolated development verification
+
+On the feature worktree, `pnpm verify` completed successfully: Prettier,
+ESLint, TypeScript, 610 unit files / 5,247 tests, and the production build.
+After adding the assistant browser spec's final provider-error and responsive
+checks, `pnpm format:check` and `pnpm typecheck` also passed. The full database
+integration suite passed against the task-specific disposable database
+`planner_test_workspace_ai_20261023`, including the two assistant persistence
+and prompt-governance cases. `pnpm migration-drill` passed all five drills
+against that disposable database. The server reported PostgreSQL 17.10
+(Homebrew), not the required PostgreSQL 16 container, so these DB results are
+supplemental and do not satisfy the repository's standard PostgreSQL 16
+release evidence.
+
+The assistant's targeted E2E passed in Chromium (2 tests): prompt creation and
+provider-error handling, serious/critical axe scan, EN layout at 375/768/1024/
+1280/1440 px, and Arabic RTL at 375 px. The complete configured six-project
+runner passed Chromium and then stalled while starting Firefox; it was stopped
+and the other projects were not verified. Docker Desktop was not reachable, so
+the required disposable PostgreSQL 16 environment could not be provisioned.
+No MiniMax account smoke/data-processing review, exact-clean-SHA CI run,
+independent verification, or production deploy evidence exists. M3.8 remains
+**In Progress** and this change is not eligible for merge or deployment.
+
+### 2026-10-23 continuation — content references and provider streaming
+
+The feature worktree now resolves a content-item ID, Planner URL, or title only
+through authorized workspace content services. Ambiguous titles return bounded
+candidates for user selection; foreign-workspace references return the same
+not-found result as unknown IDs. One selected item's bounded creative fields,
+revision, and source timestamp are attached as evidence. The assistant route
+also supports MiniMax's documented Anthropic-compatible stream through SSE,
+reports actual context/skill/analysis/provider/validation/persistence events,
+streams only the visible answer text (never thinking blocks), and accepts
+client cancellation for the request.
+
+On the PostgreSQL 17.10 Homebrew disposable database
+`planner_test_workspace_ai_refs_20261023`, the targeted Chromium assistant
+suite passed 4/4, including ambiguous item selection, streamed activity, EN/AR
+layout, and axe checks. Focused unit suites passed 33/33 across provider,
+assistant route, and reference resolution. On this working tree, `pnpm verify`
+passed formatting, lint, typecheck, 611 unit files / 5,254 tests, and the
+production build. These checks are not a clean-SHA release bundle. The full
+six-project browser matrix has not been rerun. Durable run event
+replay/reconnect, MiniMax live UAT, prompt parameters, assistant proposals/apply,
+privacy review, PostgreSQL 16 migration evidence, manual CI, and independent
+verification remain outstanding. M3.8 remains **In Progress** and this change
+is not eligible for merge or deployment.
+
+### 2026-10-23 continuation — reference selection and live provider stream
+
+The current feature worktree resolves authorized content items by Planner URL,
+ID, or title, prompts for a choice when a title is ambiguous, and resolves
+calendar/planning URLs or month names against the existing month-based
+calendar. Selected content context is allowlisted and includes its revision
+and source evidence. The MiniMax-compatible streaming path emits real
+context, skill, analysis, provider, validation, and persistence transitions;
+it streams only the user-visible answer text and discards provider thinking
+blocks. Client cancellation aborts the provider request. Conversations and
+approved prompt revisions persist in the workspace database.
+
+On disposable PostgreSQL 17.10 Homebrew database
+`planner_test_workspace_ai_refs_20261023`, the latest working-tree `pnpm verify`
+passed Prettier, ESLint, TypeScript, 611 unit files / 5,257 tests, and the
+production build. Focused assistant/provider/reference/skill/prompt unit tests
+passed 40/40. `pnpm migration-drill` passed all five drills, and the full
+database integration suite exited successfully, including assistant
+conversation/prompt access isolation. The isolated Chromium assistant suite
+passed 4/4 with responsive, ambiguity-selection, streaming activity, Arabic
+RTL, and axe checks. This is dirty-working-tree evidence on PostgreSQL 17,
+not an exact-clean-SHA release bundle or the required PostgreSQL 16 evidence.
+
+### 2026-10-23 continuation — confirmed selected-draft proposals
+
+The current implementation adds an expiring, actor/workspace/conversation-
+bound proposal for title or brief edits to one explicitly selected existing
+draft. The preview carries the exact current value, proposed value, content
+revision and evidence ID. Apply rechecks actor membership, role, workflow
+status, expiry, and expected revision; writes through the content service and
+its audit path in one transaction; and treats replay as already applied.
+Integration coverage verifies one-time apply, replay, stale-version conflict,
+and denial without workspace membership. This path does not approve, publish,
+or change workflow status.
+
+### 2026-10-24 continuation — atomic multi-draft proposal batch
+
+Apply now accepts an explicitly selected set of 2–10 proposals targeting at
+most five drafts. The server locks proposal rows and draft rows in stable
+order, rechecks owner/workspace, expiry, workflow status, revision, and exact
+before-values, then applies all selected fields through the existing content
+service in one transaction. A stale member rejects the entire selected batch;
+successful application remains replay-safe. Scheduled-folder reconciliation
+is best effort after the transaction commits. This does not change transcript
+privacy or add workflow approval/publishing actions.
+
+| Gate                                                              | Result                                                                                                            |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `pnpm exec tsc --noEmit`                                          | Pass on dirty feature worktree                                                                                    |
+| Workspace Assistant integration suite on disposable PostgreSQL 16 | Pass — 11/11, including same-draft and multi-draft batch apply, replay, role isolation, and stale-batch rejection |
+| `pnpm verify`                                                     | Pass — formatting, lint, typecheck, 616 unit files / 5,290 tests, and production build                            |
+| Isolated Workspace Assistant Chromium suite                       | Pass — 5/5; the runner's subsequent browser pass was interrupted and remains unverified                           |
+
+This is working-tree evidence, not exact-clean-SHA evidence. The full browser
+and visual matrix, external MiniMax UAT, independent review, manual CI,
+backup/rollback evidence, merge, and deployment remain open.
+
+### 2026-10-24 continuation — agency model allowlist and member preference
+
+Agency AI settings now persist the permitted MiniMax model IDs and require the
+agency default model to remain in that list. Legacy settings backfill to their
+existing default. The assistant lists only agency-permitted choices and saves
+the member's preference in browser storage scoped to the user and agency. The
+request handler validates the submitted choice against the persisted agency
+list and server model allowlist before context retrieval or budget reservation;
+reasoning options, tool support, provider calls, and usage events use that
+selected model. Tool use still requires the agency's explicit toggle and a
+model whose registry declares tool support.
+
+| Gate                                                         | Result                                                                                                                 |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Focused AI settings and Workspace Assistant route unit tests | Pass — 54/54 after final model-policy assertions                                                                       |
+| Workspace Assistant integration suite, PostgreSQL 16         | Pass — 11/11                                                                                                           |
+| Full migration drill, PostgreSQL 16                          | Pass — 5/5, 101/101 migrations from zero; skipped-migration repair replayed migration 0100                             |
+| Workspace Assistant Chromium suite                           | Pass — 6/6, including agency model publication, allowed member preference persistence, Arabic RTL, and mobile overflow |
+| EN/AR visual and accessibility capture                       | Pass — Workspace Assistant RTL and Agency AI settings RTL, 2/2 responsive suites across five viewport widths each      |
+
+This evidence is from the dirty feature worktree. The broader cross-browser
+release suite, exact-clean-SHA CI, MiniMax account/key/model and privacy UAT,
+independent reviewer verification, and production backup/deploy gates remain
+open.
+
+On 2026-10-23, `pnpm verify` exited 0 on the dirty feature worktree: format,
+lint, TypeScript, 611 unit files / 5,258 tests, and production build. The full
+`pnpm test:integration` run exited 0 on disposable Homebrew PostgreSQL 17.10;
+the four Workspace Assistant DB integration cases passed, including the new
+confirmed-proposal cases. `pnpm migration-drill` previously passed all five
+drills on disposable PostgreSQL 17.10, including 94/94 migrations from zero.
+The isolated Workspace Assistant Chromium suite passed 4/4 on the current UI,
+including the before/after proposal preview and apply interaction. These are
+working-tree checks, not exact-clean-SHA evidence, and PostgreSQL 17 does not
+satisfy the PostgreSQL 16 release requirement.
+
+The implementation is still a limited first vertical slice of the attached
+specification. Durable assistant run activity exists, but restart-safe worker
+leases/retries do not. Skill authoring/review/rollback, document ingestion and
+semantic retrieval, campaign/analytics retrieval, and proposal generation
+across multiple selected drafts remain unimplemented. Proposal application
+supports title, brief, and schedule changes; a user can atomically apply
+already-created proposals across up to five drafts. MiniMax account/model smoke, provider
+retention and data-processing review, the full configured browser/device and
+visual matrix, PostgreSQL 16 migration evidence, exact-clean-SHA manual CI,
+independent reviewer verification, production backup/rollback evidence, and
+deployment verification remain outstanding. M3.8 remains **In Progress**, and
+the change is not ready to merge or deploy.
+
+### 2026-10-23 continuation — repository browser release path
+
+`TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test_workspace_ai_refs_20261023 pnpm test:affected -- --layer browser`
+ran the full isolated Chromium suite against disposable Homebrew PostgreSQL
+17.10. Result: 291 passed, 1 skipped, 4 failed (296 total), exit code 1, in
+22.6 minutes. During the run the test server logged that it was approaching its
+memory threshold and restarting. The four failures were calendar accessibility
+timeout, forgot-password request connection reset, workspace AI settings
+Arabic page blank during the restart, and Trend Radar navigation connection
+reset. Follow-up isolated Chromium runs passed: the forgot-password, Arabic AI
+settings, and Trend Radar cases passed 3/3; the workspace calendar and client
+calendar accessibility checks passed 2/2. The focused Workspace Assistant E2E
+also passed 4/4 in the full run. These follow-up passes support the server
+restart diagnosis but do not convert the failed full matrix into a passing
+release gate. All results remain dirty-working-tree checks on PostgreSQL 17.10,
+not PostgreSQL 16 or exact-clean-SHA evidence. M3.8 remains **In Progress** and
+the change is not eligible for merge or deployment.
+
+### 2026-10-23 continuation — Ask, Plan, and Apply modes
+
+The assistant now sends a validated `ask` / `plan` / `apply` mode with each
+request. Ask cannot create proposals. Plan may create an expiring title/brief
+preview only for an explicitly selected draft and explicit edit request.
+Apply mode cannot create a new proposal; it only enables the separate
+per-proposal confirmation control. The server still applies only the saved,
+actor/workspace-bound proposal after permission and revision revalidation.
+Model-proposed edits must cite evidence from the current authorized context;
+unknown evidence rejects the response.
+
+On 2026-10-23, `pnpm verify` exited 0 on the dirty feature worktree: format,
+lint, typecheck, 611 unit files / 5,261 tests, and production build. Focused
+route and analysis tests passed 19/19. The isolated Workspace Assistant
+Chromium suite passed 4/4, including mode controls and explicit Apply-mode
+confirmation. This did not rerun the full 296-case browser suite, PostgreSQL
+integration suite, or migration drill. The earlier full Chromium run remains
+291 passed, 1 skipped, and 4 server-restart failures with isolated reruns
+passing; its full matrix is still not a passing release gate. PostgreSQL 16,
+clean-SHA CI, independent review, live MiniMax/retention UAT, and production
+backup/rollback evidence remain outstanding. M3.8 remains **In Progress**.
+
+### 2026-10-23 continuation — conversation mode persistence
+
+Ask/Plan/Apply is now persisted on each private assistant conversation and
+restored on open. A database constraint restricts the stored values; existing
+rows receive Ask. Conversation writes continue through the active-workspace
+and owner-scoped service. The mode is a UI operating preference and does not
+grant permissions.
+
+On the dirty feature worktree, `pnpm verify` passed Prettier, ESLint,
+TypeScript, 611 unit files / 5,261 tests, and the production build. The focused
+assistant route/analysis tests passed 19/19; the assistant database suite
+passed 4/4; and its isolated Chromium suite passed 4/4. `pnpm migration-drill`
+passed all five drills (95/95 migrations from zero) on disposable Homebrew
+PostgreSQL 17.10. The full `pnpm test:integration` runner did not pass: it
+timed out in the unrelated MCP brand-kit workspace-denial test after earlier
+suite runs had passed. A focused rerun of `mcp-brand-kit.test.ts` passed 10/10,
+and the focused assistant database suite passed 4/4. These are
+dirty-working-tree results, not exact-clean-SHA evidence. PostgreSQL 16, the
+full browser/device and visual checks, manual CI,
+independent review, live MiniMax account/retention review, production backup
+and rollback evidence, and deployment verification remain open. M3.8 stays
+**In Progress**; do not merge or deploy.
+
+### 2026-10-23 continuation — bounded MiniMax tool orchestration
+
+The assistant now has a provider-neutral bounded tool loop, a server-only
+MiniMax Anthropic-compatible adapter, and read-only tools for the active
+month's summary, calendar distribution, content mix, bounded item list, the
+explicitly selected content item, and authorized brand guidance. Calls are
+schema validated, limited to three tool rounds and eight calls, and tool
+results are bounded. The feature is disabled by default and agency settings
+allow enabling it only for `MiniMax-M3.1-Flash`; a real account/model smoke is
+still required before enabling it. The model receives no workspace selector
+and cannot add tools or perform writes.
+
+On the dirty worktree, `pnpm verify` passed formatting, lint, typecheck, all
+615 unit files / 5,279 tests, and the production build. The full
+`pnpm test:integration` suite passed, including all four Workspace Assistant
+database cases. The focused Workspace Assistant Chromium suite passed 4/4 in
+English and Arabic/RTL. `pnpm migration-drill` passed all five scenarios,
+including from-zero at 97/97 migrations and skipped-migration replay, on
+disposable PostgreSQL 17.10. The first replay attempt exposed a non-idempotent
+column addition; migration `0096` now uses `ADD COLUMN IF NOT EXISTS`, and the
+full drill passed after that correction. These are working-tree checks, not
+exact-clean-SHA evidence. PostgreSQL 16, the complete browser/device and
+visual matrix, manual CI, independent review, MiniMax live account/tool and
+data-processing UAT, privacy/retention review, production backup/rollback, and
+deployment verification remain outstanding. M3.8 remains **In Progress**;
+the change is not ready to merge or deploy.
+
+### Workspace AI Assistant continuation — skill catalog and final local verification (2026-10-23)
+
+The first-party procedural registry now contains 30 versioned Planner-authored
+skills across strategy, planning, creation, and quality. Discovery returns
+metadata and only loads instructions for selected skills. No skill authoring,
+review, activation, or rollback UI is present. The bounded MiniMax-M3.1-Flash
+read-only tool loop remains agency-gated and disabled by default.
+
+Latest working-tree `pnpm verify` passed formatting, lint, typecheck, 615 unit
+files / 5,280 tests, and production build. Focused assistant tool, skill, and
+route tests passed 25/25. The isolated Workspace Assistant Chromium E2E passed
+4/4 on PostgreSQL 17.10, including prompt creation, reference clarification,
+streamed activity, validated output, and Arabic/RTL. PostgreSQL 16/17
+integration and five-scenario migration-drill results recorded above predate
+only this procedural-catalog/documentation change, which does not alter
+database or integration behavior. These are dirty-working-tree results, not
+exact-clean-SHA evidence. Firefox remains stalled; WebKit, mobile, visual,
+manual CI, independent review, live MiniMax account/model and data-processing
+UAT, privacy/retention review, production backup/rollback, and deployment
+verification remain open. M3.8 stays **In Progress** and is not ready to
+merge or deploy.
+
+### 2026-10-23 continuation — PostgreSQL 16 evidence
+
+The five-scenario `pnpm migration-drill` passed on a separate temporary
+PostgreSQL 16.15 cluster: from-zero with 97/97 migrations, skipped-migration
+repair, in-place upgrade, backup/restore, and failed-migration abort. The full
+`pnpm test:integration` suite also passed against that PostgreSQL 16 cluster,
+including all four Workspace Assistant persistence/prompt/proposal cases.
+These remain dirty-working-tree results rather than exact-clean-SHA release
+evidence.
+
+The assistant E2E passed 4/4 on Chromium against PostgreSQL 16, including
+English, Arabic/RTL, prompt creation, selected-reference clarification,
+streamed activity, and validated results. The configured multi-browser run
+passed Chromium, then stalled in Firefox before returning diagnostic output;
+it was stopped, so Firefox, WebKit, mobile, and visual checks remain
+incomplete. The earlier full Chromium release run also had four unrelated
+Next-server-restart timeouts and visual baselines showed drift. Exact-clean-SHA
+CI, a complete browser/visual matrix, independent review, MiniMax live
+account/tool and data-processing UAT, privacy/retention review, and production
+backup/rollback and deployment verification remain open. M3.8 stays **In
+Progress** and is not eligible for merge or deployment.
+
+### 2026-10-24 — schedule proposal and two-version database evidence
+
+The planned-date proposal now applies through the existing content service,
+preserves the existing UTC posting time, and performs best-effort media-folder
+reconciliation only after its transaction commits. This fixes a lock cycle
+reproduced by the integration test.
+
+| Check                                                              | Result                                                                                                      |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                      | Pass — formatting, lint, typecheck, 615 unit files / 5,282 tests, production build                          |
+| Full `pnpm test:integration`                                       | Pass on PostgreSQL 16.15 and 17.10; includes all five Workspace Assistant persistence/prompt/proposal cases |
+| `pnpm migration-drill`                                             | Pass on PostgreSQL 16.15 and 17.10; all five scenarios, 98/98 from zero                                     |
+| Workspace Assistant Chromium E2E                                   | Pass 4/4; EN/AR/RTL and mobile prompt form                                                                  |
+| Assistant route accessibility                                      | Pass in English and Arabic/RTL, no critical violations                                                      |
+| Broad Chromium suite                                               | Stopped after case 130/296; two unrelated timeout failures observed during server memory restarts           |
+| Firefox invocation                                                 | Stalled without test results; stopped. WebKit/mobile/visual not completed                                   |
+| Exact-clean-SHA, manual CI, independent review                     | Open                                                                                                        |
+| Live MiniMax/model eligibility, data-processing and privacy review | Open                                                                                                        |
+| Production backup, rollback and deployment evidence                | Open                                                                                                        |
+
+All results above are from the working tree and do not meet exact-clean-SHA
+release requirements. M3.8 remains **In Progress** and is not eligible for
+merge or deployment.
+
+### 2026-10-24 — assistant transcript privacy correction
+
+The Workspace Assistant now stores only session metadata and short-lived
+proposals. Transcript turns remain in browser memory; each request may include
+at most eight recent turns, while session APIs return no messages. The runtime
+no longer reads or writes the legacy transcript table. Existing legacy rows,
+if present, still require a separately reviewed and backed-up retention
+decision; no destructive cleanup migration was added.
+
+| Check                                 | Result                                                                             |
+| ------------------------------------- | ---------------------------------------------------------------------------------- |
+| Workspace Assistant route unit tests  | Pass — 19/19, including client-memory history bounds                               |
+| Workspace Assistant integration tests | Pass — PostgreSQL 16.15, 5/5, verifies session privacy and no transcript rows      |
+| Workspace Assistant Chromium E2E      | Pass — 4/4, including EN/AR/RTL and the updated stream contract                    |
+| `pnpm verify`                         | Pass — formatting, lint, typecheck, 615 unit files / 5,283 tests, production build |
+
+These are dirty-working-tree results. Full browser/device and visual release
+coverage, exact-clean-SHA evidence, manual CI, independent review, external
+provider/privacy UAT, and production backup/rollback remain open. M3.8 remains
+**In Progress** and is not eligible for merge or deployment.
+
+### 2026-10-24 — governed workspace knowledge vertical slice
+
+Added bilingual workspace knowledge management under Produce, with category,
+verification state, bounded title/content search, workspace or agency scope,
+manager/admin authorization, source links, soft archive, immutable revisions,
+and optimistic conflict detection. Authorized entries are retrieved as
+untrusted source-linked context; in tool mode, the assistant can cite only the
+knowledge evidence IDs actually returned by the tool. External document upload,
+web ingestion, semantic retrieval, and richer usage provenance remain open.
+
+| Check                            | Result                                                                                                                             |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm typecheck`                 | Pass after adding the knowledge routes and UI                                                                                      |
+| Focused unit suites              | Pass — 29/29 for tool orchestration, assistant route, and bounded tools                                                            |
+| Workspace Assistant integration  | Pass — PostgreSQL 16.15, 6/6, including tenant isolation, shared agency knowledge, role denial, revisions, and stale-edit conflict |
+| Workspace Assistant Chromium E2E | Pass — 5/5, including create/edit/history, prompt library, reference resolution, streamed activity, and Arabic/RTL                 |
+| `pnpm migration-drill`           | Pass — PostgreSQL 16.15, all five scenarios and 99/99 migrations from zero                                                         |
+
+The first drill run exposed that the skipped-migration repair scenario did not
+remove tables introduced by later assistant migrations before replay. The
+disposable-database drill setup now drops those tables and their revision child
+before replay; the complete drill then passed. These are working-tree results,
+not exact-clean-SHA release evidence. Full `pnpm verify`, migration evidence
+against both PostgreSQL versions, full browser/device and visual coverage,
+manual CI, independent review, MiniMax account and privacy UAT, and production
+backup/rollback remain open. M3.8 remains **In Progress** and is not eligible
+for merge or deployment.
+
+### 2026-10-24 — model capability and evidence validation hardening
+
+Added a shared MiniMax model capability registry and use it to control
+reasoning controls and agency tool-calling settings. The server rejects a
+reasoning effort unsupported by the configured model before reserving AI
+budget. Tool results now carry bounded evidence IDs into response validation;
+the assistant cannot cite every preloaded knowledge entry merely because a
+knowledge search tool ran.
+
+| Check                                | Result                                                                                                          |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `pnpm typecheck`                     | Pass                                                                                                            |
+| Focused AI and Assistant unit suites | Pass — 53/53, including model capabilities, budget precheck, tool limits, evidence citation and agency settings |
+
+Full `pnpm verify`, E2E after this model-control change, and remaining release
+gates listed above are still open. M3.8 remains **In Progress** and is not
+eligible for merge or deployment.
+
+### 2026-10-24 — full local baseline on current worktree
+
+| Check                            | Result                                                                                                                                                                 |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                    | Pass — formatting, lint, typecheck, 616 unit files / 5,293 tests, and production build                                                                                 |
+| `pnpm test:integration`          | Pass — full integration suite on PostgreSQL 16.15, including workspace-assistant knowledge tests                                                                       |
+| Workspace Assistant Chromium E2E | Pass — 5/5 on PostgreSQL 16.15, including EN/AR/RTL, accessibility, responsive layout, knowledge editing/history, prompt execution, references, and streamed responses |
+| `pnpm migration-drill`           | Pass — all five migration scenarios on PostgreSQL 16.15, 99/99 migrations from zero                                                                                    |
+| Workspace Assistant visual       | Pass — strict Chromium snapshot comparison, English/LTR 5/5 and Arabic/RTL 5/5 viewports at 375/768/1024/1280/1440px                                                   |
+| Focused assistant run recovery   | Pass — PostgreSQL integration 7/7; replay, cancellation, and stale-run coverage                                                                                        |
+| Latest `pnpm verify`             | Pass — formatting, lint, typecheck, 616 unit files / 5,293 tests, and production build                                                                                 |
+
+These checks are still from an uncommitted working tree. Full configured
+browser/device and visual coverage beyond the assistant route, exact-clean-SHA CI, manual workflow
+dispatches, independent review, MiniMax subscription-key/model and privacy UAT,
+transcript-retention decision, production backup/rollback, and deployment
+verification remain open. The AI milestone remains **In Progress** and is not
+eligible for merge or deployment.
+
+### 2026-10-24 — PostgreSQL 17 compatibility continuation
+
+The complete integration suite also passed against disposable PostgreSQL
+17.10. The five-scenario migration drill passed on PostgreSQL 17.10 with
+99/99 migrations from zero, in addition to the PostgreSQL 16.15 results above.
+The six Workspace Assistant integration cases passed, including private
+session transcript handling, prompt publication isolation, knowledge revision
+conflicts, and single-draft proposal replay/stale-version checks.
+
+This closes the local PostgreSQL 17 compatibility check for the current dirty
+working tree. It does not close production backup/rollback evidence, exact
+clean-SHA verification, complete browser/device and visual coverage, external
+MiniMax account/privacy UAT, independent review, manual CI, or deployment.
+M3.8 remains **In Progress**.
+
+### 2026-10-24 continuation — explicitly confirmed multi-field edits
+
+The plan-review UI now lets a member select two or three distinct proposed
+fields for one explicitly selected draft and apply them with one confirmation.
+The server locks the proposals and draft, rechecks role, workspace, common
+revision, workflow state, expiry, and each exact before-value, then calls the
+existing content update service once in the same transaction. It marks every
+selected proposal applied together; stale previews apply no fields, and replay
+returns the already-applied result. Schedule edits preserve the existing UTC
+posting time and retain best-effort media-folder reconciliation.
+
+| Check                            | Result                                                                                       |
+| -------------------------------- | -------------------------------------------------------------------------------------------- |
+| TypeScript                       | Pass                                                                                         |
+| `pnpm verify`                    | Pass — formatting, lint, typecheck, 616 unit files / 5,290 tests, and production build       |
+| Workspace Assistant integration  | Pass — 10/10, including three-field atomic apply, one revision bump, replay, stale, and RBAC |
+| Workspace Assistant Chromium E2E | Pass — 5/5; batch flow includes axe scan and a focused 375px overflow check                  |
+
+This is a dirty-worktree result. Multi-item proposal batches, full browser and
+visual release coverage, exact-clean-SHA CI, independent review, MiniMax
+account/privacy UAT, and production backup/rollback/deployment evidence remain
+open. M3.8 remains **In Progress**.
+
+The strict `pnpm test:e2e:release` command was also started on the current
+working tree. It reached 117 of 297 Chromium cases before being stopped after
+the Next.js test server repeatedly restarted near its memory threshold. Two
+cases timed out during that long run: workspace calendar accessibility and
+the public `/setup` route. Immediate isolated reruns passed (calendar checks
+2/2; `/setup` 1/1). This classifies those individual failures as run-level
+instability, but the complete browser and visual release suite remains open.
+
+### 2026-10-24 — authorized workload summary slice
+
+Added a bounded content-owner/designer assignment summary for the selected
+workspace month. The query uses the authorized content feature boundary and is
+limited to workspace managers and content planners. It returns display names
+and counts only, includes unassigned designer work, and is loaded by the
+assistant only when workload-related intent selects the matching skill. The
+English/Arabic prompt and skill explicitly prohibit treating assignment counts
+as proof of capacity, deadlines, or performance.
+
+| Check                                 | Result                                                                                  |
+| ------------------------------------- | --------------------------------------------------------------------------------------- |
+| `pnpm typecheck`                      | Pass                                                                                    |
+| Focused Assistant unit suites         | Pass — 11/11 for typed tools, bilingual built-in prompt, and skill selection            |
+| Workspace Assistant integration suite | Pass — PostgreSQL 16.15, 8/8, including workspace/month isolation and permission denial |
+
+These are dirty-working-tree results. After the prompt library change, strict
+Chromium visual comparison passed the English and Arabic/RTL responsive
+matrices (5 viewports each). The current focused Workspace Assistant Chromium
+E2E passed 5/5, including knowledge editing/history, private prompt creation,
+ambiguous content selection, streamed results, and Arabic RTL. The latest
+`pnpm verify` passed formatting, lint, typecheck, all 616 unit files / 5,290
+tests, and the production build. Full integration and migration verification
+must be repeated on the final clean SHA; the complete browser/device and visual
+release matrices, exact-clean-SHA CI, independent review, provider/privacy
+UAT, production backup/rollback, and deployment verification remain open.
+
+### 2026-10-24 continuation — full PostgreSQL 16 verification
+
+The complete integration suite completed on the disposable PostgreSQL 16.15
+database after the workload-summary slice; the Workspace Assistant integration
+file passed 8/8, including transcript privacy, prompt publication isolation,
+knowledge revisions, proposal conflict/replay, run cancellation, and workload
+workspace/month isolation. The PostgreSQL 16 migration drill passed all five
+scenarios, including from-zero replay of 100/100 migrations, skipped migration
+repair, in-place upgrade, backup/restore, and failed-migration rollback.
+
+These remain working-tree checks. They do not replace exact-clean-SHA, manual
+CI, independent review, production backup/rollback, or deployment evidence.
+M3.8 remains **In Progress**.
+
+### 2026-10-24 continuation — agency skill governance and release check
+
+Agency admins can author and revise agency-scoped assistant skills, submit an
+immutable revision for review, and archive skills. A different agency admin
+must approve or reject a submitted revision. Rollback creates a new draft
+revision tied to its approved source; it does not reactivate historical content
+directly. Custom skills carry instructions only and cannot register tools or
+permissions. A bilingual management page lives at
+`/app/agency-settings/ai/skills`.
+
+| Check                                                     | Result                                                                                                                                                                                |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                             | Pass — formatting, lint, typecheck, 616 unit files / 5,294 tests, and production build                                                                                                |
+| `TEST_DATABASE_URL=… NODE_ENV=test pnpm migration-drill`  | Pass — all five scenarios; PostgreSQL 16.15; 103/103 from zero                                                                                                                        |
+| `TEST_DATABASE_URL=… NODE_ENV=test pnpm test:integration` | Pass — complete integration suite; Workspace Assistant 12/12, including separate-admin review, active-version preservation, rollback provenance, archive, and workspace authorization |
+| Workspace Assistant Chromium E2E                          | Pass — 7/7; includes skill governance English/Arabic RTL, mobile layout, and axe checks                                                                                               |
+| Assistant skill Arabic RTL visual/accessibility           | Pass — 1/1 across five viewports                                                                                                                                                      |
+| Isolated retries of full-run failures                     | Pass — 4/4 for workspace calendar accessibility and the public auth providers route                                                                                                   |
+| `pnpm test:e2e:release`                                   | Incomplete — interrupted at 128/299 after repeated Next.js memory-threshold restarts and stalled progress; two unrelated route cases failed before isolated retries passed            |
+
+These are dirty-working-tree results. Full browser and visual coverage remains
+open. Exact-clean-SHA verification and manual CI, independent review, the
+configured MiniMax account/model/tool smoke, MiniMax data-processing/privacy
+review, separated-account human UAT, production backup/restore, rollback, and
+deployment evidence remain open. M3.8 remains **In Progress** and is not
+eligible for merge or deployment.
+
+A second `pnpm test:e2e:release` attempt used the verified disposable database
+and a capped Node heap. The Next.js dev server still restarted at its memory
+threshold; the workspace planning-list accessibility check timed out during a
+restart. The run was stopped after 23 cases (22 passed, one timed out), so the
+complete browser and visual release suite remains incomplete. The assistant's
+focused 7/7 Chromium checks and the isolated calendar/auth-provider retries
+remain passing evidence, but they do not substitute for the full matrix.
+
+The follow-up added an opt-in to suppress Next.js's dev-heap restart, with the
+default safety behavior unchanged. With that opt-in and an 8 GiB heap, the
+server no longer restarted, but the local process exhausted its heap while
+loading the workspace route matrix after 44 passing Chromium cases. The run
+was interrupted at case 81 after subsequent requests failed against the dead
+server. This host cannot complete the full matrix with the current dev-server
+memory footprint; the opt-in is documented for hosts with adequate headroom.
+
+### 2026-10-24 continuation — final local verification and focused retest
+
+The opt-in is implemented through Next.js's
+`experimental.devMemoryThresholdRestart` setting and is disabled only when
+`LARATIK_E2E_DISABLE_DEV_MEMORY_RESTART=1` is explicitly present. The default
+remains enabled. A final `pnpm verify` passed formatting, lint, typecheck, 616
+unit files / 5,294 tests, and the production build. The focused Workspace AI
+Assistant Chromium suite then passed 7/7 on the disposable PostgreSQL 16
+database, including model governance, knowledge history, prompt creation,
+reference clarification, streamed results, Arabic RTL, mobile layout, and
+accessibility. The broad browser/visual matrix is still incomplete; the host
+exhausted an 8 GiB dev-server heap when the restart was explicitly disabled.
+These are working-tree results, not clean-SHA release evidence.
+
+### 2026-10-24 continuation — Zod security update and final working-tree checks
+
+The production dependency audit found high advisories in Zod and transitive
+`body-parser`. Zod is now on 4.6.7 and `body-parser` is overridden to 2.4.0;
+the audit reports zero high or critical findings (two low and seven moderate
+remain). The Zod 4 compatibility pass preserves existing GUID acceptance,
+partial notification-preference updates, and caller-facing validation copy.
+Remote MCP date inputs are now ISO date-time strings converted to `Date` only
+after validation, so the tool registry can publish valid JSON Schemas.
+
+| Check                                  | Result                                                                                                                              |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                          | Pass — formatting, lint, typecheck, all 616 unit files / 5,294 tests, and production build                                          |
+| `pnpm audit --prod --audit-level high` | Pass — 0 high/critical; 2 low and 7 moderate findings remain                                                                        |
+| PostgreSQL 16 migration drill          | Pass — five scenarios, 103/103 migrations from zero, repair, upgrade, backup/restore, and failed-migration safety                   |
+| PostgreSQL 16 integration suite        | Pass — full configured integration suite, including Workspace Assistant 12/12 and MCP HTTP/tool cases                               |
+| Workspace Assistant Chromium E2E       | Pass — 7/7 on disposable PostgreSQL 16, including English/Arabic RTL, mobile, axe, knowledge, prompts, streaming, and references    |
+| Full browser release matrix            | Incomplete — the local dev server exhausted the host's available heap during the 299-case suite; the focused assistant suite passes |
+
+These checks are still from the working tree. Exact-clean-SHA verification,
+manual GitHub checks, independent review, external MiniMax model/tool and
+data-processing verification, separated-account human UAT, and production
+backup/rollback evidence are still required before M3.8 can be marked verified
+or the production deployment can proceed.
+
+### 2026-10-24 — exact code SHA and manual CI result
+
+The clean code commit `149b5d643d18ca617aa7d4e197dfe9ed6c9fc0c4` was tested
+after rebasing onto the then-current `main`. Local `pnpm verify` passed
+formatting, lint, typecheck, all 616 unit files / 5,295 tests, and the
+production build. The disposable PostgreSQL 16 migration drill passed all five
+scenarios, the pre-push affected unit/integration suite passed, and the focused
+Workspace AI Assistant Chromium suite passed 7/7 (English, Arabic/RTL, mobile,
+axe, prompt/knowledge governance, references, and streaming).
+
+Manual authoritative GitHub CI run
+[`40060982061`](https://github.com/LaraTik/laratik-planner/actions/runs/40060982061)
+passed every job on that SHA: quality/integration/audit, migration drill,
+workflow/Dockerfile/shell linters, SMTP certificate, Trend sidecar, Docker app
+and migrator builds, and container health smoke. The production dependency
+audit found zero high or critical advisories (two low and seven moderate).
+
+This evidence verifies the code commit; the subsequent readiness-note-only
+commit does not change application code. The full browser/visual release matrix
+remains incomplete because this host exhausted its dev-server memory. The
+MiniMax API privacy policy effective 2026-03-30 describes U.S. data-center
+storage/processing and retention for as long as necessary or legally permitted,
+without a fixed prompt/response retention window. Legal/privacy approval and a
+model-specific live tool smoke are still required, as are independent review,
+separated-account human UAT, and production backup/rollback evidence. M3.8 is
+not verified and production deployment is not approved.
+
+Policy reference: [MiniMax API Privacy Policy](https://platform.minimax.io/protocol/privacy-policy).
+
+### 2026-10-24 — final local verification at `f43ce2b5687daf52baf007fc123bd641dee00031`
+
+The pushed feature commit was checked from its clean worktree. `pnpm verify`
+passed formatting, lint, typecheck, all 617 unit files / 5,300 tests, and the
+production build. The full configured PostgreSQL 16 integration suite passed,
+including Workspace Assistant 12/12 for prompt and knowledge isolation,
+confirmed edits, stale/replay protection, schedule proposals, run cancellation,
+workload scoping, and skill governance. `pnpm migration-drill` passed all five
+scenarios with 103/103 migrations from zero, skipped-migration repair,
+in-place upgrade, backup/restore, and failed-migration rollback.
+
+This is local code/test evidence for `f43ce2b`; the follow-up evidence-note
+commit does not change application code. Full browser/device release coverage,
+independent review, live MiniMax model/tool and privacy UAT, separated-account
+human UAT, and production backup/rollback evidence remain open. The PR is not
+eligible for merge or production deployment until those gates are completed.
+
+The assistant's focused Chromium browser run passed 7/7 on the same application
+commit, covering model permissions, knowledge revision history, prompt
+creation, ambiguous references, streamed activity, and Arabic RTL. Its focused
+Arabic/RTL visual and accessibility case passed all five responsive viewports.
+The Firefox project did not complete: its browser process remained unresponsive
+for more than five minutes and the run was stopped. This does not count as a
+Firefox pass; complete browser/device release coverage remains open.

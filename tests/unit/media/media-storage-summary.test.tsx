@@ -25,6 +25,9 @@ describe("MediaStorageSummary", () => {
     expect(summary).toHaveTextContent("Agency-owned R2");
     expect(summary).toHaveTextContent("laratik-planner");
     expect(summary).toHaveTextContent("agencies/5694a565-c198-4a1d-add7-fe9c8bc056fc");
+    expect(screen.getByTestId("media-storage-key-prefix")).toHaveTextContent(
+      "agencies/5694a565-c198-4a1d-add7-fe9c8bc056fc",
+    );
   });
 
   it("opens a popover with the full breakdown when the info trigger is clicked", async () => {

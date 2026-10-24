@@ -85,7 +85,11 @@ import {
   type AdvertisingHierarchyExplorerLabels,
 } from "./advertising-hierarchy-explorer";
 import { AdvertisingSaveViewDialog } from "./advertising-save-view-dialog";
+import { AdvertisingShareDialog } from "./advertising-share-dialog";
+import type { AdvertisingLocalTagView } from "./advertising-taxonomy-editor";
+import { AdvertisingFilterDrawer } from "./advertising-filter-drawer";
 import { advertisingReportViewConfigFromSearch } from "@/lib/advertising/reporting-view-config";
+import { listAdvertisingLocalTags } from "@/lib/advertising/reporting-metadata-service";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -111,6 +115,7 @@ type SearchParams = {
   trendMetricA?: string | string[];
   trendMetricB?: string | string[];
   trendGranularity?: string | string[];
+  supplementaryMetric?: string | string[];
   sort?: string | string[];
   visibleColumns?: string | string[];
 };
@@ -275,7 +280,89 @@ export default async function AdvertisingAnalyticsPage({
   }
 
   const view = buildAdvertisingReportView(result.report.rows, result.objects);
+  const activeSection = normalizeReportSection(firstQueryValue(query.section));
+  const localTags =
+    activeSection === "campaigns" || activeSection === "creatives"
+      ? await listAdvertisingLocalTags({
+          workspaceId: workspace.id,
+          accountId: selectedAccount.id,
+        })
+      : [];
+  const localTagsByEntity: Record<string, AdvertisingLocalTagView[]> = {};
+  for (const tag of localTags) {
+    const key = `${tag.entityType}:${tag.entityId}`;
+    (localTagsByEntity[key] ??= []).push({
+      id: tag.id,
+      entityType: tag.entityType as AdvertisingLocalTagView["entityType"],
+      entityId: tag.entityId,
+      labelType: tag.labelType as AdvertisingLocalTagView["labelType"],
+      tagValue: tag.tagValue,
+    });
+  }
+  const campaignSearch = firstQueryValue(query.search)?.trim().toLowerCase() ?? "";
+  const objectiveFilter = firstQueryValue(query.objective) ?? "";
+  const statusFilter = firstQueryValue(query.status) ?? "";
+  const visibleCampaigns = view.campaigns.filter((campaign) => {
+    const searchMatch =
+      campaignSearch.length === 0 ||
+      (String(campaign.name ?? "") + " " + campaign.campaignId)
+        .toLowerCase()
+        .includes(campaignSearch) ||
+      (localTagsByEntity[`campaign:${campaign.campaignId}`] ?? []).some((tag) =>
+        tag.tagValue.toLowerCase().includes(campaignSearch),
+      );
+    const objectiveMatch = !objectiveFilter || campaign.objective === objectiveFilter;
+    const statusMatch = !statusFilter || campaign.status === statusFilter;
+    return searchMatch && objectiveMatch && statusMatch;
+  });
+  const campaignInsights = buildCampaignPerformanceInsights(visibleCampaigns);
+  const budgetPacing = buildBudgetPacingInsights(visibleCampaigns, since, until);
+  const creativeFatigue = buildCreativeFatigueInsights(result.report.rows, view.ads, since, until);
+  const organicByPostId = await loadOrganicPromotedPosts({
+    postIds: new Set(view.promotedPosts?.map((post) => post.postId) ?? []),
+    workspaceId: workspace.id,
+    timezone: workspace.timezone,
+    since,
+    until,
+  });
+  const freshnessLabel = t(`advertising.reporting.freshness.${result.freshness}`);
+  if (firstQueryValue(query.presentation) === "client") {
+    return (
+      <div className="space-y-6" data-testid="advertising-client-report-shell">
+        <AdvertisingClientReport
+          accountName={selectedAccount.name}
+          accountId={selectedAccount.id}
+          workspaceId={workspace.id}
+          currency={selectedAccount.currency}
+          since={since}
+          until={until}
+          freshness={freshnessLabel}
+          partial={result.partial}
+          totals={result.report.totals}
+          campaigns={view.campaigns}
+          performance={campaignInsights}
+          pacing={budgetPacing}
+          fatigue={creativeFatigue}
+          promotedPosts={view.promotedPosts ?? []}
+          organicByPostId={
+            new Map(
+              [...organicByPostId.entries()].map(
+                ([postId, value]) => [postId, value.views] as const,
+              ),
+            )
+          }
+          backHref={`${basePath}?accountId=${encodeURIComponent(selectedAccount.id)}&since=${since}&until=${until}`}
+          labels={advertisingClientReportLabels(t)}
+          locale={code}
+        />
+      </div>
+    );
+  }
+
   const primaryMetrics = aggregateAdvertisingMetrics(result.report.rows);
+  const reportMetricStatuses = metricStatuses(primaryMetrics, {
+    healthState: result.dataHealth.state,
+  });
   const comparisonMode = normalizeComparisonMode(firstQueryValue(query.compare));
   const requestedComparisonRange = comparisonRange({
     since,
@@ -317,31 +404,6 @@ export default async function AdvertisingAnalyticsPage({
     comparisonDailyMetrics,
     trendGranularity,
   );
-  const campaignSearch = firstQueryValue(query.search)?.trim().toLowerCase() ?? "";
-  const objectiveFilter = firstQueryValue(query.objective) ?? "";
-  const statusFilter = firstQueryValue(query.status) ?? "";
-  const activeSection = normalizeReportSection(firstQueryValue(query.section));
-  const visibleCampaigns = view.campaigns.filter((campaign) => {
-    const searchMatch =
-      campaignSearch.length === 0 ||
-      (String(campaign.name ?? "") + " " + campaign.campaignId)
-        .toLowerCase()
-        .includes(campaignSearch);
-    const objectiveMatch = !objectiveFilter || campaign.objective === objectiveFilter;
-    const statusMatch = !statusFilter || campaign.status === statusFilter;
-    return searchMatch && objectiveMatch && statusMatch;
-  });
-  const campaignInsights = buildCampaignPerformanceInsights(visibleCampaigns);
-  const budgetPacing = buildBudgetPacingInsights(visibleCampaigns, since, until);
-  const creativeFatigue = buildCreativeFatigueInsights(result.report.rows, view.ads, since, until);
-  const organicByPostId = await loadOrganicPromotedPosts({
-    postIds: new Set(view.promotedPosts?.map((post) => post.postId) ?? []),
-    workspaceId: workspace.id,
-    timezone: workspace.timezone,
-    since,
-    until,
-  });
-  const freshnessLabel = t(`advertising.reporting.freshness.${result.freshness}`);
   const syncLabel = result.syncStatus
     ? t(`advertising.syncStatus.${result.syncStatus}`)
     : t("advertising.reporting.notAvailable");
@@ -353,14 +415,33 @@ export default async function AdvertisingAnalyticsPage({
     const value = (campaign: (typeof visibleCampaigns)[number]) =>
       hierarchySort === "results"
         ? (campaign.results ?? -1)
-        : hierarchySort === "ctr"
-          ? (campaign.ctr ?? -1)
-          : campaign.spend;
+        : hierarchySort === "costPerResult"
+          ? (campaign.costPerResult ?? -1)
+          : hierarchySort === "reach"
+            ? (campaign.reach ?? -1)
+            : hierarchySort === "frequency"
+              ? (campaign.frequency ?? -1)
+              : hierarchySort === "ctrLink"
+                ? (campaign.ctrLink ?? -1)
+                : hierarchySort === "cpm"
+                  ? (campaign.cpm ?? -1)
+                  : hierarchySort === "ctr"
+                    ? (campaign.ctr ?? -1)
+                    : campaign.spend;
     return value(right) - value(left);
   });
   const campaignPage = paginate(sortedVisibleCampaigns, firstQueryValue(query.campaignPage));
   const adSetPage = paginate(view.adSets, firstQueryValue(query.adSetPage));
-  const adPage = paginate(view.ads, firstQueryValue(query.adPage));
+  const visibleAds = view.ads.filter((ad) => {
+    if (!campaignSearch) return true;
+    return (
+      `${ad.name ?? ""} ${ad.adId}`.toLowerCase().includes(campaignSearch) ||
+      (localTagsByEntity[`ad:${ad.adId}`] ?? []).some((tag) =>
+        tag.tagValue.toLowerCase().includes(campaignSearch),
+      )
+    );
+  });
+  const adPage = paginate(visibleAds, firstQueryValue(query.adPage));
   const clientReportHref = `${basePath}?${new URLSearchParams({
     accountId: selectedAccount.id,
     since,
@@ -378,6 +459,7 @@ export default async function AdvertisingAnalyticsPage({
     since,
     until,
   });
+  const supplementaryMetric = savedViewConfig.supplementaryMetric;
   const objectiveOptions = [
     ...new Set(view.campaigns.map((campaign) => campaign.objective).filter(Boolean)),
   ] as string[];
@@ -396,6 +478,7 @@ export default async function AdvertisingAnalyticsPage({
     trendMetricA,
     trendMetricB,
     trendGranularity,
+    supplementaryMetric,
     sort: savedViewConfig.sort,
     visibleColumns: savedViewConfig.visibleColumns,
     search: campaignSearch,
@@ -409,7 +492,7 @@ export default async function AdvertisingAnalyticsPage({
     workspaceId: workspace.id,
     since,
     until,
-    surface: "csv_export",
+    surface: "xlsx_export",
     compare: comparisonMode,
     section: activeSection,
     search: campaignSearch,
@@ -418,6 +501,7 @@ export default async function AdvertisingAnalyticsPage({
     trendMetricA,
     trendMetricB,
     trendGranularity,
+    supplementaryMetric,
   });
   if (savedViewConfig.sort) exportParams.set("sort", savedViewConfig.sort);
   if (savedViewConfig.visibleColumns?.length) {
@@ -428,14 +512,42 @@ export default async function AdvertisingAnalyticsPage({
   if (compareSince) exportParams.set("compareSince", compareSince);
   if (compareUntil) exportParams.set("compareUntil", compareUntil);
   const reportExportHref = `/api/advertising/report?${exportParams.toString()}`;
+  const csvExportParams = new URLSearchParams(exportParams);
+  csvExportParams.set("surface", "csv_export");
+  const csvExportHref = `/api/advertising/report?${csvExportParams.toString()}`;
   const reportHeaderActions = (
     <>
       <Button asChild variant="secondary" size="sm">
-        <a href={reportExportHref} download>
+        <a href={csvExportHref} download>
           <Download className="h-4 w-4" aria-hidden="true" />
-          {t("advertising.reporting.exportReport")}
+          {t("advertising.reporting.exportCsv")}
         </a>
       </Button>
+      <Button asChild variant="secondary" size="sm">
+        <a href={reportExportHref} download>
+          <Download className="h-4 w-4" aria-hidden="true" />
+          {t("advertising.reporting.exportXlsx")}
+        </a>
+      </Button>
+      <AdvertisingShareDialog
+        workspaceSlug={slug}
+        viewConfig={savedViewConfig}
+        labels={{
+          share: t("advertising.reporting.shareReport"),
+          title: t("advertising.reporting.shareReportTitle"),
+          description: t("advertising.reporting.shareReportDescription"),
+          expires: t("advertising.reporting.shareExpires"),
+          sevenDays: t("advertising.reporting.shareSevenDays"),
+          thirtyDays: t("advertising.reporting.shareThirtyDays"),
+          cancel: t("common.cancel"),
+          create: t("advertising.reporting.createShareLink"),
+          creating: t("common.saving"),
+          copy: t("advertising.reporting.copyShareLink"),
+          copied: t("advertising.reporting.shareLinkCopied"),
+          error: t("advertising.reporting.shareError"),
+          authenticated: t("advertising.reporting.shareAuthenticated"),
+        }}
+      />
       <AdvertisingSaveViewDialog
         workspaceSlug={slug}
         viewConfig={savedViewConfig}
@@ -461,165 +573,150 @@ export default async function AdvertisingAnalyticsPage({
     </>
   );
 
-  if (firstQueryValue(query.presentation) === "client") {
-    return (
-      <div className="space-y-6" data-testid="advertising-client-report-shell">
-        <AdvertisingClientReport
-          accountName={selectedAccount.name}
-          accountId={selectedAccount.id}
-          workspaceId={workspace.id}
-          currency={selectedAccount.currency}
-          since={since}
-          until={until}
-          freshness={freshnessLabel}
-          partial={result.partial}
-          totals={result.report.totals}
-          campaigns={view.campaigns}
-          performance={campaignInsights}
-          pacing={budgetPacing}
-          fatigue={creativeFatigue}
-          promotedPosts={view.promotedPosts ?? []}
-          organicByPostId={
-            new Map(
-              [...organicByPostId.entries()].map(
-                ([postId, value]) => [postId, value.views] as const,
-              ),
-            )
-          }
-          backHref={`${basePath}?accountId=${encodeURIComponent(selectedAccount.id)}&since=${since}&until=${until}`}
-          labels={advertisingClientReportLabels(t)}
-          locale={code}
+  const renderFilterFields = (idPrefix: string) => (
+    <>
+      <input type="hidden" name="section" value={activeSection} />
+      <input type="hidden" name="trendMetricA" value={trendMetricA} />
+      <input type="hidden" name="trendMetricB" value={trendMetricB} />
+      <input type="hidden" name="trendGranularity" value={trendGranularity} />
+      <input type="hidden" name="supplementaryMetric" value={supplementaryMetric} />
+      {savedViewConfig.sort ? (
+        <input type="hidden" name="sort" value={savedViewConfig.sort} />
+      ) : null}
+      {savedViewConfig.visibleColumns?.length ? (
+        <input
+          type="hidden"
+          name="visibleColumns"
+          value={savedViewConfig.visibleColumns.join(",")}
         />
-      </div>
-    );
-  }
+      ) : null}
+      <FormField id={`${idPrefix}-account`} label={t("advertising.reporting.account")}>
+        <select
+          name="accountId"
+          defaultValue={selectedAccount.id}
+          className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2"
+        >
+          {accounts.map((account) => (
+            <option key={account.id} value={account.id}>
+              {account.name}
+            </option>
+          ))}
+        </select>
+      </FormField>
+      <FormField id={`${idPrefix}-since`} label={t("advertising.reporting.from")}>
+        <Input name="since" type="date" defaultValue={since} />
+      </FormField>
+      <FormField id={`${idPrefix}-until`} label={t("advertising.reporting.to")}>
+        <Input name="until" type="date" defaultValue={until} />
+      </FormField>
+      <FormField id={`${idPrefix}-search`} label={t("advertising.reporting.search")}>
+        <div className="relative">
+          <Search
+            className="text-fg-muted pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2"
+            aria-hidden="true"
+          />
+          <Input
+            name="search"
+            defaultValue={campaignSearch}
+            placeholder={t("advertising.reporting.searchPlaceholder")}
+            className="ps-9"
+          />
+        </div>
+      </FormField>
+      <FormField id={`${idPrefix}-objective`} label={t("advertising.reporting.objective")}>
+        <select
+          name="objective"
+          defaultValue={objectiveFilter}
+          className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2"
+        >
+          <option value="">{t("advertising.reporting.allObjectives")}</option>
+          {objectiveOptions.map((objective) => (
+            <option key={objective} value={objective}>
+              {objective}
+            </option>
+          ))}
+        </select>
+      </FormField>
+      <FormField id={`${idPrefix}-status`} label={t("advertising.reporting.status")}>
+        <select
+          name="status"
+          defaultValue={statusFilter}
+          className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2"
+        >
+          <option value="">{t("advertising.reporting.allStatuses")}</option>
+          {statusOptions.map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
+        </select>
+      </FormField>
+      <FormField id={`${idPrefix}-comparison`} label={t("advertising.reporting.comparisonMode")}>
+        <select
+          name="compare"
+          defaultValue={comparisonMode}
+          className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2"
+        >
+          <option value="previous">{t("advertising.reporting.previousPeriod")}</option>
+          <option value="previous_year">{t("advertising.reporting.previousYear")}</option>
+          <option value="custom">{t("advertising.reporting.customComparison")}</option>
+        </select>
+      </FormField>
+      {comparisonMode === "custom" ? (
+        <>
+          <FormField
+            id={`${idPrefix}-compare-since`}
+            label={t("advertising.reporting.compareSince")}
+          >
+            <Input
+              name="compareSince"
+              type="date"
+              defaultValue={firstQueryValue(query.compareSince)}
+            />
+          </FormField>
+          <FormField
+            id={`${idPrefix}-compare-until`}
+            label={t("advertising.reporting.compareUntil")}
+          >
+            <Input
+              name="compareUntil"
+              type="date"
+              defaultValue={firstQueryValue(query.compareUntil)}
+            />
+          </FormField>
+        </>
+      ) : null}
+    </>
+  );
 
   return (
     <div className="space-y-6" data-testid="advertising-reporting-page">
       {renderHeading(reportHeaderActions)}
+      <AdvertisingFilterDrawer
+        action={basePath}
+        buttonLabel={t("advertising.reporting.filtersButton")}
+        title={t("advertising.reporting.filtersTitle")}
+        description={t("advertising.reporting.filtersDescription")}
+        applyLabel={t("advertising.reporting.apply")}
+        closeLabel={t("common.close")}
+      >
+        {renderFilterFields("advertising-report-mobile")}
+        <a
+          href={csvExportHref}
+          className="border-border text-label text-fg-primary focus-visible:ring-focus-ring inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border px-4 font-semibold focus:outline-none focus-visible:ring-2"
+          download
+        >
+          <Download className="h-4 w-4" aria-hidden="true" />
+          {t("advertising.reporting.exportCsv")}
+        </a>
+      </AdvertisingFilterDrawer>
       <form
         method="get"
         action={basePath}
-        className="border-border bg-surface sticky top-16 z-20 grid gap-4 rounded-[var(--radius-card)] border p-4 shadow-sm sm:grid-cols-2 xl:grid-cols-6 xl:items-end"
+        className="border-border bg-surface sticky top-16 z-20 hidden gap-4 rounded-[var(--radius-card)] border p-4 shadow-sm sm:grid sm:grid-cols-2 xl:grid-cols-6 xl:items-end"
         data-testid="advertising-reporting-filters"
       >
-        <input type="hidden" name="section" value={activeSection} />
-        <input type="hidden" name="trendMetricA" value={trendMetricA} />
-        <input type="hidden" name="trendMetricB" value={trendMetricB} />
-        <input type="hidden" name="trendGranularity" value={trendGranularity} />
-        {savedViewConfig.sort ? (
-          <input type="hidden" name="sort" value={savedViewConfig.sort} />
-        ) : null}
-        {savedViewConfig.visibleColumns?.length ? (
-          <input
-            type="hidden"
-            name="visibleColumns"
-            value={savedViewConfig.visibleColumns.join(",")}
-          />
-        ) : null}
-        <FormField id="advertising-report-account" label={t("advertising.reporting.account")}>
-          <select
-            name="accountId"
-            defaultValue={selectedAccount.id}
-            className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2"
-          >
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name}
-              </option>
-            ))}
-          </select>
-        </FormField>
-        <FormField id="advertising-report-since" label={t("advertising.reporting.from")}>
-          <Input name="since" type="date" defaultValue={since} />
-        </FormField>
-        <FormField id="advertising-report-until" label={t("advertising.reporting.to")}>
-          <Input name="until" type="date" defaultValue={until} />
-        </FormField>
-        <FormField id="advertising-report-search" label={t("advertising.reporting.search")}>
-          <div className="relative">
-            <Search
-              className="text-fg-muted pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2"
-              aria-hidden="true"
-            />
-            <Input
-              id="advertising-report-search"
-              name="search"
-              defaultValue={campaignSearch}
-              placeholder={t("advertising.reporting.searchPlaceholder")}
-              className="ps-9"
-            />
-          </div>
-        </FormField>
-        <FormField id="advertising-report-objective" label={t("advertising.reporting.objective")}>
-          <select
-            id="advertising-report-objective"
-            name="objective"
-            defaultValue={objectiveFilter}
-            className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2"
-          >
-            <option value="">{t("advertising.reporting.allObjectives")}</option>
-            {objectiveOptions.map((objective) => (
-              <option key={objective} value={objective}>
-                {objective}
-              </option>
-            ))}
-          </select>
-        </FormField>
-        <FormField id="advertising-report-status" label={t("advertising.reporting.status")}>
-          <select
-            id="advertising-report-status"
-            name="status"
-            defaultValue={statusFilter}
-            className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2"
-          >
-            <option value="">{t("advertising.reporting.allStatuses")}</option>
-            {statusOptions.map((status) => (
-              <option key={status} value={status}>
-                {status}
-              </option>
-            ))}
-          </select>
-        </FormField>
-        <FormField
-          id="advertising-report-comparison"
-          label={t("advertising.reporting.comparisonMode")}
-        >
-          <select
-            id="advertising-report-comparison"
-            name="compare"
-            defaultValue={comparisonMode}
-            className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2"
-          >
-            <option value="previous">{t("advertising.reporting.previousPeriod")}</option>
-            <option value="previous_year">{t("advertising.reporting.previousYear")}</option>
-            <option value="custom">{t("advertising.reporting.customComparison")}</option>
-          </select>
-        </FormField>
-        {comparisonMode === "custom" ? (
-          <>
-            <FormField
-              id="advertising-report-compare-since"
-              label={t("advertising.reporting.compareSince")}
-            >
-              <Input
-                name="compareSince"
-                type="date"
-                defaultValue={firstQueryValue(query.compareSince)}
-              />
-            </FormField>
-            <FormField
-              id="advertising-report-compare-until"
-              label={t("advertising.reporting.compareUntil")}
-            >
-              <Input
-                name="compareUntil"
-                type="date"
-                defaultValue={firstQueryValue(query.compareUntil)}
-              />
-            </FormField>
-          </>
-        ) : null}
+        {renderFilterFields("advertising-report-desktop")}
         <button
           type="submit"
           className="bg-primary text-label focus-visible:ring-focus-ring min-h-11 rounded-[var(--radius-control)] px-4 font-semibold text-white focus:outline-none focus-visible:ring-2"
@@ -632,7 +729,7 @@ export default async function AdvertisingAnalyticsPage({
           download
         >
           <Download className="h-4 w-4" aria-hidden="true" />
-          {t("advertising.reporting.exportCsv")}
+          {t("advertising.reporting.exportXlsx")}
         </a>
       </form>
       <p className="text-label text-fg-muted -mt-3 inline-flex items-center gap-2">
@@ -692,21 +789,27 @@ export default async function AdvertisingAnalyticsPage({
           {activeSection === "overview" ? (
             <>
               <AdvertisingReportingDashboard
+                accountId={selectedAccount.id}
+                workspaceSlug={slug}
                 accountName={selectedAccount.name ?? selectedAccount.id}
                 currency={selectedAccount.currency ?? "EUR"}
                 locale={code}
                 timezone={selectedAccount.timezone ?? workspace.timezone}
                 freshness={freshnessLabel}
+                syncStatus={syncLabel}
                 partial={result.partial}
                 dataHealth={result.dataHealth}
                 lastSync={result.lastSuccessfulSyncAt}
                 since={since}
                 until={until}
                 metrics={primaryMetrics}
+                supplementaryMetric={supplementaryMetric}
                 comparison={comparisonSummary}
-                statuses={metricStatuses(primaryMetrics)}
+                statuses={reportMetricStatuses}
                 campaigns={view.campaigns}
                 insights={campaignInsights}
+                pacing={budgetPacing}
+                fatigue={creativeFatigue}
                 dailyMetrics={chartMetrics}
                 comparisonDailyMetrics={comparisonChartMetrics}
                 comparisonComparable={comparisonSummary?.comparable === true}
@@ -715,6 +818,12 @@ export default async function AdvertisingAnalyticsPage({
                 trendMetricB={trendMetricB}
                 audienceCount={result.audience.length}
                 campaignsHref={campaignsHref}
+                creativesHref={
+                  reportSectionNavItems.find((item) => item.key === "creatives")?.href ?? basePath
+                }
+                audienceHref={
+                  reportSectionNavItems.find((item) => item.key === "audience")?.href ?? basePath
+                }
                 labels={advertisingReportingDashboardLabels(t)}
               />
               <AdvertisingIntelligencePanel
@@ -808,7 +917,7 @@ export default async function AdvertisingAnalyticsPage({
                   </CardDescription>
                 </CardHeader>
                 <div className="space-y-2 px-4 pb-4 sm:px-5 sm:pb-5">
-                  {metricStatuses(primaryMetrics).map((status) => (
+                  {reportMetricStatuses.map((status) => (
                     <div
                       key={status.key}
                       className="border-border-subtle bg-surface-subtle rounded-[var(--radius-control)] border p-3"
@@ -837,7 +946,7 @@ export default async function AdvertisingAnalyticsPage({
                 key={`${savedViewConfig.sort ?? "spend"}:${savedViewConfig.visibleColumns?.join(",") ?? "all"}`}
                 campaigns={campaignPage.items}
                 adSets={view.adSets}
-                ads={view.ads}
+                ads={visibleAds}
                 currency={selectedAccount.currency}
                 locale={code}
                 labels={advertisingHierarchyExplorerLabels(t)}
@@ -1174,6 +1283,9 @@ export default async function AdvertisingAnalyticsPage({
                 currency={selectedAccount.currency}
                 locale={code}
                 labels={advertisingCreativeExplorerLabels(t)}
+                workspaceSlug={slug}
+                accountId={selectedAccount.id}
+                localTagsByEntity={localTagsByEntity}
               />
               <Card data-testid="advertising-reporting-promoted-posts">
                 <CardHeader>
@@ -1394,6 +1506,17 @@ function advertisingCreativeExplorerLabels(
     noHeadline: t("advertising.reporting.creativeExplorerNoHeadline"),
     noBody: t("advertising.reporting.creativeExplorerNoBody"),
     close: t("common.close"),
+    taxonomyTitle: t("advertising.reporting.taxonomyTitle"),
+    taxonomyAdd: t("advertising.reporting.taxonomyAdd"),
+    taxonomyRemove: t("advertising.reporting.taxonomyRemove"),
+    taxonomyPlaceholder: t("advertising.reporting.taxonomyPlaceholder"),
+    taxonomyTopic: t("advertising.reporting.taxonomyTopic"),
+    taxonomyBrand: t("advertising.reporting.taxonomyBrand"),
+    taxonomyPlatform: t("advertising.reporting.taxonomyPlatform"),
+    taxonomyObjective: t("advertising.reporting.taxonomyObjective"),
+    taxonomyLanguage: t("advertising.reporting.taxonomyLanguage"),
+    taxonomyMonth: t("advertising.reporting.taxonomyMonth"),
+    taxonomyError: t("advertising.reporting.taxonomyError"),
   };
 }
 
@@ -1457,7 +1580,12 @@ function advertisingHierarchyExplorerLabels(
     ad: t("advertising.reporting.ad"),
     spend: t("advertising.reporting.spend"),
     results: t("advertising.reporting.results"),
+    costPerResult: t("advertising.reporting.dashboard.costPerResult"),
+    reach: t("advertising.reporting.reach"),
+    frequency: t("advertising.reporting.dashboard.frequency"),
     ctr: t("advertising.reporting.ctr"),
+    ctrLink: t("advertising.reporting.dashboard.ctrLink"),
+    cpm: t("advertising.reporting.cpm"),
     delivery: t("advertising.reporting.status"),
     expand: t("advertising.reporting.expand"),
     collapse: t("advertising.reporting.collapse"),
@@ -1471,6 +1599,11 @@ function advertisingHierarchyExplorerLabels(
     sortSpend: t("advertising.reporting.sortSpend"),
     sortResults: t("advertising.reporting.sortResults"),
     sortCtr: t("advertising.reporting.sortCtr"),
+    sortCostPerResult: t("advertising.reporting.sortCostPerResult"),
+    sortReach: t("advertising.reporting.sortReach"),
+    sortFrequency: t("advertising.reporting.sortFrequency"),
+    sortCtrLink: t("advertising.reporting.sortCtrLink"),
+    sortCpm: t("advertising.reporting.sortCpm"),
   };
 }
 
@@ -1483,7 +1616,45 @@ function advertisingReportingDashboardLabels(
     timezone: t("advertising.reporting.dashboard.timezone"),
     coverage: t("advertising.reporting.dashboard.coverage"),
     retry: t("advertising.reporting.dashboard.retry"),
+    details: t("advertising.reporting.dashboard.details"),
+    close: t("common.close"),
+    detailsTitle: t("advertising.reporting.dashboard.detailsTitle"),
+    detailsDescription: t("advertising.reporting.dashboard.detailsDescription"),
+    lastSuccessfulSync: t("advertising.reporting.dashboard.lastSuccessfulSync"),
+    currency: t("advertising.reporting.dashboard.currency"),
+    healthState: t("advertising.reporting.dashboard.healthState"),
+    freshnessLabel: t("advertising.reporting.dashboard.freshnessLabel"),
+    syncStatus: t("advertising.reporting.dashboard.syncStatus"),
+    issues: t("advertising.reporting.dashboard.issues"),
+    noIssues: t("advertising.reporting.dashboard.noIssues"),
+    metricStatus: t("advertising.reporting.dashboard.metricStatus"),
+    source: t("advertising.reporting.dashboard.source"),
+    formula: t("advertising.reporting.dashboard.formula"),
+    denominator: t("advertising.reporting.dashboard.denominator"),
+    attributionWindow: t("advertising.reporting.dashboard.attributionWindow"),
+    notSet: t("advertising.reporting.dashboard.notSet"),
+    statusEstimated: t("advertising.reporting.dashboard.statusEstimated"),
+    issueNoSuccessfulSync: t("advertising.reporting.dashboard.issueNoSuccessfulSync"),
+    issuePartialCoverage: t("advertising.reporting.dashboard.issuePartialCoverage"),
+    issueSyncRunning: t("advertising.reporting.dashboard.issueSyncRunning"),
+    issueSyncFailed: t("advertising.reporting.dashboard.issueSyncFailed"),
+    issueSyncDeadLetter: t("advertising.reporting.dashboard.issueSyncDeadLetter"),
+    issueStaleData: t("advertising.reporting.dashboard.issueStaleData"),
     primaryMetrics: t("advertising.reporting.dashboard.primaryMetrics"),
+    supplementaryMetric: t("advertising.reporting.dashboard.supplementaryMetric"),
+    supplementaryMetricDescription: t(
+      "advertising.reporting.dashboard.supplementaryMetricDescription",
+    ),
+    selectSupplementaryMetric: t("advertising.reporting.dashboard.selectSupplementaryMetric"),
+    metricImpressions: t("advertising.reporting.impressions"),
+    metricAllClicks: t("advertising.reporting.dashboard.metricAllClicks"),
+    metricLinkClicks: t("advertising.reporting.dashboard.metricLinkClicks"),
+    metricOutboundClicks: t("advertising.reporting.dashboard.metricOutboundClicks"),
+    metricLandingPageViews: t("advertising.reporting.dashboard.metricLandingPageViews"),
+    metricCtrAll: t("advertising.reporting.dashboard.metricCtrAll"),
+    metricCpcAll: t("advertising.reporting.dashboard.metricCpcAll"),
+    metricCpcLink: t("advertising.reporting.dashboard.metricCpcLink"),
+    metricCpm: t("advertising.reporting.cpm"),
     comparison: t("advertising.reporting.dashboard.comparison"),
     noComparison: t("advertising.reporting.dashboard.noComparison"),
     performanceTrend: t("advertising.reporting.dashboard.performanceTrend"),
@@ -1494,6 +1665,26 @@ function advertisingReportingDashboardLabels(
     objectiveMixDescription: t("advertising.reporting.dashboard.objectiveMixDescription"),
     actionCenter: t("advertising.reporting.dashboard.actionCenter"),
     actionCenterDescription: t("advertising.reporting.dashboard.actionCenterDescription"),
+    budgetPacing: t("advertising.reporting.budgetPacing"),
+    creativeHealth: t("advertising.reporting.creativeHealth"),
+    audienceOpportunity: t("advertising.reporting.audienceOpportunity"),
+    noBudgetData: t("advertising.reporting.noBudgetData"),
+    noFatigueData: t("advertising.reporting.noFatigueData"),
+    markReviewed: t("advertising.reporting.markReviewed"),
+    dismiss: t("advertising.reporting.dismiss"),
+    snooze: t("advertising.reporting.snooze"),
+    reopen: t("advertising.reporting.reopen"),
+    feedbackReason: t("advertising.reporting.feedbackReason"),
+    selectReason: t("advertising.reporting.selectReason"),
+    reasonNotRelevant: t("advertising.reporting.reasonNotRelevant"),
+    reasonAlreadyHandled: t("advertising.reporting.reasonAlreadyHandled"),
+    reasonDataIncomplete: t("advertising.reporting.reasonDataIncomplete"),
+    saveFeedback: t("advertising.reporting.saveFeedback"),
+    feedbackSaved: t("advertising.reporting.feedbackSaved"),
+    feedbackError: t("advertising.reporting.feedbackError"),
+    reviewed: t("advertising.reporting.reviewed"),
+    dismissed: t("advertising.reporting.dismissed"),
+    snoozed: t("advertising.reporting.snoozed"),
     review: t("advertising.reporting.dashboard.review"),
     campaignExplorer: t("advertising.reporting.dashboard.campaignExplorer"),
     campaignExplorerDescription: t("advertising.reporting.dashboard.campaignExplorerDescription"),
@@ -1517,6 +1708,7 @@ function advertisingReportingDashboardLabels(
     reviewEvidence: t("advertising.reporting.reviewEvidence"),
     metricSpend: t("advertising.reporting.spend"),
     metricResults: t("advertising.reporting.results"),
+    resultDefinition: t("advertising.reporting.dashboard.resultDefinition"),
     metricCostPerResult: t("advertising.reporting.dashboard.costPerResult"),
     metricReach: t("advertising.reporting.reach"),
     metricCtr: t("advertising.reporting.ctr"),
@@ -1553,6 +1745,7 @@ function reportSectionItems({
   trendMetricA,
   trendMetricB,
   trendGranularity,
+  supplementaryMetric,
   sort,
   visibleColumns,
   search,
@@ -1570,6 +1763,7 @@ function reportSectionItems({
   trendMetricA: TrendMetricKey;
   trendMetricB: TrendMetricKey;
   trendGranularity: TrendGranularity;
+  supplementaryMetric: string;
   sort?: string | undefined;
   visibleColumns?: readonly string[] | undefined;
   search: string;
@@ -1583,6 +1777,7 @@ function reportSectionItems({
     params.set("trendMetricA", trendMetricA);
     params.set("trendMetricB", trendMetricB);
     params.set("trendGranularity", trendGranularity);
+    params.set("supplementaryMetric", supplementaryMetric);
     if (sort) params.set("sort", sort);
     if (visibleColumns?.length) params.set("visibleColumns", visibleColumns.join(","));
     if (search) params.set("search", search);
@@ -1597,8 +1792,8 @@ function reportSectionItems({
     { key: "campaigns", label: t("advertising.reporting.sectionCampaigns") },
     { key: "adsets", label: t("advertising.reporting.sectionAdSets") },
     { key: "ads", label: t("advertising.reporting.sectionAds") },
-    { key: "creatives", label: t("advertising.reporting.sectionCreatives") },
     { key: "audience", label: t("advertising.reporting.sectionAudience") },
+    { key: "creatives", label: t("advertising.reporting.sectionCreatives") },
     { key: "targeting", label: t("advertising.reporting.sectionTargeting") },
   ];
   return sections.map((section) => ({ ...section, href: hrefFor(section.key) }));

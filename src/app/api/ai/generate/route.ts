@@ -7,7 +7,6 @@ import { currentActor } from "@/lib/auth/current-actor";
 import { db } from "@/lib/db";
 import {
   aiFeatureSettings,
-  aiUsageEvents,
   contentItems,
   contentResearchLinks,
   socialChannels,
@@ -26,12 +25,16 @@ import {
   improveBrief,
   platformAdapt,
   relatedFormatIdeas,
+  enforceAiBudget,
+  reconcileAiBudget,
+  releaseAiBudgetReservation,
+  recordAiUsageEvent,
   splitVariants,
   type ChatResult,
   type FormatPayloadField,
   type ResearchBriefContext,
 } from "@/lib/ai";
-import { loadAiContext, isContextMeaningful } from "@/lib/ai/context";
+import { buildAiContextManifestCategories, loadAiContext } from "@/lib/ai/context";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 import { publicProviderError } from "@/lib/security/public-error";
@@ -39,8 +42,6 @@ import { randomUUID } from "node:crypto";
 import { serverEnv } from "@/lib/validation/env";
 import { captureError } from "@/lib/observability/sentry";
 import { getEffectiveEntitlement, LimitExceededError } from "@/lib/entitlements";
-import { recordUsage } from "@/lib/usage";
-import { enforceAiBudget, reconcileAiBudget } from "@/lib/ai/governance";
 
 /**
  * POST /api/ai/generate
@@ -50,9 +51,9 @@ import { enforceAiBudget, reconcileAiBudget } from "@/lib/ai/governance";
  *       "caption_drafts"        (default — backwards compatible)
  *       "brief_improvement"
  *       "completeness_check"
- *       "platform_adaptation"   (not yet implemented)
- *       "campaign_ideas"        (not yet implemented)
- *       "related_format_ideas"  (not yet implemented)
+ *       "platform_adaptation"
+ *       "campaign_ideas"
+ *       "related_format_ideas"
  *
  * Auth: signed in + workspace member with manager or planner role.
  * The agency feature-settings `enabledCapabilities` allowlist is the
@@ -65,7 +66,7 @@ import { enforceAiBudget, reconcileAiBudget } from "@/lib/ai/governance";
  * counts by capability.
  */
 const Body = z.object({
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
   capability: z
     .enum([
       "caption_drafts",
@@ -131,7 +132,7 @@ const Body = z.object({
    */
   contentLanguage: z.string().min(2).max(10).optional(),
   /** Optional, validated link used by the explicit trend-angle action. */
-  trendSignalId: z.string().uuid().optional(),
+  trendSignalId: z.string().guid().optional(),
   // Per master prompt §15, the user selects which context to include
   // before generation. The basic fields (title / brief / format /
   // workspace_name) are always included; the toggles below are
@@ -152,7 +153,14 @@ const Body = z.object({
       approvedContent: z.boolean().optional().default(false),
     })
     .optional()
-    .default({}),
+    .default({
+      brandKit: false,
+      brandVisuals: false,
+      campaign: false,
+      pillars: false,
+      channels: false,
+      approvedContent: false,
+    }),
 });
 
 export async function POST(req: NextRequest) {
@@ -253,6 +261,30 @@ export async function POST(req: NextRequest) {
       { status: 404, headers: mutatingApiHeaders() },
     );
 
+  if (
+    !(await hasWorkspaceRole({ id: session.user.id }, ws.id, [
+      "workspace_manager",
+      "content_planner",
+    ]))
+  ) {
+    return NextResponse.json(
+      { error: "Forbidden" },
+      { status: 403, headers: mutatingApiHeaders() },
+    );
+  }
+
+  // Keep the explicit write-capability gate beside the role check so
+  // read-only callers are rejected before any workspace content context
+  // is loaded for generation.
+  try {
+    await requireWriteCapability({ id: session.user.id }, ws.id, "ai_generate");
+  } catch {
+    return NextResponse.json(
+      { error: "Read-only users cannot trigger AI generation" },
+      { status: 403, headers: mutatingApiHeaders() },
+    );
+  }
+
   const [researchReference] = await db
     .select({
       accountName: socialChannels.accountName,
@@ -325,36 +357,9 @@ export async function POST(req: NextRequest) {
     selection: parsed.data.contextSelection,
   });
 
-  if (
-    !(await hasWorkspaceRole({ id: session.user.id }, ws.id, [
-      "workspace_manager",
-      "content_planner",
-    ]))
-  ) {
-    return NextResponse.json(
-      { error: "Forbidden" },
-      { status: 403, headers: mutatingApiHeaders() },
-    );
-  }
-
-  // FEAT-16 (GAP-FULL-REVIEW-2026-08-25) — explicit read-only gate
-  // for the AI generation route. The role check above is
-  // intentionally narrow (manager/planner only) and already excludes
-  // `client_reviewer` + `viewer`; the additional guard is the
-  // documentable single source of truth that future refactors can
-  // re-use. Defence-in-depth: a refactor that broadens the role
-  // list above without also loosening this guard would still block
-  // read-only users.
-  try {
-    await requireWriteCapability({ id: session.user.id }, ws.id, "ai_generate");
-  } catch {
-    return NextResponse.json(
-      { error: "Read-only users cannot trigger AI generation" },
-      { status: 403, headers: mutatingApiHeaders() },
-    );
-  }
-
   let reservedTokens: { input: number; output: number } | null = null;
+  let providerUsage: ChatResult | null = null;
+  let accountedUsage: { inputTokens: number; outputTokens: number } | null = null;
   try {
     const estimatedInput = Math.max(
       1,
@@ -397,7 +402,6 @@ export async function POST(req: NextRequest) {
       });
     });
     reservedTokens = { input: estimatedInput, output: outputReservation };
-    let providerUsage: ChatResult | null = null;
     const baseInput = {
       title: item.title,
       brief: item.brief,
@@ -484,14 +488,23 @@ export async function POST(req: NextRequest) {
           { status: 400, headers: mutatingApiHeaders() },
         );
     }
-    if (!text) {
-      return NextResponse.json(
-        { error: "AI returned no result" },
-        { status: 502, headers: mutatingApiHeaders() },
-      );
-    }
     const actualInput = (providerUsage as ChatResult | null)?.inputTokens ?? estimatedInput;
     const actualOutput = (providerUsage as ChatResult | null)?.outputTokens ?? outputReservation;
+    if (!text) {
+      if (providerUsage) {
+        await reconcileAiBudget({
+          agencyId,
+          userId: session.user.id,
+          estimatedInputTokens: estimatedInput,
+          estimatedOutputTokens: outputReservation,
+          actualInputTokens: actualInput,
+          actualOutputTokens: actualOutput,
+        });
+        reservedTokens = null;
+        accountedUsage = { inputTokens: actualInput, outputTokens: actualOutput };
+      }
+      throw new Error("AI returned no result");
+    }
     // M3.3 — reconcile the per-request reservation against the
     // provider's actual token usage. Idempotent and atomic; the
     // daily counter is left alone (it counts requests, not
@@ -505,7 +518,10 @@ export async function POST(req: NextRequest) {
       actualInputTokens: actualInput,
       actualOutputTokens: actualOutput,
     });
-    reservedTokens = { input: actualInput, output: actualOutput };
+    // Reconciliation commits actual provider usage. Later audit or response
+    // failures must not refund tokens already consumed by the provider.
+    reservedTokens = null;
+    accountedUsage = { inputTokens: actualInput, outputTokens: actualOutput };
     // Build the actual context manifest from the user's selection.
     // FEAT-09 — we now log which categories actually had data, not
     // just which the planner ticked. A workspace with zero Brand
@@ -513,48 +529,9 @@ export async function POST(req: NextRequest) {
     // false }` so the audit doesn't claim context was included
     // when it wasn't. Categories the planner didn't tick are
     // simply omitted from the manifest.
-    const usedCategories: string[] = ["title", "brief", "format", "workspace_name"];
-    const sel = parsed.data.contextSelection;
-    if (sel.brandKit) {
-      usedCategories.push(
-        isContextMeaningful(context) &&
-          context.brandVoice.tone.length +
-            context.brandVoice.do.length +
-            context.brandVoice.dont.length >
-            0
-          ? "brand_kit:used"
-          : "brand_kit:empty",
-      );
-    }
-    if (sel.brandVisuals) {
-      // Phase 8 — log whether the workspace actually has any visual
-      // brand data. A workspace that ticked the box but has no
-      // colors / fonts / rules will report `empty` so the audit
-      // doesn't claim visual context was included when it wasn't.
-      const has =
-        (context.brandVisuals?.colors.length ?? 0) > 0 ||
-        (context.brandVisuals?.fonts.length ?? 0) > 0 ||
-        (context.brandVisuals?.publishingRules.length ?? 0) > 0;
-      usedCategories.push(has ? "brand_visuals:used" : "brand_visuals:empty");
-    }
-    if (sel.campaign) {
-      usedCategories.push(context.campaign ? "campaign:used" : "campaign:empty");
-    }
-    if (sel.pillars) {
-      usedCategories.push(context.pillars.length > 0 ? "pillars:used" : "pillars:empty");
-    }
-    if (sel.channels) {
-      usedCategories.push(context.channels.length > 0 ? "channels:used" : "channels:empty");
-    }
-    if (sel.approvedContent) {
-      usedCategories.push(
-        context.approvedContentSamples.length > 0
-          ? "approved_content:used"
-          : "approved_content:empty",
-      );
-    }
+    const usedCategories = buildAiContextManifestCategories(parsed.data.contextSelection, context);
 
-    await db.insert(aiUsageEvents).values({
+    await recordAiUsageEvent({
       agencyId,
       workspaceId: ws.id,
       contentItemId: item.id,
@@ -565,7 +542,7 @@ export async function POST(req: NextRequest) {
       outputTokens: actualOutput,
       requestId: usageRequestId,
       succeeded: true,
-      contextManifest: { categories: usedCategories },
+      contextCategories: usedCategories,
     });
     return NextResponse.json(
       {
@@ -579,16 +556,41 @@ export async function POST(req: NextRequest) {
     );
   } catch (e) {
     if (e instanceof LimitExceededError) {
+      if (providerUsage)
+        await recordAiUsageEvent({
+          agencyId,
+          workspaceId: ws.id,
+          contentItemId: item.id,
+          userId: session.user.id,
+          capability: parsed.data.capability,
+          model: serverEnv.MINIMAX_MODEL,
+          inputTokens: (providerUsage as ChatResult | null)?.inputTokens ?? 0,
+          outputTokens: (providerUsage as ChatResult | null)?.outputTokens ?? 0,
+          requestId: requestId ?? randomUUID(),
+          succeeded: false,
+          contextCategories: ["provider_request"],
+        }).catch(() => undefined);
       return NextResponse.json(
         { error: e.message, quota: e.details },
         { status: 429, headers: mutatingApiHeaders() },
       );
     }
     if (reservedTokens) {
-      await Promise.allSettled([
-        recordUsage(db, agencyId, "ai_input_tokens_month", -reservedTokens.input),
-        recordUsage(db, agencyId, "ai_output_tokens_month", -reservedTokens.output),
-      ]);
+      const released = await releaseAiBudgetReservation({
+        agencyId,
+        inputTokens: reservedTokens.input,
+        outputTokens: reservedTokens.output,
+      });
+      if (!released)
+        captureError(
+          "ai.budget_release_failed",
+          new Error("Failed to release AI token reservation"),
+          {
+            requestId,
+            userId: session.user.id,
+            workspaceId: ws.id,
+          },
+        );
     }
     // On failure the context selection may be undefined (parse error);
     // fall back to the basic-only manifest so the audit row reflects
@@ -604,22 +606,19 @@ export async function POST(req: NextRequest) {
       if (sel.channels) failedCategories.push("active_channels");
       if (sel.approvedContent) failedCategories.push("approved_content");
     }
-    await db
-      .insert(aiUsageEvents)
-      .values({
-        agencyId,
-        workspaceId: ws.id,
-        contentItemId: item.id,
-        userId: session.user.id,
-        capability: parsed.data.capability,
-        model: serverEnv.MINIMAX_MODEL,
-        inputTokens: 0,
-        outputTokens: 0,
-        requestId: requestId ?? randomUUID(),
-        succeeded: false,
-        contextManifest: { categories: failedCategories },
-      })
-      .catch(() => undefined);
+    await recordAiUsageEvent({
+      agencyId,
+      workspaceId: ws.id,
+      contentItemId: item.id,
+      userId: session.user.id,
+      capability: parsed.data.capability,
+      model: serverEnv.MINIMAX_MODEL,
+      inputTokens: accountedUsage?.inputTokens ?? 0,
+      outputTokens: accountedUsage?.outputTokens ?? 0,
+      requestId: requestId ?? randomUUID(),
+      succeeded: false,
+      contextCategories: failedCategories,
+    }).catch(() => undefined);
     captureError("ai.provider_failed", e, {
       requestId,
       userId: session.user.id,

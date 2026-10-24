@@ -30,6 +30,7 @@ import { LeadTimesForm } from "./_components/lead-times-form";
 import { DefaultsForm } from "./_components/defaults-form";
 import { ApprovalsForm } from "./_components/approvals-form";
 import { MetaPublishingForm } from "./_components/meta-publishing-form";
+import { DEFAULT_LEAD_TIMES, hasCustomLeadTimes } from "./_lib/lead-times";
 import { currentActor } from "@/lib/auth/current-actor";
 import { workspaceBasePath } from "@/lib/urls";
 
@@ -67,6 +68,7 @@ export default async function WorkspaceSettingsPage({
   const workspace = await getAccessibleWorkspaceAtPath({ id: session.user.id }, agencySlug, slug);
   if (!workspace) notFound();
   const { t, code: locale } = await tForActive();
+  const renderedAt = new Date();
   const actor = await currentActor();
   const [canBulkReset, bulkCounts] = await Promise.all([
     actor ? hasPlatformPermission(actor, "platform.destructive.execute") : Promise.resolve(false),
@@ -103,10 +105,7 @@ export default async function WorkspaceSettingsPage({
   ]);
   const values = settings ?? {
     approvalMode: "simple",
-    contentApprovalLeadDays: 10,
-    designCompleteLeadDays: 5,
-    creativeApprovalLeadDays: 2,
-    readyToPublishLeadDays: 1,
+    ...DEFAULT_LEAD_TIMES,
     monthlyTarget: null,
     defaultDesignerId: null,
     defaultContentReviewerId: null,
@@ -120,6 +119,7 @@ export default async function WorkspaceSettingsPage({
     values.designCompleteLeadDays +
     values.creativeApprovalLeadDays +
     values.readyToPublishLeadDays;
+  const customizedLeadTimes = hasCustomLeadTimes(values);
   const defaultsCount = [
     values.defaultDesignerId,
     values.defaultContentReviewerId,
@@ -160,12 +160,11 @@ export default async function WorkspaceSettingsPage({
     {
       id: "lead-times",
       label: t("settings.items.leadTimes.label"),
-      blurb:
-        leadTotal === 18
-          ? t("settings.items.leadTimes.configuredBlurb")
-          : t("settings.items.leadTimes.unconfiguredBlurb", { count: leadTotal }),
+      blurb: customizedLeadTimes
+        ? t("settings.items.leadTimes.configuredBlurb")
+        : t("settings.items.leadTimes.unconfiguredBlurb", { count: leadTotal }),
       href: `${wsBase}#lead-times`,
-      configured: leadTotal !== 18, // non-default = user has touched it
+      configured: customizedLeadTimes,
     },
     {
       id: "defaults",
@@ -364,7 +363,7 @@ export default async function WorkspaceSettingsPage({
           ) : (
             <ReadOnlySettings message={t("settings.lifecycle.readOnly")} />
           )}
-          <LastSaved at={settings?.updatedAt ?? null} />
+          <LastSaved at={settings?.updatedAt ?? null} now={renderedAt} />
         </SettingsSection>
 
         <SettingsSection
@@ -385,7 +384,7 @@ export default async function WorkspaceSettingsPage({
             </p>
             <LeadTimeDeadline
               totalDays={leadTotal}
-              today={new Date()}
+              today={renderedAt}
               timezone={workspace.timezone}
             />
           </div>
@@ -396,11 +395,12 @@ export default async function WorkspaceSettingsPage({
               values={leadTimeValues(values)}
               approvalMode={values.approvalMode as "simple" | "internal_then_client"}
               timezone={workspace.timezone}
+              today={renderedAt}
             />
           ) : (
             <ReadOnlySettings message={t("settings.leadTimes.readOnly")} />
           )}
-          <LastSaved at={settings?.updatedAt ?? null} />
+          <LastSaved at={settings?.updatedAt ?? null} now={renderedAt} />
         </SettingsSection>
 
         <SettingsSection
@@ -438,7 +438,7 @@ export default async function WorkspaceSettingsPage({
           ) : (
             <ReadOnlySettings message={t("settings.defaults.readOnly")} />
           )}
-          <LastSaved at={settings?.updatedAt ?? null} />
+          <LastSaved at={settings?.updatedAt ?? null} now={renderedAt} />
         </SettingsSection>
 
         <SettingsSection
@@ -463,7 +463,7 @@ export default async function WorkspaceSettingsPage({
           ) : (
             <ReadOnlySettings message={t("settings.approvals.readOnly")} />
           )}
-          <LastSaved at={settings?.updatedAt ?? null} />
+          <LastSaved at={settings?.updatedAt ?? null} now={renderedAt} />
         </SettingsSection>
 
         <SettingsSection
@@ -494,7 +494,7 @@ export default async function WorkspaceSettingsPage({
           ) : (
             <ReadOnlySettings message={t("settings.metaPublishing.readOnly")} />
           )}
-          <LastSaved at={settings?.updatedAt ?? null} />
+          <LastSaved at={settings?.updatedAt ?? null} now={renderedAt} />
         </SettingsSection>
 
         {canBulkReset ? (
@@ -597,7 +597,7 @@ function KpiCard({
           <span className="text-label text-fg-muted block font-semibold tracking-wide uppercase">
             {label}
           </span>
-          <span className="text-section-title text-fg-primary block font-semibold">{summary}</span>
+          <span className="text-title-section text-fg-primary block font-semibold">{summary}</span>
           <span className="text-label text-fg-muted mt-1 block">{badge}</span>
         </span>
       </Link>

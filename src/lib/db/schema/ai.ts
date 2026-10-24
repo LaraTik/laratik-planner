@@ -45,8 +45,13 @@ export const aiFeatureSettings = pgTable("ai_feature_setting", {
     .primaryKey()
     .references(() => agencies.id, { onDelete: "cascade" }),
   enabled: boolean("enabled").notNull().default(false),
+  toolCallingEnabled: boolean("tool_calling_enabled").notNull().default(false),
   model: text("model").notNull().default("MiniMax-M3"),
   enabledCapabilities: text("enabled_capabilities")
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`),
+  permittedModels: text("permitted_models")
     .array()
     .notNull()
     .default(sql`'{}'::text[]`),

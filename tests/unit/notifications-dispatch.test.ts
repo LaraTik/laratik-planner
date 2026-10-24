@@ -1,5 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
+const emailMock = vi.hoisted(() => ({ sendEmail: vi.fn() }));
+vi.mock("@/lib/email", () => emailMock);
+
 /**
  * FEAT-01 (GAP-FULL-REVIEW-2026-08-25) — outbox dispatcher coverage
  * for the 10 newly-wired notification kinds.
@@ -27,6 +30,7 @@ type DrizzleState = {
   deleteCalls: { table: unknown; where: unknown }[];
   executeCalls: { sql: unknown }[];
   transactionCalls: number;
+  transactionError?: Error;
 };
 
 function thenableProxy(target: Record<string, unknown>): Record<string, unknown> {
@@ -94,6 +98,7 @@ const executeFn = vi.fn((sqlArg: unknown) => {
 });
 const transactionFn = vi.fn(async (cb: (tx: Record<string, unknown>) => Promise<unknown>) => {
   state.transactionCalls += 1;
+  if (state.transactionError) throw state.transactionError;
   const txSelect = vi.fn(() => makeSelectChain());
   const txInsert = vi.fn(() => insertChain);
   const txUpdate = vi.fn(() => updateChain);
@@ -177,6 +182,8 @@ const {
 
 beforeEach(() => {
   cacheMock.updateTag.mockClear();
+  emailMock.sendEmail.mockReset();
+  emailMock.sendEmail.mockResolvedValue({ id: "message-1" });
   state = {
     selectResults: [],
     insertCalls: [],
@@ -285,9 +292,10 @@ describe("dispatchOutboxOnce (FEAT-01) — per-kind fan-out", () => {
   // for the second select (notificationPreferences) returns [] so
   // the preference default of inAppEnabled=true kicks in.
   function stageOutboxEvent(eventType: string, payload: Record<string, unknown>) {
-    state.selectResults.push([{ id: "evt-1", eventType, payload }]);
-    // The notification_preferences select inside fanOutSingleRecipient / maybeNotify
-    // returns [] so the default inAppEnabled=true wins.
+    const event = { id: "evt-1", eventType, payload };
+    // The candidate scan and transactional FOR UPDATE claim both read the row.
+    state.selectResults.push([event], [event]);
+    // The preference select returns [] so the default inAppEnabled=true wins.
     state.selectResults.push([]);
   }
 
@@ -340,7 +348,35 @@ describe("dispatchOutboxOnce (FEAT-01) — per-kind fan-out", () => {
     expect(update, "expected processedAt update").toBeDefined();
   });
 
+  it("stores a stable code when outbox transaction errors contain credentials", async () => {
+    stageOutboxEvent("approval", { userId: "user-1", title: "T", body: "B" });
+    state.transactionError = new Error(
+      "postgres://planner:credential-shaped-secret@db.test/planner",
+    );
+
+    await dispatchOutboxOnce({ maxEvents: 10 });
+
+    const persistedError = state.updateCalls
+      .map((call) => (call.set as Record<string, unknown>).lastError)
+      .find((value) => value !== undefined);
+    expect(persistedError).toBe("outbox_dispatch_failed");
+    expect(String(persistedError)).not.toContain("credential-shaped-secret");
+  });
+
   it("invalidates every mentioned user's bell cache", async () => {
+    state.selectResults.push([
+      {
+        id: "evt-mentions",
+        eventType: "comment_created",
+        payload: {
+          commentId: "comment-1",
+          contentItemId: "ci-1",
+          authorId: "author-1",
+          workspaceId: "ws-1",
+          mentionedUserIds: ["user-1", "user-2", "user-1"],
+        },
+      },
+    ]);
     state.selectResults.push([
       {
         id: "evt-mentions",
@@ -371,6 +407,13 @@ describe("dispatchOutboxOnce (FEAT-01) — per-kind fan-out", () => {
       },
     ]);
     state.selectResults.push([
+      {
+        id: "evt-publication",
+        eventType: "publication_recorded",
+        payload: { contentItemId: "ci-1", channelStatus: "published" },
+      },
+    ]);
+    state.selectResults.push([
       { workspaceId: "ws-1", contentOwnerId: "owner-1", designerId: "designer-1" },
     ]);
     state.selectResults.push([]);
@@ -385,9 +428,12 @@ describe("dispatchOutboxOnce (FEAT-01) — per-kind fan-out", () => {
   });
 
   it("skips unknown event types without throwing", async () => {
-    state.selectResults.push([
-      { id: "evt-1", eventType: "future_kind_we_dont_handle_yet", payload: { userId: "u" } },
-    ]);
+    const unknownEvent = {
+      id: "evt-1",
+      eventType: "future_kind_we_dont_handle_yet",
+      payload: { userId: "u" },
+    };
+    state.selectResults.push([unknownEvent], [unknownEvent]);
     const result = await dispatchOutboxOnce({ maxEvents: 10 });
     expect(result.processed).toBe(1);
     // The update still runs (so the queue doesn't retry forever).
@@ -429,16 +475,25 @@ describe("updateNotificationPreferences (FEAT-07) — §14 contract alias", () =
       delivery: { inAppEnabled: true, emailEnabled: false },
       ready_to_publish: { inAppEnabled: true, emailEnabled: false },
       mention: { inAppEnabled: true, emailEnabled: true },
-      system: { inAppEnabled: true, emailEnabled: false },
+      system: { inAppEnabled: false, emailEnabled: true },
     } as const;
     await updateNotificationPreferences("user-1", { prefs, dailyDigest: true });
     const inserts = state.insertCalls.filter((c) => c.table === "insert");
     expect(inserts.length).toBe(11);
+    expect(state.transactionCalls).toBe(1);
+    expect(
+      inserts.find((entry) => (entry.values as { kind?: string }).kind === "system")?.values,
+    ).toMatchObject({
+      kind: "system",
+      inAppEnabled: true,
+      emailEnabled: false,
+      digestEnabled: true,
+    });
   });
 });
 
 // ─── FEAT-10 — email dispatcher (GAP-FULL-REVIEW-2026-08-25) ──────────────
-const { dispatchEmailOnce } = await import("@/lib/notifications/service");
+const { dispatchEmailOnce } = await import("@/lib/notifications/email-dispatch");
 
 describe("dispatchEmailOnce (FEAT-10)", () => {
   // The dispatcher needs:
@@ -447,23 +502,24 @@ describe("dispatchEmailOnce (FEAT-10)", () => {
   //      default email_enabled=false skips the row).
   //   3. (When opted in) a read of the user's email address.
   function stageUnprocessedEvent(eventType: string, payload: Record<string, unknown>) {
-    state.selectResults.push([{ id: "evt-1", eventType, payload }]);
+    const event = { id: "evt-1", eventType, payload };
+    state.selectResults.push([event], [event]);
   }
 
   it("skips rows when the user has not opted into email for the kind", async () => {
     stageUnprocessedEvent("assignment", { userId: "user-1", title: "T", body: "B" });
-    // The first select inside shouldEmailUserFor returns [] → emailEnabled defaults to false.
-    state.selectResults.push([]);
+    // The transaction reads the delivery, the preference query returns []
+    // (emailEnabled defaults to false), and no delivery remains pending.
+    state.selectResults.push([{ userId: "user-1", attemptCount: 0 }], [], []);
     const result = await dispatchEmailOnce({ maxEvents: 10 });
     expect(result.processed).toBe(1);
     expect(result.skipped).toBe(1);
     expect(result.sent).toBe(0);
   });
 
-  it("marks email state processed on skip + non-existent user", async () => {
+  it("marks email state processed when the user opted out", async () => {
     stageUnprocessedEvent("assignment", { userId: "user-1", title: "T", body: "B" });
-    // shouldEmailUserFor: []
-    state.selectResults.push([]);
+    state.selectResults.push([{ userId: "user-1", attemptCount: 0 }], [], []);
     await dispatchEmailOnce({ maxEvents: 10 });
     const update = state.updateCalls.find(
       (c) => (c.set as Record<string, unknown>)["emailProcessedAt"] instanceof Date,
@@ -471,10 +527,42 @@ describe("dispatchEmailOnce (FEAT-10)", () => {
     expect(update).toBeDefined();
   });
 
+  it("retries instead of marking a message sent when SMTP is unconfigured", async () => {
+    stageUnprocessedEvent("assignment", { userId: "user-1", title: "T", body: "B" });
+    state.selectResults.push(
+      [{ userId: "user-1", attemptCount: 0 }],
+      [{ emailEnabled: true }],
+      [{ email: "user@example.com", locale: "en" }],
+      [{ userId: "user-1" }],
+    );
+    emailMock.sendEmail.mockResolvedValueOnce(null);
+    const result = await dispatchEmailOnce({ maxEvents: 10 });
+    expect(result.failed).toBe(1);
+    expect(result.sent).toBe(0);
+    expect(
+      state.updateCalls.some(
+        (call) => (call.set as Record<string, unknown>).lastError === "email_delivery_failed",
+      ),
+    ).toBe(true);
+  });
+
+  it("stores a stable code when dispatch transaction errors contain credentials", async () => {
+    stageUnprocessedEvent("assignment", { userId: "user-1", title: "T", body: "B" });
+    state.transactionError = new Error(
+      "postgres://planner:credential-shaped-secret@db.test/planner",
+    );
+
+    await dispatchEmailOnce({ maxEvents: 10 });
+
+    const persistedError = state.updateCalls
+      .map((call) => (call.set as Record<string, unknown>).emailLastError)
+      .find((value) => value !== undefined);
+    expect(persistedError).toBe("email_dispatch_failed");
+    expect(String(persistedError)).not.toContain("credential-shaped-secret");
+  });
+
   it("handles rows with no userId by marking them processed and skipping", async () => {
-    state.selectResults.push([
-      { id: "evt-1", eventType: "assignment", payload: { title: "T", body: "B" } },
-    ]);
+    stageUnprocessedEvent("assignment", { title: "T", body: "B" });
     const result = await dispatchEmailOnce({ maxEvents: 10 });
     expect(result.skipped).toBe(1);
     expect(result.sent).toBe(0);
@@ -486,6 +574,21 @@ describe("dispatchEmailOnce (FEAT-10)", () => {
     // notification's click-through lands on the real
     // /app/w/{slug}/planning/{id}#discussion route. The
     // dispatcher must pass that actionUrl through unchanged.
+    state.selectResults.push([
+      {
+        id: "evt-1",
+        eventType: "comment_created",
+        payload: {
+          commentId: "cm-1",
+          contentItemId: "ci-1",
+          authorId: "u-author",
+          workspaceId: "ws-1",
+          mentionedUserIds: ["u-mentioned"],
+          visibility: "internal",
+          actionUrl: "/app/w/just-halal/planning/ci-1#discussion",
+        },
+      },
+    ]);
     state.selectResults.push([
       {
         id: "evt-1",

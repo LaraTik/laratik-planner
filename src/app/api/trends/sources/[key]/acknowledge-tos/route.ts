@@ -8,6 +8,7 @@ import { captureError } from "@/lib/observability/sentry";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 import { publicProviderError } from "@/lib/security/public-error";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
+import { isAgencyAdmin } from "@/lib/auth/policy";
 
 /**
  * POST /api/trends/sources/{key}/acknowledge-tos
@@ -72,6 +73,18 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ key: strin
     if (!agency) {
       return NextResponse.json(
         { error: "no_active_agency" },
+        { status: 403, headers: mutatingApiHeaders() },
+      );
+    }
+
+    // Recording the ToS acknowledgement is the administrative
+    // precondition for enabling a trend source, and every sibling
+    // route on this resource (`enable`, `key`, `bulk-enable`) is
+    // agency-admin only. Agency membership alone let a read-only
+    // member record the acknowledgement on the agency's behalf.
+    if (!(await isAgencyAdmin(actor, agency.agencyId))) {
+      return NextResponse.json(
+        { error: "forbidden" },
         { status: 403, headers: mutatingApiHeaders() },
       );
     }

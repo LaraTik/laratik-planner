@@ -30,6 +30,8 @@ vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/library/actions", () => ({
 }));
 vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   archiveContentItemAction: vi.fn(async () => undefined),
+  createCommentAction: vi.fn(async () => ({})),
+  resolveCommentAction: vi.fn(async () => ({})),
   restoreContentItemAction: vi.fn(async () => undefined),
 }));
 vi.mock("next/navigation", () => ({

@@ -21,12 +21,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  transitionAction,
-  decideApprovalAction,
-  claimAction,
-  assignDesignerAction,
-} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import { humanStatus } from "@/lib/content/status";
 import { ApprovalTimeline } from "@/components/workspace/approval-timeline";
 import { ReasonDialog } from "@/components/forms/reason-dialog";
@@ -37,11 +31,13 @@ import {
   localizeStepExplanation,
 } from "@/lib/content/workflow-explanations";
 import { planningStageForStatus } from "@/lib/planning/presentation";
-import type { ScenarioSpec } from "@/lib/content/workflow";
+import type { ScenarioSpec, WorkflowAction } from "@/lib/content/workflow";
 import { responsibleRolesForStatus, type WorkspaceRole } from "@/lib/content/workflow";
 import type { PlanningPresentation } from "@/lib/planning/presentation";
+import type { ActionState } from "@/lib/validation/action-state";
 import { cn } from "@/lib/utils";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { isMissingTranslation } from "@/messages";
 
 type Role =
   | "isManager"
@@ -49,7 +45,15 @@ type Role =
   | "isDesigner"
   | "isInternalReviewer"
   | "isClientReviewer"
-  | "isPublisher";
+  | "isPublisher"
+  /**
+   * The agency admin is not a workspace role — it is a membership
+   * flag on the actor — but it is carried alongside the role flags
+   * because the admin holds approval authority that no single
+   * workspace role carries (master prompt §9: the admin has "F" on
+   * every gate).
+   */
+  | "isAgencyAdmin";
 
 type AssignedDesigner = { id: string; label: string };
 
@@ -201,7 +205,7 @@ export function WorkflowRail(props: WorkflowRailBodyProps) {
   const t = useLocaleT();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
     const value = t(key, params);
-    return value === key ? fallback : value;
+    return isMissingTranslation(value, key) ? fallback : value;
   };
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const [hydrated, setHydrated] = useState<boolean>(false);
@@ -325,6 +329,26 @@ export function WorkflowRail(props: WorkflowRailBodyProps) {
  * on `<lg`.
  */
 export interface WorkflowRailBodyProps {
+  actions: {
+    transition: (input: {
+      workspaceSlug: string;
+      contentItemId: string;
+      action: WorkflowAction;
+      reason?: string;
+    }) => Promise<ActionState>;
+    claim: (input: { workspaceSlug: string; contentItemId: string }) => Promise<ActionState>;
+    assignDesigner: (input: {
+      workspaceSlug: string;
+      contentItemId: string;
+      designerId: string;
+    }) => Promise<ActionState>;
+    decideApproval: (input: {
+      workspaceSlug: string;
+      approvalRequestId: string;
+      decision: "approved" | "changes_requested";
+      feedback?: string;
+    }) => Promise<ActionState>;
+  };
   workspaceSlug: string;
   contentItemId: string;
   status: string;
@@ -357,6 +381,7 @@ export interface WorkflowRailBodyProps {
 }
 
 function WorkflowRailBody({
+  actions,
   workspaceSlug,
   contentItemId,
   status,
@@ -369,6 +394,7 @@ function WorkflowRailBody({
   planningPresentation,
   scenario,
 }: {
+  actions: WorkflowRailBodyProps["actions"];
   workspaceSlug: string;
   contentItemId: string;
   status: string;
@@ -391,30 +417,58 @@ function WorkflowRailBody({
   const router = useRouter();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
     const value = t(key, params);
-    return value === key ? fallback : value;
+    return isMissingTranslation(value, key) ? fallback : value;
+  };
+  const claimErrorFallbacks: Record<string, string> = {
+    not_found: "This item is no longer available. Refresh and try again.",
+    already_assigned: "This item has already been claimed by a designer.",
+    invalid_status: "This item is not ready to be claimed.",
+    claim_conflict: "Someone else claimed this item first. Refresh and try again.",
+    forbidden: "You do not have permission to claim this item.",
+    failed: "The claim could not be completed. Please try again.",
+  };
+  const claimErrorMessage = (error: string) => {
+    const code = error.startsWith("claimError.") ? error.slice("claimError.".length) : null;
+    if (!code) return error;
+    const fallback = claimErrorFallbacks[code] ?? claimErrorFallbacks.failed!;
+    return tr(`contentDetail.workflow.claimErrors.${code}`, fallback);
+  };
+  const workflowErrorMessage = (error: string) => {
+    const code = error.startsWith("workflowError.") ? error.slice("workflowError.".length) : null;
+    if (!code) return error;
+    const fallback =
+      code === "unauthorized"
+        ? "You do not have permission to make this workflow change."
+        : code === "invalid_transition"
+          ? "This item can no longer make that workflow change. Refresh and try again."
+          : code === "validation_failed"
+            ? "Check the item details and try again."
+            : code === "not_found"
+              ? "This item is no longer available. Refresh and try again."
+              : code === "conflict"
+                ? "The item changed while you were working. Refresh and try again."
+                : "The workflow action failed. Please try again.";
+    return tr(`contentDetail.workflow.errors.${code}`, fallback);
   };
   const [pending, start] = useTransition();
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const executeTransition = async (
-    action: Parameters<typeof transitionAction>[0]["action"],
-    reason?: string,
-  ) => {
+  const executeTransition = async (action: WorkflowAction, reason?: string) => {
     setActionError(null);
-    const result = await transitionAction({
+    const result = await actions.transition({
       workspaceSlug,
       contentItemId,
       action,
       ...(reason ? { reason } : {}),
     });
     if (result?.error) {
-      setActionError(result.error);
+      setActionError(workflowErrorMessage(result.error));
     } else {
       router.refresh();
     }
   };
 
-  const run = (action: Parameters<typeof transitionAction>[0]["action"], reason?: string) => {
+  const run = (action: WorkflowAction, reason?: string) => {
     start(async () => {
       await executeTransition(action, reason).catch(() => undefined);
     });
@@ -430,18 +484,19 @@ function WorkflowRailBody({
     }
   })();
 
-  const roleFlagByName: Record<WorkspaceRole, Role> = {
+  const roleFlagByName: Partial<Record<WorkspaceRole, Role>> = {
     workspace_manager: "isManager",
     content_planner: "isPlanner",
     designer: "isDesigner",
     internal_reviewer: "isInternalReviewer",
     client_reviewer: "isClientReviewer",
     publisher: "isPublisher",
-    viewer: "isPlanner",
   };
   const currentEligibleRoles: Role[] = responsibleRolesForStatus(
     status as Parameters<typeof responsibleRolesForStatus>[0],
-  ).map((role) => roleFlagByName[role]);
+  )
+    .map((role) => roleFlagByName[role])
+    .filter((flag): flag is Role => flag !== undefined);
   const canActOnCurrentStep = currentEligibleRoles.some((r) => roles[r]);
   const currentRoleLabels = (currentStep?.responsibleRoles ?? []).map((r) => r.label);
   const canonicalAction = planningPresentation?.nextAction;
@@ -451,10 +506,9 @@ function WorkflowRailBody({
   const condition = status === "blocked" || status === "cancelled" ? status : null;
   const hasAnyButton =
     (status === "draft" && can(["isManager", "isPlanner"])) ||
-    (status === "content_review" && can(["isInternalReviewer", "isManager"])) ||
+    (status === "content_review" && can(["isInternalReviewer"])) ||
     (status === "changes_requested" && can(["isManager", "isPlanner"])) ||
-    (status === "approved_for_design" &&
-      (roles.isDesigner || roles.isManager || roles.isPlanner)) ||
+    (status === "approved_for_design" && (roles.isDesigner || roles.isManager)) ||
     (status === "blocked" && roles.isManager) ||
     ([
       "draft",
@@ -677,17 +731,25 @@ function WorkflowRailBody({
                           onExecuteTransition={executeTransition}
                           onClaim={async () => {
                             setActionError(null);
-                            const result = await claimAction({ workspaceSlug, contentItemId });
-                            if (result?.error) setActionError(result.error);
+                            const result = await actions.claim({ workspaceSlug, contentItemId });
+                            if (result?.error) {
+                              setActionError(claimErrorMessage(result.error));
+                            } else {
+                              router.refresh();
+                            }
                           }}
                           onAssignDesigner={async (designerId) => {
                             setActionError(null);
-                            const result = await assignDesignerAction({
+                            const result = await actions.assignDesigner({
                               workspaceSlug,
                               contentItemId,
                               designerId,
                             });
-                            if (result?.error) setActionError(result.error);
+                            if (result?.error) {
+                              setActionError(workflowErrorMessage(result.error));
+                            } else {
+                              router.refresh();
+                            }
                           }}
                           {...(canonicalAction?.type
                             ? { canonicalActionType: canonicalAction.type }
@@ -744,19 +806,20 @@ function WorkflowRailBody({
               isManager: roles.isManager,
               isInternalReviewer: roles.isInternalReviewer,
               isClientReviewer: roles.isClientReviewer,
+              isAgencyAdmin: roles.isAgencyAdmin,
             }}
             disabled={pending}
             onApprove={(approvalRequestId) =>
               start(async () => {
                 setActionError(null);
                 try {
-                  const result = await decideApprovalAction({
+                  const result = await actions.decideApproval({
                     workspaceSlug,
                     approvalRequestId,
                     decision: "approved",
                   });
                   if (result?.error) {
-                    setActionError(result.error);
+                    setActionError(workflowErrorMessage(result.error));
                   } else {
                     router.refresh();
                   }
@@ -770,14 +833,14 @@ function WorkflowRailBody({
             onRequestChanges={async (approvalRequestId, feedback) => {
               setActionError(null);
               try {
-                const result = await decideApprovalAction({
+                const result = await actions.decideApproval({
                   workspaceSlug,
                   approvalRequestId,
                   decision: "changes_requested",
                   feedback,
                 });
                 if (result?.error) {
-                  setActionError(result.error);
+                  setActionError(workflowErrorMessage(result.error));
                 } else {
                   router.refresh();
                 }
@@ -961,11 +1024,8 @@ function ActionButtons({
   designers: { id: string; label: string }[];
   designer?: AssignedDesigner | null;
   pending: boolean;
-  onTransition: (action: Parameters<typeof transitionAction>[0]["action"], reason?: string) => void;
-  onExecuteTransition: (
-    action: Parameters<typeof transitionAction>[0]["action"],
-    reason?: string,
-  ) => Promise<void>;
+  onTransition: (action: WorkflowAction, reason?: string) => void;
+  onExecuteTransition: (action: WorkflowAction, reason?: string) => Promise<void>;
   onClaim: () => Promise<void>;
   onAssignDesigner: (designerId: string) => Promise<void>;
   canonicalActionType?: PlanningPresentation["nextAction"]["type"];
@@ -1002,7 +1062,7 @@ function ActionButtons({
           {tr("contentDetail.workflow.submitForReview", "Submit for review")}
         </Button>
       ) : null}
-      {status === "content_review" && can(["isInternalReviewer", "isManager"]) ? (
+      {status === "content_review" && can(["isInternalReviewer"]) ? (
         <>
           <Button
             size="default"
@@ -1043,7 +1103,7 @@ function ActionButtons({
           {tr("contentDetail.workflow.resubmitForReview", "Resubmit for review")}
         </Button>
       ) : null}
-      {status === "approved_for_design" && isDesigner ? (
+      {status === "approved_for_design" && isDesigner && !designer ? (
         <Button
           size="default"
           onClick={() => {
@@ -1056,8 +1116,7 @@ function ActionButtons({
           {tr("contentDetail.workflow.claimAsDesigner", "Claim as designer")}
         </Button>
       ) : null}
-      {(status === "approved_for_design" || status === "in_design") &&
-      can(["isManager", "isPlanner"]) ? (
+      {(status === "approved_for_design" || status === "in_design") && can(["isManager"]) ? (
         <AssignDesignerDialog
           designers={designers}
           {...(designer?.id ? { currentDesignerId: designer.id } : {})}
@@ -1082,6 +1141,9 @@ function ActionButtons({
         "in_design",
         "creative_review",
         "ready_to_publish",
+        // A blocked item can still be cancelled — `WORKFLOW_RULES.cancel`
+        // accepts `blocked` as a source status.
+        "blocked",
       ].includes(status) && isManager ? (
         <details
           className="border-border rounded-[var(--radius-control)] border"
@@ -1188,7 +1250,7 @@ function AssignDesignerDialog({
   const t = useLocaleT();
   const tr = (key: string, fallback: string) => {
     const value = t(key);
-    return value === key ? fallback : value;
+    return isMissingTranslation(value, key) ? fallback : value;
   };
   const [open, setOpen] = useState(false);
   const initialDesignerId =
@@ -1337,7 +1399,7 @@ export function WorkflowSheet(props: WorkflowRailBodyProps) {
   const t = useLocaleT();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
     const value = t(key, params);
-    return value === key ? fallback : value;
+    return isMissingTranslation(value, key) ? fallback : value;
   };
   const [open, setOpen] = useState(false);
   const triggerRef = React.useRef<HTMLButtonElement | null>(null);
@@ -1362,18 +1424,20 @@ export function WorkflowSheet(props: WorkflowRailBodyProps) {
   const currentStage = planningStageForStatus(
     props.status as Parameters<typeof planningStageForStatus>[0],
   );
-  const roleFlagByName: Record<WorkspaceRole, Role> = {
+  const roleFlagByName: Partial<Record<WorkspaceRole, Role>> = {
     workspace_manager: "isManager",
     content_planner: "isPlanner",
     designer: "isDesigner",
     internal_reviewer: "isInternalReviewer",
     client_reviewer: "isClientReviewer",
     publisher: "isPublisher",
-    viewer: "isPlanner",
   };
   const canAct = responsibleRolesForStatus(
     props.status as Parameters<typeof responsibleRolesForStatus>[0],
-  ).some((role) => props.roles[roleFlagByName[role]]);
+  )
+    .map((role) => roleFlagByName[role])
+    .filter((flag): flag is Role => flag !== undefined)
+    .some((role) => props.roles[role]);
   const condition =
     props.status === "blocked" || props.status === "cancelled" ? props.status : null;
 

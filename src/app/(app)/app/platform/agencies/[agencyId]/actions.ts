@@ -2,12 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { currentActor } from "@/lib/auth/current-actor";
-import {
-  updateAgencyAsPlatform,
-  UpdateAgencySchema,
-  AgencyUpdateError,
-} from "@/lib/agencies/command";
+import { updateAgencyAsPlatform, UpdateAgencySchema } from "@/lib/agencies/command";
 import { z } from "zod";
+import { agencyUpdateActionFailure } from "@/lib/agencies/action-errors";
 
 /**
  * Platform admin: edit-agency server action.
@@ -45,7 +42,7 @@ export async function platformEditAgencyAction(
   formData: FormData,
 ): Promise<PlatformEditAgencyActionState> {
   const actor = await requirePlatformActor();
-  const agencyId = z.string().uuid().safeParse(formData.get("agencyId"));
+  const agencyId = z.string().guid().safeParse(formData.get("agencyId"));
   if (!agencyId.success) return { error: "Missing or invalid agency id." };
   const parsed = UpdateAgencySchema.safeParse({
     name: formData.get("name"),
@@ -64,12 +61,6 @@ export async function platformEditAgencyAction(
     revalidatePath("/app/agency-settings");
     return { ok: true, changedFields: result.changedFields };
   } catch (e) {
-    if (e instanceof AgencyUpdateError) {
-      return { error: e.message, code: e.code };
-    }
-    if (e instanceof Error) {
-      return { error: e.message };
-    }
-    return { error: "Could not save the agency settings." };
+    return agencyUpdateActionFailure(e, "platform.agency_update_failed");
   }
 }

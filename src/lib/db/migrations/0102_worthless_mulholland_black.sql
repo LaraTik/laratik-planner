@@ -1,0 +1,2 @@
+ALTER TABLE "workspace_assistant_skill_revision" ADD COLUMN "rollback_of_revision" integer;--> statement-breakpoint
+ALTER TABLE "workspace_assistant_skill_revision" ADD CONSTRAINT "workspace_assistant_skill_revision_rollback_target_valid" CHECK ("workspace_assistant_skill_revision"."rollback_of_revision" IS NULL OR "workspace_assistant_skill_revision"."rollback_of_revision" > 0);

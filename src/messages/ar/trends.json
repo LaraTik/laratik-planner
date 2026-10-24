@@ -117,6 +117,7 @@
     "subtitle": "اختر 4 مصادر أو أكثر للبدء. يمكنك تغييرها في أي وقت من صفحة إعدادات المصادر.",
     "requiresKey": "يتطلب مفتاح API",
     "noKey": "لا حاجة لمفتاح",
+    "reviewRequired": "يجب إكمال مراجعة المنصة قبل تفعيل هذا المصدر.",
     "selected": "{count} من 4 مختارة",
     "minimum": "اختر 4 مصادر على الأقل للمتابعة.",
     "readOnlyTitle": "لم يتم إعداد مصادر الترندات بعد",
@@ -166,12 +167,15 @@
     "tabEnabled": "مُفعّل",
     "tabPaid": "مدفوع",
     "tabGrey": "منطقة رمادية",
+    "reviewRequired": "يجب إكمال مراجعة المنصة قبل تفعيل هذا المصدر.",
+    "greyAreaAcknowledgement": "مصدر من منطقة رمادية — يتطلب الإقرار بشروط الخدمة",
     "statusEnabled": "مُفعّل",
     "statusDisabled": "معطّل",
     "hasKey": "تم تعيين المفتاح",
     "apiKeyLabel": "مفتاح API",
     "error": {
       "api_key_required": "أضف مفتاح API قبل تفعيل هذا المصدر.",
+      "source_review_required": "يجب إكمال مراجعة المنصة قبل تفعيل هذا المصدر.",
       "request_failed": "تعذر تحديث هذا المصدر. حاول مرة أخرى.",
       "key_save_failed": "تعذر حفظ مفتاح API. حاول مرة أخرى.",
       "tos_acknowledgement_required": "يجب تأكيد الشروط قبل تفعيل هذا المصدر."

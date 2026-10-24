@@ -13,7 +13,8 @@ import { agencies, agencySocialProviderConfig } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { ProviderConfigCard } from "./provider-config-card";
 import { AnalyticsProbeCard } from "./analytics-probe-card";
-import { listAnalyticsProbeProfiles } from "@/lib/social/analytics-probe";
+import type { ProviderConfigSummary } from "./provider-config-view";
+import { listAnalyticsProbeProfiles } from "@/features/social-analytics/server";
 import { Card } from "@/components/ui/card";
 
 export async function generateMetadata() {
@@ -112,6 +113,7 @@ export default async function AgencySocialProvidersPage() {
   const credentialsPassed = metaRow?.lastTestedOk === true;
   const credentialsFailed = metaRow?.lastTestedOk === false;
   const probeReady = metaConfigured && metaProfiles.length > 0;
+  const renderedAt = new Date();
 
   return (
     <div className="space-y-6" data-testid="agency-providers-page">
@@ -150,15 +152,15 @@ export default async function AgencySocialProvidersPage() {
             provider="meta"
             agencyId={agencyId}
             agencySlug={agency?.slug ?? ""}
-            actorId={actor.id}
             existing={metaRow ? toExistingSummary(metaRow) : null}
+            now={renderedAt}
           />
           <ProviderConfigCard
             provider="tiktok"
             agencyId={agencyId}
             agencySlug={agency?.slug ?? ""}
-            actorId={actor.id}
             existing={tiktokRow ? toExistingSummary(tiktokRow) : null}
+            now={renderedAt}
           />
         </div>
       </section>
@@ -232,31 +234,19 @@ export default async function AgencySocialProvidersPage() {
   );
 }
 
-type ExistingSummary = {
-  appId: string;
-  loginConfigId: string | null;
-  graphApiVersion: string | null;
-  enabled: boolean;
-  publishingEnabled: boolean;
-  appReviewStatus: "not_requested" | "pending" | "approved" | "rejected";
-  businessVerificationStatus: "not_required" | "not_started" | "pending" | "verified" | "rejected";
-  lastTestedAt: Date | null;
-  lastTestedOk: boolean | null;
-  lastTestErrorCode: string | null;
-  configuredBy: string;
-  updatedAt: Date;
-};
-
-function toExistingSummary(row: typeof agencySocialProviderConfig.$inferSelect): ExistingSummary {
+/** Explicit client DTO: encrypted and decrypted secret fields stay server-only. */
+function toExistingSummary(
+  row: typeof agencySocialProviderConfig.$inferSelect,
+): ProviderConfigSummary {
   return {
     appId: row.appId,
     loginConfigId: row.loginConfigId,
     graphApiVersion: row.graphApiVersion,
     enabled: row.enabled,
     publishingEnabled: row.publishingEnabled,
-    appReviewStatus: row.appReviewStatus as ExistingSummary["appReviewStatus"],
+    appReviewStatus: row.appReviewStatus as ProviderConfigSummary["appReviewStatus"],
     businessVerificationStatus:
-      row.businessVerificationStatus as ExistingSummary["businessVerificationStatus"],
+      row.businessVerificationStatus as ProviderConfigSummary["businessVerificationStatus"],
     lastTestedAt: row.lastTestedAt,
     lastTestedOk: row.lastTestedOk,
     lastTestErrorCode: row.lastTestErrorCode,

@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/config";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
-import { isAgencyAdmin } from "@/lib/auth/policy";
 import { loadReport } from "@/lib/reports/storage";
 
 /**
@@ -28,20 +27,14 @@ export async function GET(_request: NextRequest, ctx: { params: Promise<{ id: st
   if (!agency) {
     return NextResponse.json({ error: "No active agency" }, { status: 404 });
   }
-  const isAdmin = await isAgencyAdmin({ id: session.user.id }, agency.agencyId);
   const loaded = await loadReport(id);
   if (!loaded) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   if (loaded.row.agencyId !== agency.agencyId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    // Match missing reports so callers cannot probe report IDs across agencies.
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-
-  // The route lives at `/api/reports/[id]/pdf`; we let any signed-in
-  // agency member (not just admins) fetch the bytes because the file
-  // is already gated by the agencyId check above. If you tighten
-  // this in future, surface a hard-link switch here.
-  void isAdmin;
 
   const arrayBuffer = loaded.bytes.buffer.slice(
     loaded.bytes.byteOffset,

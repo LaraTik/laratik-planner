@@ -45,9 +45,7 @@ describe("creation completion loop (UX-13)", () => {
   );
 
   it("takes Quick Create to the new draft with an explicit completion state", () => {
-    expect(actions).toContain(
-      "redirect(`${workspaceBasePath(workspace.agencySlug, workspaceSlug)}/planning/${id}?created=1`)",
-    );
+    expect(actions).toContain("?created=1#overview");
     expect(detail).toContain("searchParams?: Promise<{ created?: string }>");
     expect(detail).toContain('const justCreated = query.created === "1"');
     expect(detail).toContain('data-testid="content-created-banner"');

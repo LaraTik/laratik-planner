@@ -1,0 +1,143 @@
+"use client";
+
+import * as React from "react";
+import { WorkflowRail, type WorkflowRailBodyProps } from "@/components/planning/workflow-rail";
+import { WorkspaceShell } from "./workspace-shell";
+import type { WorkspacePanelId, WorkspaceTab } from "@/components/planning/workspace-tabs";
+import type { CommentRecord, CommentRoleFlags } from "@/components/comments/comment-item";
+import type { ResetIdeaCounts } from "@/lib/content/reset-idea-shared";
+import type { ContentFormat } from "@/lib/format-payload/schemas";
+import { useLocaleT } from "@/components/i18n/locale-provider";
+
+/**
+ * Props that feed the right rail (workflow + approvals). Serialised
+ * to the client by the page's Server Component.
+ */
+export type PlanningDetailShellWorkflowProps = WorkflowRailBodyProps;
+
+/**
+ * Props that feed the tabbed workspace body (tab strip + panels +
+ * discussion drawer + operator overflow). Serialised to the client.
+ */
+export interface PlanningDetailShellWorkspaceProps {
+  /** Canonical agency segment, forwarded to WorkspaceShell. */
+  agencySlug: string;
+  workspaceSlug: string;
+  contentItemId: string;
+  ideaTitle: string;
+  comments: CommentRecord[];
+  currentUserId: string;
+  roles: CommentRoleFlags;
+  canPostInternal: boolean;
+  canPostClientVisible: boolean;
+  tabs: WorkspaceTab[];
+  panels: Partial<Record<WorkspacePanelId, React.ReactNode>>;
+  canResetIdea: boolean;
+  resetCounts: ResetIdeaCounts;
+  activityCount: number;
+  openCommentCount: number;
+  mentionCount: number;
+  canManageContentActions?: boolean;
+  sourceFormat?: ContentFormat;
+  editHref?: string;
+  canEdit?: boolean;
+}
+
+/**
+ * PlanningDetailShell — the three-zone application shell for the
+ * planning content detail page.
+ *
+ * Replaces the previous page-level `<div className="space-y-6">`
+ * pattern where the workflow card sat *above* the tabbed workspace
+ * in a vertical stack. The new structure on `xl+`:
+ *
+ *   ┌──────────────────────────────────────────┬──────────────────┐
+ *   │ Header (PlanningHeader)                  │                  │
+ *   │                                          │  WorkflowRail    │
+ *   │ Workspace tabs (sticky)                  │  (sticky,        │
+ *   │ ──────────────────────────────────       │   320px)         │
+ *   │ Active tab panel                         │  ↕ localStorage  │
+ *   │                                          │    collapsed     │
+ *   │ Footer (audit row)                       │    state         │
+ *   └──────────────────────────────────────────┴──────────────────┘
+ *
+ * Responsive:
+ *   - `<lg`  (mobile): the right rail is **not rendered**. The page
+ *     renders a `WorkflowSheet` trigger pill alongside the header
+ *     instead, which opens a bottom sheet.
+ *   - `lg` (1024–1279): the right rail renders in its
+ *     localStorage-persisted collapsed/expanded state. The user
+ *     can collapse it to a 56px icon rail for more working room.
+ *   - `xl+` (1280+): the right rail is always present in the
+ *     same state. On a standard laptop, the default is expanded
+ *     (`300px`).
+ *
+ * The collapsed/expanded state is owned by the `WorkflowRail`
+ * component itself (which already has localStorage persistence);
+ * the shell doesn't duplicate the state. The shell's only
+ * responsibility is the grid layout and the right-rail wrapper.
+ */
+export interface PlanningDetailShellProps {
+  /** Center-column header (PlanningHeader). */
+  header: React.ReactNode;
+  /** Center-column footer (audit row). */
+  footer?: React.ReactNode;
+  /** Workflow props for the right rail. */
+  workflow: PlanningDetailShellWorkflowProps;
+  /** Workspace props for the tabbed center body. */
+  workspace: PlanningDetailShellWorkspaceProps;
+}
+
+export function PlanningDetailShell({
+  header,
+  footer,
+  workflow,
+  workspace,
+}: PlanningDetailShellProps) {
+  const t = useLocaleT();
+  return (
+    <div data-testid="planning-detail-shell">
+      {/* The header and rail share one grid row so lifecycle context is
+          visible beside the content identity, matching the reference
+          workspace composition. */}
+      <div
+        className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_304px]"
+        data-testid="planning-detail-grid"
+      >
+        {/* Center column — tabs + active panel. */}
+        <section
+          className="min-w-0 space-y-0"
+          data-testid="planning-detail-center"
+          aria-label={t("common.contentWorkspace")}
+        >
+          <div data-testid="planning-detail-header">{header}</div>
+          <WorkspaceShell
+            {...workspace}
+            {...(workspace.editHref ? { editHref: workspace.editHref } : {})}
+            {...(workspace.canEdit !== undefined ? { canEdit: workspace.canEdit } : {})}
+          />
+        </section>
+
+        {/* Right rail — sticky so it stays visible while the
+            user scrolls through long Content / Publishing
+            workspaces. Page-level scrolling (no nested
+            scrollers). Hidden at <lg because the WorkflowSheet
+            is the mobile equivalent. The rail's own
+            collapsed/expanded toggle (a chevron in its
+            header) controls the rail's width inside this
+            column. */}
+        <aside
+          className="sticky top-20 hidden self-start lg:block"
+          id="workflow"
+          tabIndex={-1}
+          data-testid="planning-detail-rail"
+          aria-label={t("common.workflowRail")}
+        >
+          <WorkflowRail {...workflow} />
+        </aside>
+      </div>
+
+      {footer ? <div data-testid="planning-detail-footer">{footer}</div> : null}
+    </div>
+  );
+}

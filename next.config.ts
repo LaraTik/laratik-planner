@@ -7,6 +7,15 @@ const nextConfig: NextConfig = {
   // We copy the .next/standalone tree into the Docker runner stage.
   output: "standalone",
 
+  // Long isolated browser suites compile many routes in one dev process. On
+  // large test hosts, the default 80% heap restart can interrupt a browser
+  // navigation mid-test. Keep Next's safety restart enabled by default; allow
+  // an explicit E2E-only opt-in when the runner has enough memory to finish
+  // the matrix without recycling the server.
+  experimental: {
+    devMemoryThresholdRestart: process.env.LARATIK_E2E_DISABLE_DEV_MEMORY_RESTART !== "1",
+  },
+
   // Native modules that must not be bundled by webpack.
   // argon2 / node-rs bindings in production; pg is pure-JS so it's fine.
   serverExternalPackages: ["@node-rs/argon2", "pg"],
@@ -33,6 +42,10 @@ const nextConfig: NextConfig = {
 
   // Strict React in dev, no surprises in prod.
   reactStrictMode: true,
+
+  // Keep the floating Next.js dev-tools badge out of the mobile bottom-nav
+  // touch area during browser checks. Compile and runtime errors still surface.
+  devIndicators: false,
 
   // Disable powered-by header (Traefik already adds its own).
   poweredByHeader: false,

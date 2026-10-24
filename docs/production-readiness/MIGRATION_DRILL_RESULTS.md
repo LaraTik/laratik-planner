@@ -4,6 +4,26 @@
 > checks. The destructive downgrade/rollback drill remains intentionally
 > separate because the project uses forward-only corrective migrations.
 >
+> Current capture: 2026-10-19 on local Postgres 16 (`planner_test`), after
+> migration `0089_advertising_reporting_metadata` was registered. Result:
+> **5/5 PASS** — the metadata tables are tenant-scoped, the SQL is replay-safe,
+> backup/restore preserved the 90-entry ledger, and the injected failure left
+> the schema unchanged. Rollback remains forward-only after backup.
+
+```text
+1. from-zero                PASS  144 public tables; Drizzle ledger 90/90
+2. skipped migration repair PASS  guarded advertising metadata DDL reapplied
+3. in-place upgrade         PASS  marker add/drop cycle
+4. backup + restore         PASS  ledger 90 before / 90 after; restore verified
+5. failed-migration abort   PASS  schema unchanged after injected failure
+total: 5/5 PASS
+```
+
+The evidence was captured against implementation commit `9f3c4022`. The
+production database must still be backed up before any deployment migration,
+and the release remains subject to the independent production-readiness
+reviewer and advertising rollout flag.
+
 > Latest capture: 2026-10-13 on local Postgres 16
 > (`127.0.0.1:5432`, database `planner_test`), after migration
 > `0076_tiny_queen_noir` was registered.

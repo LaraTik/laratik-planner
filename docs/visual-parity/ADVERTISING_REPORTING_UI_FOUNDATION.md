@@ -9,20 +9,20 @@ for tokens, shell behavior, bilingual support, and accessibility.
 
 ## Parity review
 
-| Reference expectation          | LaraTik implementation                                            | Decision                                                                   |
-| ------------------------------ | ----------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Persistent application sidebar | Workspace-aware LaraTik sidebar with expanded Advertising branch  | Keep Advertising sections in the primary rail; use the mobile drawer below |
-| Dense reporting workspace      | Light, border-first cards with compact KPI and table rhythm       | Match density without importing the reference's dark theme                 |
-| Six primary KPIs               | Spend, Results, Cost / result, Reach, CTR, Frequency              | Keep objective-aware and unavailable-safe                                  |
-| Trend chart with comparison    | SVG bar + line chart with localized values and table fallback     | Preserve as a lightweight dependency-free chart foundation                 |
-| Objective breakdown donut      | Objective spend donut with legend, results, and cost / result     | Added to align more closely with the reference                             |
-| AI/action insight rail         | Evidence-backed Action Center and intelligence panels             | Keep actions read-only and link to the Campaigns section                   |
-| Evidence disclosure            | Prioritized signals with period, sample, peer baseline, and guard | Keep the scan compact; disclose decision evidence on demand                |
-| Campaign/ad/ad-set detail      | Separate URL-driven report sections                               | Do not render all explorers as one long page                               |
-| Audience and targeting         | Dedicated Audience and Targeting sections                         | Audience tabs rank compact provider rows; targeting keeps chips + raw JSON |
-| Technical metric detail        | Progressive-disclosure Metric definitions panel                   | Keep available without dominating the first scan                           |
-| Report export context          | CSV metadata preamble plus authorized fact rows                   | Preserve filters, comparison, metric, attribution, and health context      |
-| Campaign explorer controls     | URL-backed sort and visible-column picker                         | Keep one metric visible and preserve state across section changes          |
+| Reference expectation          | LaraTik implementation                                                  | Decision                                                                                          |
+| ------------------------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Persistent application sidebar | Workspace-aware LaraTik sidebar with expanded Advertising branch        | Keep Advertising sections in the primary rail; use the mobile drawer below                        |
+| Dense reporting workspace      | Light, border-first cards with compact KPI and table rhythm             | Match density without importing the reference's dark theme                                        |
+| Six primary KPIs               | Spend, Results, Cost / result, Reach, CTR, Frequency                    | Keep objective-aware and unavailable-safe                                                         |
+| Trend chart with comparison    | SVG bar + line chart with localized values and table fallback           | Preserve as a lightweight dependency-free chart foundation                                        |
+| Objective breakdown donut      | Objective spend donut with legend, results, and cost / result           | Added to align more closely with the reference                                                    |
+| AI/action insight rail         | Evidence-backed Action Center in the trend row plus intelligence panels | Keep the highest-priority review action beside the trend; keep actions read-only                  |
+| Evidence disclosure            | Prioritized signals with period, sample, peer baseline, and guard       | Keep the scan compact; disclose decision evidence on demand                                       |
+| Campaign/ad/ad-set detail      | Separate URL-driven report sections                                     | Do not render all explorers as one long page                                                      |
+| Audience and targeting         | Dedicated Audience and Targeting sections                               | Audience tabs rank compact provider rows; targeting keeps chips + raw JSON                        |
+| Technical metric detail        | Progressive-disclosure Metric definitions panel                         | Keep available without dominating the first scan                                                  |
+| Report export context          | CSV metadata preamble plus authorized fact rows                         | Preserve filters, comparison, metric, attribution, and health context                             |
+| Campaign explorer controls     | URL-backed hierarchy, sort, and visible-column picker                   | Keep delivery and core efficiency columns available while preserving state across section changes |
 
 ## Section contract
 
@@ -60,11 +60,18 @@ to avoid duplicate navigation.
 The data-health strip is backed by the same typed state used by the report API:
 `complete`, `partial`, `delayed`, or `unavailable`. It shows the selected
 coverage window, account timezone, localized sync time, freshness, and an
-explicit status label. A missing or stale provider value remains unavailable or
-delayed; it is never rendered as a zero or a fabricated estimate. Objective
+explicit status label. Each primary KPI repeats its availability state, and the
+health details dialog exposes metric lineage, source, formula, denominator, and
+attribution window without crowding the first scan. A missing or stale provider
+value remains unavailable or delayed; it is never rendered as a zero or a fabricated estimate. Objective
 results follow the same rule: rollups only sum rows sharing one result type,
 while mixed objective actions keep their raw evidence and show an unavailable
-aggregate.
+aggregate. The result definition is carried into the KPI label and explorer
+rows when the provider supplies one, so “Results” is never presented as an
+unqualified heterogeneous total. The six-card executive strip also exposes a
+URL-driven supplementary metric picker for impressions, click variants,
+landing-page views, CTR/CPC variants, and CPM; its comparison delta and
+availability state use the same aggregate numerators and metric dictionary.
 
 New reporting surfaces should reuse:
 
@@ -76,6 +83,9 @@ New reporting surfaces should reuse:
   neutral delta state with accessible text.
 - `Card`, `CardHeader`, `CardTitle`, `CardDescription`, and `Button` from the
   existing UI primitives before introducing another card or control variant.
+- `src/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/advertising/advertising-hierarchy-explorer.tsx`
+  for campaign → ad set → ad exploration. Keep cost/result, reach, frequency,
+  CTR(Link), and CPM unavailable-safe and URL-backed when adding future columns.
 - Semantic tokens from `src/app/globals.css`; reporting cards are
   border-first, while elevation remains reserved for transient surfaces.
 
@@ -84,11 +94,31 @@ second navigation rail, or page-local raw colors. Feature-specific data
 aggregation stays in `src/lib/advertising`; shared presentation components
 must remain provider-agnostic.
 
+The overview's decision row is intentionally asymmetric at wide desktop
+widths: the trend and objective-mix panels occupy the primary reading column,
+while the evidence-backed Action Center stays in a compact review rail beside
+them. At tablet and mobile widths the rail returns to normal document order
+below the trend controls. This preserves the reference's “what changed / what
+to review next” scan without introducing a second navigation system.
+
+Action Center decisions are now progressive and durable: each signal can be
+marked reviewed, dismissed with a reason, snoozed for seven days, or reopened.
+The state is scoped to the authenticated workspace member, selected account,
+signal entity, and report period, so one person's triage does not silently
+rewrite another person's view. Dismissed and currently snoozed signals leave
+the default rail; reviewed signals remain visible with their state shown. The
+server keeps the report authorization boundary as the source of truth and
+records sanitized state changes in the security audit stream.
+
 ## Interaction and accessibility rules
 
 - Every Advertising navigation item has a URL, visible label, active state,
   and visible focus ring in the desktop rail, collapsed-rail flyout, and
   mobile drawer.
+- On mobile, report filters collapse into one labeled button that opens an
+  accessible dialog drawer; desktop keeps the filter surface sticky and
+  visible. Both views submit the same URL-driven configuration so deep links
+  and back/forward navigation remain stable.
 - Sticky filters and section navigation must not obscure focused content.
 - Tables keep local horizontal overflow on narrow screens; the document body
   must not gain horizontal overflow.
@@ -110,7 +140,8 @@ existing workspace-scoped `saved_filter` table with the
 analytics store. Every read and write resolves the authenticated actor, active
 agency, workspace membership, and owner/share scope server-side. The stored
 configuration includes the account, date range, comparison dates, section,
-search filters, chart metrics/granularity, and pagination/explorer state. The
+search filters, supplementary metric, chart metrics/granularity, and
+pagination/explorer state. The
 dialog lists private and workspace-shared views and restores one through the
 existing URL-driven route state.
 

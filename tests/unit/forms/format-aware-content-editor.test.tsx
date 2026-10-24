@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup, within } from "@testing-library/react";
+import { render, screen, cleanup, within, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { FormatAwareContentEditor } from "@/components/forms/format-aware-content-editor";
 import { tFor } from "@/messages";
 
@@ -7,9 +8,7 @@ vi.mock("@/components/forms/per-field-ai-suggest", () => ({
   PerFieldAiSuggest: () => null,
 }));
 
-vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
-  updateFormatPayloadAction: vi.fn(),
-}));
+const saveAction = vi.fn(async () => ({}));
 
 /**
  * The Create workspace renders the workbook-shaped production
@@ -39,7 +38,7 @@ afterEach(() => {
 const t = tFor("en");
 const baseProps = {
   t,
-  workspaceSlug: "acme",
+  saveAction,
   contentItemId: "ci-1",
   initial: { schemaVersion: 1 as const },
   editable: true,
@@ -109,6 +108,33 @@ describe("FormatAwareContentEditor", () => {
   it("renders the Save button in editable mode", () => {
     render(<FormatAwareContentEditor {...baseProps} format="static_post" />);
     expect(screen.getByTestId("format-aware-save-now")).toBeInTheDocument();
+  });
+
+  it("submits changed creative fields through the supplied route action", async () => {
+    const user = userEvent.setup();
+    const saveAction = vi.fn(async (previous: unknown, formData: FormData) => {
+      void previous;
+      void formData;
+      return { ok: true as const };
+    });
+    render(
+      <FormatAwareContentEditor
+        {...baseProps}
+        saveAction={saveAction}
+        format="static_post"
+        initial={{ schemaVersion: 1, caption: "Original caption" }}
+      />,
+    );
+
+    const caption = screen.getByTestId("field-caption-caption");
+    await user.clear(caption);
+    await user.type(caption, "Updated caption");
+    await user.click(screen.getByTestId("format-aware-save-now"));
+
+    await waitFor(() => expect(saveAction).toHaveBeenCalledTimes(1));
+    const submitted = saveAction.mock.calls[0]?.[1];
+    expect(submitted?.get("format")).toBe("static_post");
+    expect(JSON.parse(String(submitted?.get("formatPayload"))).caption).toBe("Updated caption");
   });
 
   it("keeps publication copy out of the Create workspace", () => {

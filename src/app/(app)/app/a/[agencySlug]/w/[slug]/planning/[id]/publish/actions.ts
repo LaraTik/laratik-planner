@@ -67,8 +67,8 @@ function zodFieldPath(error: z.ZodError): string | undefined {
 const SavePayloadFormSchema = z.object({
   workspaceSlug: z.string().min(1).max(64),
   agencySlug: z.string().min(1).max(64),
-  contentItemId: z.string().uuid(),
-  socialChannelId: z.string().uuid(),
+  contentItemId: z.string().guid(),
+  socialChannelId: z.string().guid(),
   payload: z.string(), // JSON-stringified PlatformPayload
   expectedUpdatedAt: z.string().datetime().nullable().optional(),
 });
@@ -130,11 +130,11 @@ export async function savePublishPackageAction(input: z.input<typeof SavePayload
 const BatchPayloadFormSchema = z.object({
   workspaceSlug: z.string().min(1).max(64),
   agencySlug: z.string().min(1).max(64),
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
   entries: z
     .array(
       z.object({
-        socialChannelId: z.string().uuid(),
+        socialChannelId: z.string().guid(),
         payload: z.string(), // JSON-stringified PlatformPayload
         expectedUpdatedAt: z.string().datetime().nullable(),
       }),
@@ -212,7 +212,7 @@ export async function savePublishPackageBatchAction(input: z.input<typeof BatchP
 const NonMaterialNoteSchema = z.object({
   workspaceSlug: z.string().min(1).max(64),
   agencySlug: z.string().min(1).max(64),
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
   resource: z.string().min(1).max(80),
   summary: z.string().min(1).max(200),
 });
@@ -252,8 +252,8 @@ export async function recordInternalNoteAction(input: z.input<typeof NonMaterial
 const ApprovalFormSchema = z.object({
   workspaceSlug: z.string().min(1).max(64),
   agencySlug: z.string().min(1).max(64),
-  contentItemId: z.string().uuid(),
-  socialChannelId: z.string().uuid(),
+  contentItemId: z.string().guid(),
+  socialChannelId: z.string().guid(),
   approved: z.boolean(),
 });
 
@@ -282,7 +282,7 @@ export async function setFinalCopyApprovalAction(input: z.input<typeof ApprovalF
 const ReadinessFormSchema = z.object({
   workspaceSlug: z.string().min(1).max(64),
   agencySlug: z.string().min(1).max(64),
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
 });
 
 /** Explicitly acknowledge an overdue plan without changing the timestamp.

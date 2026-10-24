@@ -44,6 +44,7 @@ const baseRoles = {
 function renderItem(overrides: Partial<CommentRecord> = {}, onReply = vi.fn()) {
   return render(
     <CommentItem
+      onResolve={vi.fn(async () => ({}))}
       comment={{ ...baseComment, ...overrides }}
       workspaceSlug="acme"
       currentUserId="u-2"
@@ -126,6 +127,7 @@ describe("CommentItem", () => {
     // re-render with currentUserId matching
     render(
       <CommentItem
+        onResolve={vi.fn(async () => ({}))}
         comment={baseComment}
         workspaceSlug="acme"
         currentUserId="u-1"
@@ -140,6 +142,7 @@ describe("CommentItem", () => {
   it("shows the Resolve button for a manager even when not the author", () => {
     render(
       <CommentItem
+        onResolve={vi.fn(async () => ({}))}
         comment={baseComment}
         workspaceSlug="acme"
         currentUserId="u-2"
@@ -154,6 +157,7 @@ describe("CommentItem", () => {
   it("shows the Unresolve button when the comment is already resolved", () => {
     render(
       <CommentItem
+        onResolve={vi.fn(async () => ({}))}
         comment={{ ...baseComment, resolvedAt: "2026-08-21T11:00:00.000Z" }}
         workspaceSlug="acme"
         currentUserId="u-1"
@@ -168,6 +172,7 @@ describe("CommentItem", () => {
   it("hides the resolve button when the user is neither author nor manager/planner", () => {
     render(
       <CommentItem
+        onResolve={vi.fn(async () => ({}))}
         comment={baseComment}
         workspaceSlug="acme"
         currentUserId="u-2"
@@ -213,6 +218,7 @@ describe("CommentItem", () => {
     // re-render with isReply
     const { container: c2 } = render(
       <CommentItem
+        onResolve={vi.fn(async () => ({}))}
         comment={baseComment}
         workspaceSlug="acme"
         currentUserId="u-2"

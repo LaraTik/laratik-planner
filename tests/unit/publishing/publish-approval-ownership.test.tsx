@@ -137,6 +137,7 @@ function renderForm({
   return render(
     <LocaleProvider locale="en">
       <PublishPackageForm
+        recordPublicationAction={async () => ({})}
         workspaceId={workspaceId}
         workspaceSlug="demo"
         agencySlug="acme"

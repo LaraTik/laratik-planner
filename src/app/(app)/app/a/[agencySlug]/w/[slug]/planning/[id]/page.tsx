@@ -17,7 +17,7 @@ function humanPlatform(
   return value === key ? platformLabel(platform) : value;
 }
 import { auth } from "@/lib/auth/config";
-import { getContentItem, listWorkspaceDesigners } from "@/lib/content/service";
+import { getContentItem, listWorkspaceDesigners } from "@/features/content/server";
 import { listApprovalsForItem, listDeliveryVersionsForItem } from "@/lib/deliveries/service";
 
 import {
@@ -31,6 +31,7 @@ import { buildAudienceCopyViewModel } from "@/lib/format-payload/mapper";
 import { listCommentsForItem } from "@/lib/discussions/service";
 import { getSignedPreviewUrl } from "@/lib/media/thumbnails";
 import { getWorkspaceRoles, hasWorkspaceRole, isAgencyAdmin } from "@/lib/auth/policy";
+import { getPublishingReadinessStatus } from "@/lib/publishing/readiness-display";
 // resolveActiveAgencyContext is intentionally NOT imported here. The
 // page derives its agency scope from `ws.agencyId` (the workspace
 // row's actual agency) rather than the user's active agency, so
@@ -40,24 +41,33 @@ import { getWorkspaceRoles, hasWorkspaceRole, isAgencyAdmin } from "@/lib/auth/p
 import { currentActor } from "@/lib/auth/current-actor";
 import { hasPlatformPermission } from "@/lib/auth/platform-access";
 import { Button } from "@/components/ui/button";
-import { PlanningHeader } from "@/components/planning/planning-header";
+import { OverviewNavigator, PlanningHeader } from "@/features/content";
 import { PlanningSection } from "@/components/planning/planning-section";
-import { ChannelPublishingCard } from "@/components/planning/channel-publishing-card";
+import { ChannelPublishingCard } from "./channel-publishing-card";
 import { PublishingCommandCenter } from "@/components/planning/publishing-command-center";
 import { ActivityWithFilters } from "@/components/planning/activity-with-filters";
-import { OverviewNavigator } from "@/components/planning/overview-navigator";
 import { FormatAwareContentEditor } from "@/components/forms/format-aware-content-editor";
 import { ResearchTeardownApply } from "@/components/planning/research-teardown-apply";
+import {
+  assignDesignerAction,
+  applyResearchTeardownAction,
+  claimAction,
+  decideApprovalAction,
+  transitionAction,
+  updateAudienceCopyAction,
+  updateFormatPayloadAction,
+} from "../actions";
 import { MessagesPanel } from "@/components/planning/messages-panel";
 // Phase 6 of the planning-detail refactor (2026-08-30): the
 // inline title/date/brief editors used to live here. They
 // moved into the Overview's `DetailsSection` (see
-// `@/components/planning/overview-command-center`). The
+// `@/features/content`). The
 // source component (`./inline-editable-fields`) is unchanged.
 import { WorkflowSheet } from "@/components/planning/workflow-rail";
-import { PlanningDetailShell } from "@/components/planning/planning-detail-shell";
+import { PlanningDetailShell } from "./planning-detail-shell";
 import { DeliverySection } from "./delivery-section";
 import { AiAssistancePanel } from "@/components/planning/ai-assistance-panel";
+import { AiAssistanceSection } from "./ai-assistance-section";
 import { getResetIdeaCounts, EMPTY_RESET_IDEA_COUNTS } from "@/lib/content/reset-idea";
 import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { db } from "@/lib/db";
@@ -80,6 +90,7 @@ import { parseFormatPayload, type ContentFormat } from "@/lib/format-payload/sch
 import { PlatformPreviewSwitcher } from "@/components/planning/platform-preview-switcher";
 import { type WorkspaceTab } from "@/components/planning/workspace-tabs";
 import { PublishPackageForm } from "./publish/publish-package-form";
+import { recordPublicationAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import { getMetaPublishingReadinessForWorkspace } from "@/lib/social/publishing-readiness-service";
 import { metaPublishingReadinessCopy } from "@/lib/social/publishing-readiness-copy";
 import { designerEditableFieldsFor } from "@/lib/content/production-fields";
@@ -89,7 +100,7 @@ import {
   ensurePlanningMediaFolderPathPublic,
   listMediaAssetsForContentItem,
   listMediaFolders,
-} from "@/lib/media/service";
+} from "@/features/media/server";
 import { buildPlanningPresentation, type PlanningPresentation } from "@/lib/planning/presentation";
 import type { WorkspaceRole, ApprovalGate } from "@/lib/content/workflow";
 import { getActiveScenario } from "@/lib/content/workflow";
@@ -221,6 +232,12 @@ export default async function ContentDetailPage({
     .limit(1);
 
   const roles = await getWorkspaceRoles(actor, ws.id);
+  // The agency admin is not a workspace role — it is a membership flag
+  // on the actor — but it carries authority that no single workspace
+  // role carries (master prompt §9: the admin holds "F" on every
+  // approval gate). Resolved once, here, because both the role flags
+  // and the publish form's final-copy approval need it.
+  const actorIsAgencyAdmin = await isAgencyAdmin(actor, ws.agencyId);
   const actorRoles = {
     isManager: roles.has("workspace_manager"),
     isPlanner: roles.has("content_planner"),
@@ -228,6 +245,8 @@ export default async function ContentDetailPage({
     isInternalReviewer: roles.has("internal_reviewer"),
     isClientReviewer: roles.has("client_reviewer"),
     isPublisher: roles.has("publisher"),
+    isViewer: roles.has("viewer"),
+    isAgencyAdmin: actorIsAgencyAdmin,
   };
 
   const [
@@ -239,11 +258,10 @@ export default async function ContentDetailPage({
     canResetIdea,
     resetCounts,
     activityEvents,
-    readiness,
+    readinessResult,
     channelPayloads,
     channelPayloadStates,
     canConfirmReadiness,
-    canApproveFinalCopy,
     linkedMediaAssets,
     mediaFolders,
   ] = await Promise.all([
@@ -257,17 +275,22 @@ export default async function ContentDetailPage({
     hasPlatformPermission(actor, "platform.destructive.execute"),
     getResetIdeaCounts(id).catch(() => EMPTY_RESET_IDEA_COUNTS),
     listActivityEvents(actor, ws.id, id).catch(() => []),
-    evaluateReadiness({ actor, workspaceId: ws.id, contentItemId: id }).catch(() => ({
-      contentItemId: id,
-      revision: 0,
-      blockers: 0,
-      recommendations: 0,
-      requiredTotal: 0,
-      requiredCompleted: 0,
-      canPublish: false,
-      issues: [],
-      channels: [],
-    })),
+    evaluateReadiness({ actor, workspaceId: ws.id, contentItemId: id })
+      .then((value) => ({ value, unavailable: false }))
+      .catch(() => ({
+        value: {
+          contentItemId: id,
+          revision: 0,
+          blockers: 0,
+          recommendations: 0,
+          requiredTotal: 0,
+          requiredCompleted: 0,
+          canPublish: false,
+          issues: [],
+          channels: [],
+        },
+        unavailable: true,
+      })),
     readAllChannelPayloads({ actor, workspaceId: ws.id, contentItemId: id }).catch(() => ({})),
     readAllChannelPayloadStates({ actor, workspaceId: ws.id, contentItemId: id }).catch(() => ({})),
     // Phase 7 of the planning-detail refactor (2026-08-30):
@@ -276,7 +299,6 @@ export default async function ContentDetailPage({
     // moving into the Publishing tab, the checks now live
     // here so the form can render with the right affordances.
     hasWorkspaceRole(actor, ws.id, ["workspace_manager", "content_planner", "publisher"]),
-    isAgencyAdmin(actor, ws.agencyId),
     listMediaAssetsForContentItem(actor, {
       agencyId: ws.agencyId,
       workspaceId: ws.id,
@@ -284,6 +306,8 @@ export default async function ContentDetailPage({
     }).catch(() => []),
     listMediaFolders(actor, { agencyId: ws.agencyId, workspaceId: ws.id }).catch(() => []),
   ]);
+  const readiness = readinessResult.value;
+  const readinessUnavailable = readinessResult.unavailable;
 
   // PR 3 / Tier 3 (perf/media): sign a per-page R2 URL for the first
   // image asset's preview variant. The signed URL lets the planning
@@ -435,19 +459,26 @@ export default async function ContentDetailPage({
     canEditProduction && !canEditAll ? designerEditableFieldsFor(item.format) : undefined;
   // Canonical copy remains editable by managers and planners after approval.
   const canEditCopy = (actorRoles.isManager || actorRoles.isPlanner) && item.status !== "cancelled";
+  // Discussion is the ONE write a viewer holds: master prompt §9 gives
+  // the viewer "V/comment" on both internal and client-visible
+  // discussion, and the discussions service accepts any workspace
+  // member. The composer was hidden from viewers, so a read-only
+  // member could not use the one thing their role allows.
   const canPostInternal =
     actorRoles.isManager ||
     actorRoles.isPlanner ||
     actorRoles.isDesigner ||
     actorRoles.isInternalReviewer ||
-    actorRoles.isPublisher;
+    actorRoles.isPublisher ||
+    actorRoles.isViewer;
   const canPostClientVisible =
     actorRoles.isClientReviewer ||
     actorRoles.isManager ||
     actorRoles.isPlanner ||
     actorRoles.isDesigner ||
     actorRoles.isInternalReviewer ||
-    actorRoles.isPublisher;
+    actorRoles.isPublisher ||
+    actorRoles.isViewer;
 
   const channelConfigs = item.channels.map((ch) => {
     const payload = (channelPayloads as Record<string, unknown>)[ch.socialChannelId];
@@ -565,14 +596,12 @@ export default async function ContentDetailPage({
         i.path.toLowerCase().startsWith("channel") ||
         i.path.toLowerCase().startsWith("disclosure")),
   ).length;
-  const publishingReadinessStatus: "ready" | "warning" | "danger" | "neutral" =
-    publishingBlockers > 0
-      ? "danger"
-      : item.channels.length === 0
-        ? "neutral"
-        : configuredChannelCount < item.channels.length
-          ? "warning"
-          : "ready";
+  const publishingReadinessStatus = getPublishingReadinessStatus({
+    unavailable: readinessUnavailable,
+    blockerCount: publishingBlockers,
+    channelCount: item.channels.length,
+    configuredChannelCount,
+  });
 
   // Schedule readiness — past-dated or shipped. `nowMs` is the
   // server's request time, not a render-time impurity (this is a
@@ -637,23 +666,29 @@ export default async function ContentDetailPage({
       id: "publishing",
       label: t("contentDetail.readiness.rowPublishing"),
       status: publishingIsFuture ? "neutral" : publishingReadinessStatus,
-      detail: publishingIsFuture
-        ? t("contentDetail.readiness.rowPublishingUpcoming")
-        : publishingReadinessStatus === "ready"
-          ? item.channels.length === 0
-            ? t("contentDetail.readiness.rowPublishingNoChannels")
-            : t("contentDetail.readiness.rowPublishingReady")
-          : publishingReadinessStatus === "danger"
-            ? publishingBlockers === 1
-              ? t("contentDetail.readiness.rowPublishingBlockerOne", { count: publishingBlockers })
-              : t("contentDetail.readiness.rowPublishingBlockerMany", { count: publishingBlockers })
-            : channelsNotConfigured === 1
-              ? t("contentDetail.readiness.rowPublishingNeedSetupOne", {
-                  count: channelsNotConfigured,
-                })
-              : t("contentDetail.readiness.rowPublishingNeedSetupMany", {
-                  count: channelsNotConfigured,
-                }),
+      detail: readinessUnavailable
+        ? t("contentDetail.readiness.rowPublishingUnavailable")
+        : publishingIsFuture
+          ? t("contentDetail.readiness.rowPublishingUpcoming")
+          : publishingReadinessStatus === "ready"
+            ? item.channels.length === 0
+              ? t("contentDetail.readiness.rowPublishingNoChannels")
+              : t("contentDetail.readiness.rowPublishingReady")
+            : publishingReadinessStatus === "danger"
+              ? publishingBlockers === 1
+                ? t("contentDetail.readiness.rowPublishingBlockerOne", {
+                    count: publishingBlockers,
+                  })
+                : t("contentDetail.readiness.rowPublishingBlockerMany", {
+                    count: publishingBlockers,
+                  })
+              : channelsNotConfigured === 1
+                ? t("contentDetail.readiness.rowPublishingNeedSetupOne", {
+                    count: channelsNotConfigured,
+                  })
+                : t("contentDetail.readiness.rowPublishingNeedSetupMany", {
+                    count: channelsNotConfigured,
+                  }),
       href: "#publishing",
     },
     {
@@ -766,6 +801,35 @@ export default async function ContentDetailPage({
     };
   })();
 
+  // The mobile sheet and desktop rail display the same workflow state.
+  // Build the serializable client model once so both responsive surfaces
+  // stay in sync as the workflow contract evolves.
+  const workflowProps = {
+    actions: {
+      transition: transitionAction,
+      claim: claimAction,
+      assignDesigner: assignDesignerAction,
+      decideApproval: decideApprovalAction,
+    },
+    workspaceSlug: slug,
+    contentItemId: item.id,
+    status: item.status,
+    blockedReason: item.blockedReason,
+    cancellationReason: item.cancellationReason,
+    roles: actorRoles,
+    approvals: approvals.map((approval) => ({
+      id: approval.id,
+      gate: approval.gate,
+      status: approval.status,
+      requestedAt: approval.requestedAt.toISOString(),
+      deliveryVersionId: approval.deliveryVersionId,
+    })),
+    designers,
+    ...(designer ? { designer: { id: designer.id, label: designer.displayName } } : {}),
+    planningPresentation,
+    scenario: activeScenario,
+  };
+
   return (
     <div data-testid="workspace-content-detail">
       {justCreated ? (
@@ -794,26 +858,7 @@ export default async function ContentDetailPage({
                 a client boundary for the trigger itself. The
                 sheet only appears on <lg viewports. */}
             <div className="lg:hidden">
-              <WorkflowSheet
-                workspaceSlug={slug}
-                contentItemId={item.id}
-                status={item.status}
-                blockedReason={item.blockedReason}
-                cancellationReason={item.cancellationReason}
-                roles={actorRoles}
-                approvals={approvals.map((a) => ({
-                  id: a.id,
-                  gate: a.gate,
-                  status: a.status,
-                  requestedAt: a.requestedAt.toISOString(),
-                  deliveryVersionId: a.deliveryVersionId,
-                }))}
-                designers={designers}
-                {...(designer
-                  ? { designer: { id: designer.id, label: designer.displayName } }
-                  : {})}
-                planningPresentation={planningPresentation}
-              />
+              <WorkflowSheet {...workflowProps} />
             </div>
             {/* Compact header — answers the four questions at a
                 glance (back link, title, status, action). The
@@ -856,25 +901,7 @@ export default async function ContentDetailPage({
             />
           </>
         }
-        workflow={{
-          workspaceSlug: slug,
-          contentItemId: item.id,
-          status: item.status,
-          blockedReason: item.blockedReason,
-          cancellationReason: item.cancellationReason,
-          roles: actorRoles,
-          approvals: approvals.map((a) => ({
-            id: a.id,
-            gate: a.gate,
-            status: a.status,
-            requestedAt: a.requestedAt.toISOString(),
-            deliveryVersionId: a.deliveryVersionId,
-          })),
-          designers,
-          ...(designer ? { designer: { id: designer.id, label: designer.displayName } } : {}),
-          planningPresentation,
-          scenario: activeScenario,
-        }}
+        workflow={workflowProps}
         workspace={{
           agencySlug,
           workspaceSlug: slug,
@@ -1077,6 +1104,7 @@ export default async function ContentDetailPage({
                           contentItemId={item.id}
                           researchTeardownId={linkedTeardown.teardownId}
                           editable={canEdit}
+                          applyAction={applyResearchTeardownAction}
                           labels={{
                             title: t("contentDetail.researchTeardownApply.title"),
                             description: t("contentDetail.researchTeardownApply.description"),
@@ -1089,7 +1117,7 @@ export default async function ContentDetailPage({
                         />
                       ) : null}
                       <FormatAwareContentEditor
-                        workspaceSlug={slug}
+                        saveAction={updateFormatPayloadAction.bind(null, slug)}
                         contentItemId={item.id}
                         format={item.format}
                         initial={(() => {
@@ -1135,6 +1163,7 @@ export default async function ContentDetailPage({
                         contentItemId={item.id}
                         researchTeardownId={linkedTeardown.teardownId}
                         editable={canEdit}
+                        applyAction={applyResearchTeardownAction}
                         labels={{
                           title: t("contentDetail.researchTeardownApply.title"),
                           description: t("contentDetail.researchTeardownApply.description"),
@@ -1147,7 +1176,7 @@ export default async function ContentDetailPage({
                       />
                     ) : null}
                     <FormatAwareContentEditor
-                      workspaceSlug={slug}
+                      saveAction={updateFormatPayloadAction.bind(null, slug)}
                       contentItemId={item.id}
                       format={item.format}
                       initial={(() => {
@@ -1180,19 +1209,23 @@ export default async function ContentDetailPage({
                     <div className="flex items-center gap-2">
                       {canEdit ? (
                         <AiAssistancePanel
-                          agencySlug={agencySlug}
-                          workspaceSlug={slug}
-                          contentItemId={item.id}
-                          contentStatus={item.status}
-                          isManager={actorRoles.isManager}
-                          isPlanner={actorRoles.isPlanner}
-                          enabledCapabilities={enabledCapabilities}
-                          agencyEnabled={agencyEnabled}
-                          hasKey={hasKey}
-                          currentBrief={item.brief ?? ""}
-                          {...(linkedTrend
-                            ? { trendContext: { id: linkedTrend.id, label: linkedTrend.label } }
-                            : {})}
+                          content={
+                            <AiAssistanceSection
+                              agencySlug={agencySlug}
+                              workspaceSlug={slug}
+                              contentItemId={item.id}
+                              contentStatus={item.status}
+                              isManager={actorRoles.isManager}
+                              isPlanner={actorRoles.isPlanner}
+                              enabledCapabilities={enabledCapabilities}
+                              agencyEnabled={agencyEnabled}
+                              hasKey={hasKey}
+                              currentBrief={item.brief ?? ""}
+                              {...(linkedTrend
+                                ? { trendContext: { id: linkedTrend.id, label: linkedTrend.label } }
+                                : {})}
+                            />
+                          }
                           {...(researchLinks[0]
                             ? {
                                 researchContext: {
@@ -1234,8 +1267,10 @@ export default async function ContentDetailPage({
                     workspaceSlug={slug}
                     contentItemId={item.id}
                     contentStatus={item.status}
+                    changeRequestGate={item.changeRequestGate}
                     isDesigner={actorRoles.isDesigner}
                     isManager={actorRoles.isManager}
+                    isAssignedDesigner={Boolean(item.designerId) && item.designerId === actor.id}
                     viewerIsClient={actorRoles.isClientReviewer}
                     mediaAssets={linkedMediaAssets.map((row) => ({
                       id: row.asset.id,
@@ -1342,6 +1377,7 @@ export default async function ContentDetailPage({
                 data-testid="workspace-tab-panel-copy"
               >
                 <MessagesPanel
+                  saveAction={updateAudienceCopyAction.bind(null, slug)}
                   agencySlug={agencySlug}
                   workspaceSlug={slug}
                   contentItemId={item.id}
@@ -1563,6 +1599,7 @@ export default async function ContentDetailPage({
                   >
                     <div data-testid="publish-package-form-mount">
                       <PublishPackageForm
+                        recordPublicationAction={recordPublicationAction}
                         workspaceId={ws.id}
                         workspaceSlug={slug}
                         agencySlug={agencySlug}
@@ -1622,7 +1659,7 @@ export default async function ContentDetailPage({
                           item.status === "partially_published" ||
                           item.status === "published"
                         }
-                        canApproveFinalCopy={canApproveFinalCopy}
+                        canApproveFinalCopy={actorIsAgencyAdmin}
                         canConfirmReadiness={canConfirmReadiness}
                         canExcludeChannel={
                           (actorRoles.isPublisher || actorRoles.isManager) &&

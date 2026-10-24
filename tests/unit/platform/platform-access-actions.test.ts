@@ -7,8 +7,10 @@ const serviceMock = vi.hoisted(() => ({
   revoke: vi.fn(),
 }));
 const revalidatePathMock = vi.hoisted(() => vi.fn());
+const logErrorMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/auth/current-actor", () => ({ currentActor: actorMock }));
+vi.mock("@/lib/observability/logger", () => ({ logError: logErrorMock }));
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 vi.mock("@/lib/platform/access", async () => {
   const actual =
@@ -34,6 +36,7 @@ beforeEach(() => {
   serviceMock.change.mockReset();
   serviceMock.revoke.mockReset();
   revalidatePathMock.mockReset();
+  logErrorMock.mockReset();
 });
 
 describe("platform access actions", () => {
@@ -104,5 +107,20 @@ describe("platform access actions", () => {
       error: "At least one active Platform Owner must remain.",
       code: accessService.PlatformAccessErrorCode.LastOwner,
     });
+  });
+
+  it("logs unexpected persistence failures without reporting a permission denial", async () => {
+    const failure = new Error("postgres://planner:credential-shaped-secret@db.test/planner");
+    serviceMock.grant.mockRejectedValueOnce(failure);
+    const data = new FormData();
+    data.set("email", "person@example.com");
+    data.set("role", "support_operator");
+    data.set("reason", "Support rotation");
+
+    const result = await actions.grantPlatformAccessAction({}, data);
+
+    expect(result).toEqual({ errorCode: "unexpected_failure" });
+    expect(JSON.stringify(result)).not.toContain("credential-shaped-secret");
+    expect(logErrorMock).toHaveBeenCalledWith("platform_access.grant_failed", { err: failure });
   });
 });

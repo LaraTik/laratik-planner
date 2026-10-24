@@ -58,6 +58,15 @@ describe("resolveCustomPeriod", () => {
     ).toThrow(/start.*before.*end/i);
   });
 
+  it("rejects missing or malformed dates", () => {
+    expect(() => resolveCustomPeriod(new Date(""), new Date("2026-05-01T00:00:00Z"))).toThrow(
+      /start.*before.*end/i,
+    );
+    expect(() => resolveCustomPeriod(new Date("2026-05-01T00:00:00Z"), new Date(""))).toThrow(
+      /start.*before.*end/i,
+    );
+  });
+
   it("accepts multi-month ranges", () => {
     const p = resolveCustomPeriod(
       new Date("2025-12-31T00:00:00Z"),

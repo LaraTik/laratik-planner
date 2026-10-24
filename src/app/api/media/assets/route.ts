@@ -8,14 +8,14 @@ import {
   listMediaAssets,
   registerUploadedMediaAsset,
   MediaPermissionError,
-} from "@/lib/media/service";
+} from "@/features/media/server";
 
 const Body = z.object({
-  workspaceId: z.string().uuid(),
-  storageObjectId: z.string().uuid(),
+  workspaceId: z.string().guid(),
+  storageObjectId: z.string().guid(),
   title: z.string().trim().min(1).max(160),
-  folderId: z.string().uuid().nullable().optional(),
-  contentItemId: z.string().uuid().optional(),
+  folderId: z.string().guid().nullable().optional(),
+  contentItemId: z.string().guid().optional(),
   visibility: z.enum(["workspace", "agency"]).default("workspace"),
 });
 
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
   const workspaceId = req.nextUrl.searchParams.get("workspaceId");
-  if (!workspaceId || !z.string().uuid().safeParse(workspaceId).success) {
+  if (!workspaceId || !z.string().guid().safeParse(workspaceId).success) {
     return NextResponse.json({ error: "Invalid workspace" }, { status: 400 });
   }
 

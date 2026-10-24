@@ -5,7 +5,6 @@ import * as Sentry from "@sentry/nextjs";
 import { useRouter } from "next/navigation";
 import { Bell, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { markAllReadAction, markReadAction } from "@/app/(app)/actions";
 import {
   NotificationItem,
   type NotificationListItem,
@@ -31,6 +30,11 @@ export type NotificationsCopy = {
   yesterday?: string;
 };
 
+export type MarkAllReadAction = () => Promise<{ ok?: boolean }>;
+export type MarkReadAction = (input: {
+  ids: string[];
+}) => Promise<{ ok?: boolean; error?: string }>;
+
 /**
  * Notifications bell — bell icon with unread badge, plus a popover
  * listing the latest 10 in-app notifications.
@@ -49,11 +53,15 @@ export function NotificationsBell({
   initialUnread,
   badgeTestId,
   copy,
+  markAllReadAction,
+  markReadAction,
 }: {
   initial: NotificationRow[];
   initialUnread: number;
   badgeTestId?: string;
   copy: NotificationsCopy;
+  markAllReadAction: MarkAllReadAction;
+  markReadAction: MarkReadAction;
 }) {
   const [open, setOpen] = React.useState(false);
   const [items, setItems] = React.useState<NotificationRow[]>(initial);

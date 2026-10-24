@@ -1,8 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
-import { exportDeliveryVersionZip, exportMediaAssetIdsZip } from "@/lib/media/collection-service";
-import { MediaPermissionError } from "@/lib/media/service";
+import {
+  exportDeliveryVersionZip,
+  exportMediaAssetIdsZip,
+  MediaPermissionError,
+} from "@/features/media/server";
 import { MediaZipTooLargeError } from "@/lib/exports/media-assets-zip";
 
 export const dynamic = "force-dynamic";
@@ -10,10 +13,10 @@ export const runtime = "nodejs";
 
 const Body = z.union([
   z.object({
-    assetIds: z.array(z.string().uuid()).min(1).max(100),
+    assetIds: z.array(z.string().guid()).min(1).max(100),
     filenameBase: z.string().max(100).optional(),
   }),
-  z.object({ deliveryVersionId: z.string().uuid() }),
+  z.object({ deliveryVersionId: z.string().guid() }),
 ]);
 
 export async function POST(req: NextRequest) {

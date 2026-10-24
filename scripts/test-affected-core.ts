@@ -111,6 +111,10 @@ function isTestRelevantPath(path: string): boolean {
   );
 }
 
+function isTestFilePath(path: string): boolean {
+  return /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(path);
+}
+
 export function classifyChangedFiles(
   changedFiles: string[],
   manifest: TestOwnershipManifest,
@@ -148,6 +152,24 @@ export function classifyChangedFiles(
     files.some((file) => matchesAny(file, area.sourceGlobs) || areaOwnsTestFile(file, area)),
   );
   const relevantFiles = files.filter(isTestRelevantPath);
+  const changedTestFiles = files.filter(isTestFilePath);
+  const unmappedTestFiles = changedTestFiles.filter(
+    (file) => !manifest.areas.some((area) => areaOwnsTestFile(file, area)),
+  );
+
+  if (unmappedTestFiles.length > 0) {
+    return {
+      kind: "escalated",
+      areaIds: [],
+      unitFiles: [],
+      integrationFiles: [],
+      browser: [],
+      runAllUnit: true,
+      runAllIntegration: true,
+      runAllBrowser: true,
+      escalationReason: `No ownership mapping exists for changed test files: ${unmappedTestFiles.join(", ")}`,
+    };
+  }
 
   if (
     matchedAreas.length === 0 &&

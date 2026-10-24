@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Building2, Check, ChevronsUpDown, Plus, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -49,6 +48,7 @@ export function AgencySwitcher({
   testId,
   isPlatformAdmin = false,
   compact = false,
+  collapsed = false,
   /**
    * Round-4b single-agency micro-affordance: when the user is a
    * member of exactly one agency, the switcher collapses to a
@@ -65,6 +65,7 @@ export function AgencySwitcher({
   testId?: string;
   isPlatformAdmin?: boolean;
   compact?: boolean;
+  collapsed?: boolean;
   asSettingsLink?: boolean;
   variant?: "sidebar" | "header";
   copy?: AgencySwitcherCopy;
@@ -73,7 +74,6 @@ export function AgencySwitcher({
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [pending, setPending] = React.useState(false);
   const listRef = React.useRef<HTMLUListElement | null>(null);
-  const router = useRouter();
 
   // When the popover opens, jump activeIndex to the current agency
   // (so arrow-key navigation starts at the highlighted row, not
@@ -127,14 +127,11 @@ export function AgencySwitcher({
         );
         return;
       }
-      // The POST response has committed the signed cookie. Navigate only
-      // after that response completes so the destination request resolves
-      // the new agency/workspace context on the server.
-      router.push(result.redirectTo);
-      // The app shell layout persists across workspace navigation. Refresh
-      // it after the cookie-setting POST so the sidebar reflects the new
-      // agency instead of retaining the previous shell props.
-      router.refresh();
+      // The POST response has committed the signed cookie. Load the target
+      // document only after that response completes so the destination shell
+      // and page resolve together from the new agency context. Combining a
+      // client push with an immediate refresh can leave the old route active.
+      window.location.assign(result.redirectTo);
     } catch (error) {
       console.error("agency switch failed", error);
       toast.error(copy.switchFailedShort);
@@ -178,7 +175,9 @@ export function AgencySwitcher({
         <span className="bg-surface-subtle text-fg-muted flex h-6 w-6 items-center justify-center rounded font-bold">
           —
         </span>
-        <span className={compact ? "hidden xl:inline" : "inline"}>{copy.noAgency}</span>
+        <span className={collapsed ? "sr-only" : compact ? "hidden xl:inline" : "inline"}>
+          {copy.noAgency}
+        </span>
       </button>
     );
   }
@@ -200,13 +199,19 @@ export function AgencySwitcher({
           variant === "header"
             ? "border-border bg-surface-subtle w-auto max-w-[18rem] border shadow-sm"
             : "w-full",
-          compact ? "justify-center xl:justify-start" : "justify-start",
+          collapsed
+            ? "justify-center"
+            : compact
+              ? "justify-center xl:justify-start"
+              : "justify-start",
         )}
       >
         <span className="bg-primary-subtle text-primary flex h-6 w-6 items-center justify-center rounded font-bold">
           {active.name.charAt(0).toUpperCase()}
         </span>
-        <span className={compact ? "hidden xl:inline" : "inline"}>{active.name}</span>
+        <span className={collapsed ? "sr-only" : compact ? "hidden xl:inline" : "inline"}>
+          {active.name}
+        </span>
         {active.isAdmin ? (
           <Shield
             className="text-primary h-3.5 w-3.5"
@@ -233,13 +238,17 @@ export function AgencySwitcher({
             variant === "header"
               ? "border-border bg-surface-subtle w-auto max-w-[18rem] border shadow-sm"
               : "w-full",
-            compact ? "justify-center xl:justify-start" : "justify-start",
+            collapsed
+              ? "justify-center"
+              : compact
+                ? "justify-center xl:justify-start"
+                : "justify-start",
           )}
         >
           <span className="bg-primary-subtle text-primary flex h-6 w-6 items-center justify-center rounded font-bold">
             {active ? active.name.charAt(0).toUpperCase() : <Building2 className="h-3.5 w-3.5" />}
           </span>
-          <span className={compact ? "hidden xl:inline" : "inline"}>
+          <span className={collapsed ? "sr-only" : compact ? "hidden xl:inline" : "inline"}>
             {active?.name ?? copy.selectAgency}
           </span>
           {active?.isAdmin ? (
@@ -250,7 +259,11 @@ export function AgencySwitcher({
             />
           ) : null}
           <ChevronsUpDown
-            className={cn("text-fg-muted h-3.5 w-3.5", compact && "hidden xl:block")}
+            className={cn(
+              "text-fg-muted h-3.5 w-3.5",
+              (compact || collapsed) && "hidden xl:block",
+              collapsed && "hidden",
+            )}
             aria-hidden="true"
           />
         </button>

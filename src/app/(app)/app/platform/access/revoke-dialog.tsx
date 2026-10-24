@@ -82,6 +82,10 @@ export function RevokePlatformAccessDialog({
             <p role="alert" className="text-body text-danger">
               {state.error}
             </p>
+          ) : state.errorCode === "unexpected_failure" ? (
+            <p role="alert" className="text-body text-danger">
+              {t("platform.accessUnexpectedFailure")}
+            </p>
           ) : null}
           {state.ok ? (
             <p role="status" className="text-body text-success">

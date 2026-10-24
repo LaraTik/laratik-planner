@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { ZodError } from "zod";
 import { invitationCommandSchema } from "@/lib/auth/invitation-command";
 
 /**
@@ -13,7 +14,7 @@ import { invitationCommandSchema } from "@/lib/auth/invitation-command";
  * change to the action that drops field-level detail will fail this
  * test.
  */
-function formatZodIssues(issues: { path: (string | number)[]; message: string }[]): {
+function formatZodIssues(issues: ZodError["issues"]): {
   error: string;
   fieldErrors: Record<string, string[]>;
 } {

@@ -1,26 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { FOLDER_IMPORT_CONCURRENCY } from "@/lib/media/folder-sources/types";
-import { MediaPermissionError } from "@/lib/media/service";
+import { MediaPermissionError } from "@/lib/media/errors";
 import { MediaSourceError } from "@/lib/media/source";
-import { runMediaFolderBatch } from "@/lib/media/folder-import";
+import { runMediaFolderBatch } from "@/features/media/folder-import.server";
 
 // We do not want this test to hit the real `importPublicMediaAsset`. Mock
-// the service module so we can drive success / failure / per-row code.
+// the single-file import module so we can drive success / failure / per-row code.
 const mockedImport = vi.fn();
-vi.mock("@/lib/media/service", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("@/lib/media/service")>();
-  return {
-    ...mod,
-    importPublicMediaAsset: (...args: unknown[]) => mockedImport(...args),
-    MediaPermissionError: class extends Error {
-      constructor(message: string) {
-        super(message);
-        this.name = "MediaPermissionError";
-      }
-    },
-  };
-});
+const logErrorMock = vi.hoisted(() => vi.fn());
+vi.mock("@/features/media/import.server", () => ({
+  importPublicMediaAsset: (...args: unknown[]) => mockedImport(...args),
+}));
+vi.mock("@/lib/observability/logger", () => ({ logError: logErrorMock }));
 
 // canWriteToWorkspace should pass for the happy paths.
 vi.mock("@/lib/auth/policy", () => ({
@@ -148,6 +140,31 @@ describe("runMediaFolderBatch", () => {
     });
     expect(report.items[0]!.code).toBe("permission_denied");
     expect(report.items[1]!.status).toBe("imported");
+  });
+
+  it("does not expose unexpected storage or database errors in item reports", async () => {
+    mockedImport.mockReset();
+    logErrorMock.mockReset();
+    mockedImport.mockRejectedValueOnce(new Error("database connection string leaked"));
+
+    const report = await runMediaFolderBatch({
+      actor: ACTOR,
+      agencyId: AGENCY,
+      workspaceId: WORKSPACE,
+      folderId: "1ABCDEFGHIJKLMNOPQR0",
+      items: [{ id: "failed", name: "failed.png" }],
+    });
+
+    expect(report.items[0]).toMatchObject({
+      status: "failed",
+      code: "fetch_failed",
+      message: "Import failed unexpectedly. Please try again.",
+    });
+    expect(JSON.stringify(report)).not.toContain("database connection string leaked");
+    expect(logErrorMock).toHaveBeenCalledWith(
+      "media.folder_import.item_failed",
+      expect.objectContaining({ err: expect.any(Error) }),
+    );
   });
 
   it("rejects a batch that exceeds MAX_FOLDER_BATCH_IMPORT", async () => {

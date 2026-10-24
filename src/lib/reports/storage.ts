@@ -1,5 +1,5 @@
 import "server-only";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 
@@ -64,7 +64,7 @@ export async function saveReport(
     // already deleted we ignore the unlink error.
     for (const row of dropped) {
       try {
-        await writeFile(join(REPORTS_DIR, `${row.id}.pdf`), "").catch(() => undefined);
+        await unlink(join(REPORTS_DIR, `${row.id}.pdf`));
       } catch {
         // ignore
       }

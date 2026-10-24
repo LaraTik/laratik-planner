@@ -1,14 +1,10 @@
 import Link from "next/link";
-import {
-  communityInboxView,
-  latestInboxConversations,
-  type CommunityInboxQuery,
-} from "@/lib/community/inbox-view";
+import { communityInboxView, type CommunityInboxQuery } from "@/lib/community/inbox-view";
 import { DirAwareInput } from "@/components/forms/dir-aware-textarea";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
 import {
   Activity,
   AlertTriangle,
@@ -19,11 +15,11 @@ import {
   ChevronRight,
   Database,
   FileCheck2,
+  Filter,
   Inbox,
   Link2,
   MessageCircle,
   MessageSquare,
-  PauseCircle,
   Plus,
   Search,
   Send,
@@ -33,6 +29,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { auth } from "@/lib/auth/config";
+import { hasWorkspaceRole } from "@/lib/auth/policy";
 import {
   canManageCommunityInbox,
   canReplyInCommunityInbox,
@@ -54,19 +51,24 @@ import {
   communitySendAttempts,
   communitySyncStates,
   socialChannels,
+  users,
+  workspaceMemberships,
+  workspaceMembershipRoles,
 } from "@/lib/db/schema";
 import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { workspaceBasePath } from "@/lib/urls";
-import { formatDate, DateFormat } from "@/lib/i18n/format-locale";
-import type { LocaleCode } from "@/lib/i18n/locales";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
+import type { LocaleCode } from "@/lib/i18n/locales";
 import { CommunityWorkspaceToggle } from "@/components/community/community-workspace-toggle";
 import { CapabilityValidationButton } from "@/components/community/capability-validation-button";
 import { CommentSyncButton } from "@/components/community/comment-sync-button";
 import { CommunityReplyForm } from "@/components/community/community-reply-form";
 import { PrivateMessageSyncButton } from "@/components/community/private-message-sync-button";
 import { CommunityActivity } from "@/components/community/community-activity";
+import { CommunityAssignmentForm } from "@/components/community/community-assignment-form";
 import { CommunityTestLab } from "@/components/community/community-test-lab";
+import { CommunityEmergencyStopControl } from "@/components/community/community-emergency-stop-control";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -120,9 +122,13 @@ function communityText(t: Translator, key: string, params?: Record<string, strin
   return t(`communityInbox.${key}`, params);
 }
 
-async function readMetrics(workspaceId: string) {
+async function readMetrics(
+  workspaceId: string,
+  view: { selectedConversationId?: string; kind?: string; query?: string } = {},
+) {
   const [
     conversations,
+    priorities,
     messages,
     reviews,
     channels,
@@ -132,7 +138,10 @@ async function readMetrics(workspaceId: string) {
     events,
     rules,
     playbooks,
-    inboxRows,
+    recentEvents,
+    automationRows,
+    playbookRows,
+    conversationRows,
   ] = await Promise.all([
     db
       .select({ value: count() })
@@ -143,6 +152,16 @@ async function readMetrics(workspaceId: string) {
           eq(communityConversations.state, "open"),
         ),
       ),
+    db
+      .select({ priority: communityConversations.priority, value: count() })
+      .from(communityConversations)
+      .where(
+        and(
+          eq(communityConversations.workspaceId, workspaceId),
+          eq(communityConversations.state, "open"),
+        ),
+      )
+      .groupBy(communityConversations.priority),
     db
       .select({ value: count() })
       .from(communityMessages)
@@ -203,44 +222,181 @@ async function readMetrics(workspaceId: string) {
       .where(eq(communityPlaybooks.workspaceId, workspaceId)),
     db
       .select({
+        id: communityEvents.id,
+        kind: communityEvents.kind,
+        detail: communityEvents.detail,
+        createdAt: communityEvents.createdAt,
+      })
+      .from(communityEvents)
+      .where(eq(communityEvents.workspaceId, workspaceId))
+      .orderBy(desc(communityEvents.createdAt))
+      .limit(20),
+    db
+      .select({
+        id: communityAutomationRules.id,
+        name: communityAutomationRules.name,
+        mode: communityAutomationRules.mode,
+        status: communityAutomationRules.status,
+      })
+      .from(communityAutomationRules)
+      .where(eq(communityAutomationRules.workspaceId, workspaceId))
+      .orderBy(desc(communityAutomationRules.updatedAt))
+      .limit(25),
+    db
+      .select({
+        id: communityPlaybooks.id,
+        name: communityPlaybooks.name,
+        status: communityPlaybooks.status,
+        revision: communityPlaybooks.revision,
+        expiresAt: communityPlaybooks.expiresAt,
+      })
+      .from(communityPlaybooks)
+      .where(eq(communityPlaybooks.workspaceId, workspaceId))
+      .orderBy(desc(communityPlaybooks.updatedAt))
+      .limit(25),
+    db
+      .select({
         id: communityConversations.id,
         channelType: communityConversations.channelType,
         lastMessageAt: communityConversations.lastMessageAt,
         state: communityConversations.state,
-        body: communityMessages.body,
-        authorName: communityMessages.authorName,
-        direction: communityMessages.direction,
-        visibility: communityMessages.visibility,
-        postedAt: communityMessages.postedAt,
+        assignedTo: communityConversations.assignedTo,
+        priority: communityConversations.priority,
+        externalPostId: communityConversations.externalPostId,
       })
       .from(communityConversations)
-      .leftJoin(
-        communityMessages,
-        and(
-          eq(communityMessages.conversationId, communityConversations.id),
-          eq(communityMessages.workspaceId, workspaceId),
-        ),
-      )
       .where(eq(communityConversations.workspaceId, workspaceId))
-      .orderBy(desc(communityConversations.lastMessageAt), desc(communityMessages.postedAt))
+      .orderBy(desc(communityConversations.lastMessageAt))
       .limit(100),
   ]);
 
   const mergedCapabilityRows = mergeCapabilityRows(capabilityRows);
 
-  const inboxItems = latestInboxConversations(inboxRows).map((row) => ({
-    id: row.id,
-    channelType: row.channelType,
-    lastMessageAt: row.lastMessageAt,
-    state: row.state,
-    body: row.body ?? "",
-    authorName: row.authorName,
-    direction: row.direction,
-    visibility: row.visibility,
-  }));
+  const boundedConversations = conversationRows.slice(0, 100);
+  const conversationIds = boundedConversations.map((row) => row.id);
+  const messageRows = conversationIds.length
+    ? await db
+        .select({
+          id: communityMessages.id,
+          conversationId: communityMessages.conversationId,
+          body: communityMessages.body,
+          authorName: communityMessages.authorName,
+          direction: communityMessages.direction,
+          visibility: communityMessages.visibility,
+          postedAt: communityMessages.postedAt,
+          deliveryState: communityMessages.deliveryState,
+        })
+        .from(communityMessages)
+        .where(
+          and(
+            eq(communityMessages.workspaceId, workspaceId),
+            inArray(communityMessages.conversationId, conversationIds),
+          ),
+        )
+        .orderBy(desc(communityMessages.postedAt))
+        .limit(1000)
+    : [];
+  const latestByConversation = new Map<string, (typeof messageRows)[number]>();
+  for (const message of messageRows) {
+    if (!latestByConversation.has(message.conversationId)) {
+      latestByConversation.set(message.conversationId, message);
+    }
+  }
+  const conversationItems = boundedConversations.flatMap((conversation) => {
+    const latestMessage = latestByConversation.get(conversation.id);
+    if (!latestMessage) return [];
+    return [
+      {
+        ...conversation,
+        body: latestMessage.body,
+        authorName: latestMessage.authorName,
+        direction: latestMessage.direction,
+        visibility: latestMessage.visibility,
+        lastMessageId: latestMessage.id,
+        lastMessageAt: latestMessage.postedAt,
+        deliveryState: latestMessage.deliveryState,
+      },
+    ];
+  });
+  let inboxItems = conversationItems;
+  if (view.kind === "dms") inboxItems = inboxItems.filter((item) => item.visibility === "private");
+  if (view.kind === "comments")
+    inboxItems = inboxItems.filter((item) => item.visibility !== "private");
+  const query = view.query?.trim().toLocaleLowerCase();
+  if (query) {
+    inboxItems = inboxItems.filter((item) =>
+      `${item.body} ${item.authorName ?? ""} ${item.channelType}`
+        .toLocaleLowerCase()
+        .includes(query),
+    );
+  }
+  inboxItems = inboxItems.slice(0, 25);
+  const selectedConversation =
+    inboxItems.find((item) => item.id === view.selectedConversationId) ?? inboxItems[0] ?? null;
+  const selectedThread = selectedConversation
+    ? await db
+        .select({
+          id: communityMessages.id,
+          body: communityMessages.body,
+          authorName: communityMessages.authorName,
+          direction: communityMessages.direction,
+          visibility: communityMessages.visibility,
+          postedAt: communityMessages.postedAt,
+          deliveryState: communityMessages.deliveryState,
+        })
+        .from(communityMessages)
+        .where(
+          and(
+            eq(communityMessages.workspaceId, workspaceId),
+            eq(communityMessages.conversationId, selectedConversation.id),
+          ),
+        )
+        .orderBy(desc(communityMessages.postedAt))
+        .limit(100)
+    : [];
+  const memberRows = await db
+    .select({
+      id: users.id,
+      name: users.displayName,
+      status: workspaceMemberships.status,
+      role: workspaceMembershipRoles.role,
+    })
+    .from(workspaceMemberships)
+    .innerJoin(users, eq(users.id, workspaceMemberships.userId))
+    .leftJoin(
+      workspaceMembershipRoles,
+      eq(workspaceMembershipRoles.workspaceMembershipId, workspaceMemberships.id),
+    )
+    .where(
+      and(
+        eq(workspaceMemberships.workspaceId, workspaceId),
+        eq(workspaceMemberships.status, "active"),
+      ),
+    );
+  const assigneeMap = new Map<
+    string,
+    { id: string; name: string; roles: Set<string>; openCount: number }
+  >();
+  for (const row of memberRows) {
+    const member = assigneeMap.get(row.id) ?? {
+      id: row.id,
+      name: row.name,
+      roles: new Set<string>(),
+      openCount: 0,
+    };
+    if (row.role) member.roles.add(row.role);
+    assigneeMap.set(row.id, member);
+  }
+  for (const conversation of conversationItems) {
+    if (conversation.assignedTo) {
+      const member = assigneeMap.get(conversation.assignedTo);
+      if (member && !["resolved", "spam"].includes(conversation.state)) member.openCount += 1;
+    }
+  }
 
   return {
     conversations: conversations[0]?.value ?? 0,
+    priorityCounts: Object.fromEntries(priorities.map((row) => [row.priority, row.value])),
     messages: messages[0]?.value ?? 0,
     reviews: reviews[0]?.value ?? 0,
     channels: channels[0]?.value ?? 0,
@@ -251,7 +407,20 @@ async function readMetrics(workspaceId: string) {
     events,
     rules: rules[0]?.value ?? 0,
     playbooks: playbooks[0]?.value ?? 0,
+    recentEvents,
+    automationRows,
+    playbookRows,
     inboxItems,
+    selectedConversation,
+    selectedThread: selectedThread.reverse(),
+    kind: view.kind === "dms" || view.kind === "comments" ? view.kind : "all",
+    query: view.query ?? "",
+    assignees: Array.from(assigneeMap.values()).map(({ id, name, openCount }) => ({
+      id,
+      name,
+      openCount,
+    })),
+    teamConversations: conversationItems,
   };
 }
 
@@ -368,13 +537,13 @@ function Overview({
         data-testid="community-overview-banner"
       >
         <div className="relative z-10 max-w-2xl">
-          <p className="text-label font-semibold tracking-[0.16em] text-white/70 uppercase">
+          <p className="text-label font-semibold tracking-[0.16em] text-white uppercase">
             {communityText(t, "module")}
           </p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
             {communityText(t, "overviewBanner", { count: metrics.conversations })}
           </h2>
-          <p className="mt-2 max-w-xl text-sm text-white/80">
+          <p className="mt-2 max-w-xl text-sm text-white">
             {communityText(t, "overviewDescription")}
           </p>
         </div>
@@ -400,7 +569,7 @@ function Overview({
           <div className="p-5">
             {metrics.conversations > 0 ? (
               <div className="divide-border divide-y">
-                {["urgent", "high", "normal"].map((priority) => (
+                {["urgent", "high", "normal", "low"].map((priority) => (
                   <div
                     key={priority}
                     className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
@@ -411,7 +580,9 @@ function Overview({
                         {communityText(t, priority)}
                       </span>
                     </div>
-                    <span className="text-label text-fg-muted">{metrics.conversations}</span>
+                    <span className="text-label text-fg-muted">
+                      {metrics.priorityCounts[priority] ?? 0}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -469,6 +640,7 @@ function InboxScreen({
   agencySlug,
   workspaceSlug,
   canManage,
+  canAssign,
   canReply,
   emergencyStop,
   locale,
@@ -483,6 +655,7 @@ function InboxScreen({
   agencySlug: string;
   workspaceSlug: string;
   canManage: boolean;
+  canAssign: boolean;
   canReply: boolean;
 }) {
   const { items, selected: selectedConversation } = communityInboxView(metrics.inboxItems, query);
@@ -564,7 +737,7 @@ function InboxScreen({
                   {item.body}
                 </p>
                 <p className="text-label text-fg-muted mt-2">
-                  {item.authorName ?? communityText(t, "unknownAuthor")}
+                  {item.authorName ?? communityText(t, "authorUnavailable")}
                 </p>
               </Link>
             ))
@@ -628,12 +801,44 @@ function InboxScreen({
                   )}
                 </Badge>
               </div>
-              <p dir="auto" className="text-body text-fg-primary mt-4 whitespace-pre-wrap">
-                {selectedConversation.body}
-              </p>
-              <p className="text-label text-fg-muted mt-3">
-                {selectedConversation.authorName ?? communityText(t, "unknownAuthor")}
-              </p>
+              <div className="mt-4 space-y-3">
+                {metrics.selectedThread.map((message) => (
+                  <div
+                    key={message.id}
+                    className="border-border bg-surface rounded-[var(--radius-control)] border p-3"
+                  >
+                    <div className="text-label text-fg-muted flex items-center justify-between gap-3">
+                      <span>{message.authorName ?? communityText(t, "authorUnavailable")}</span>
+                      <span>
+                        {message.direction === "outgoing"
+                          ? communityText(t, "teamReply")
+                          : communityText(t, "customerMessage")}
+                      </span>
+                    </div>
+                    <p className="text-body text-fg-primary mt-2 whitespace-pre-wrap" dir="auto">
+                      {message.body}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              {canManage ? (
+                <div className="border-border mt-4 border-t pt-4">
+                  <CommunityAssignmentForm
+                    agencySlug={agencySlug}
+                    workspaceSlug={workspaceSlug}
+                    conversationId={selectedConversation.id}
+                    assignedTo={selectedConversation.assignedTo}
+                    assignees={metrics.assignees}
+                    canAssign={canAssign}
+                    label={communityText(t, "assign")}
+                    unassignedLabel={communityText(t, "ownerUnassigned")}
+                    saveLabel={communityText(t, "saveAssignment")}
+                    savingLabel={communityText(t, "savingAssignment")}
+                    savedLabel={communityText(t, "assignmentSaved")}
+                    failedLabel={communityText(t, "assignmentFailed")}
+                  />
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="flex flex-1 items-center justify-center">
@@ -695,13 +900,93 @@ function InboxScreen({
   );
 }
 
-function ReviewsScreen({
+function CommentsScreen({
   t,
+  basePath,
   metrics,
 }: {
   t: Translator;
+  basePath: string;
   metrics: Awaited<ReturnType<typeof readMetrics>>;
 }) {
+  const comments = metrics.inboxItems.filter((item) => item.visibility !== "private");
+  return (
+    <div className="grid gap-4 xl:grid-cols-[minmax(260px,0.42fr)_minmax(0,1fr)]">
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle>{communityText(t, "source")}</CardTitle>
+            <CardDescription>{communityText(t, "commentsTitle")}</CardDescription>
+          </div>
+          <Badge variant="outline">{metrics.messages}</Badge>
+        </CardHeader>
+        <div className="bg-surface-subtle flex aspect-[4/3] items-center justify-center rounded-[var(--radius-control)]">
+          <MessageCircle className="text-fg-muted h-10 w-10" aria-hidden="true" />
+        </div>
+        <div className="mt-4 space-y-2">
+          <div className="text-body text-fg-primary font-medium">
+            {communityText(t, "commentsContext")}
+          </div>
+          <p className="text-label text-fg-muted">{communityText(t, "commentsDescription")}</p>
+        </div>
+      </Card>
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle>{communityText(t, "commentsTitle")}</CardTitle>
+            <CardDescription>{communityText(t, "commentsDescription")}</CardDescription>
+          </div>
+          <Button asChild variant="secondary">
+            <Link href={`${basePath}/inbox?kind=comments`}>
+              <Filter className="h-4 w-4" aria-hidden="true" />
+              {communityText(t, "openInbox")}
+            </Link>
+          </Button>
+        </CardHeader>
+        {comments.length === 0 ? (
+          <EmptyCommunity t={t} icon={<MessageCircle className="h-6 w-6" />} />
+        ) : (
+          <ul className="divide-border divide-y">
+            {comments.map((item) => (
+              <li key={item.id}>
+                <Link
+                  href={`${basePath}/inbox?conversation=${item.id}&kind=comments`}
+                  className="hover:bg-surface-subtle focus-visible:ring-focus-ring block rounded-[var(--radius-control)] px-3 py-4 focus:outline-none focus-visible:ring-2"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-label text-fg-muted uppercase">{item.channelType}</span>
+                    <Badge variant={item.state === "open" ? "info" : "outline"}>
+                      {communityText(t, item.state)}
+                    </Badge>
+                  </div>
+                  <p className="text-body text-fg-primary mt-2 line-clamp-3" dir="auto">
+                    {item.body}
+                  </p>
+                  <p className="text-label text-fg-muted mt-2">
+                    {item.authorName ?? communityText(t, "authorUnavailable")}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function ReviewsScreen({
+  t,
+  basePath,
+  metrics,
+}: {
+  t: Translator;
+  basePath: string;
+  metrics: Awaited<ReturnType<typeof readMetrics>>;
+}) {
+  const queued = metrics.teamConversations.filter(
+    (conversation) => conversation.state === "waiting_approval",
+  );
   return (
     <>
       <SectionKpis t={t} metrics={metrics} />
@@ -711,7 +996,27 @@ function ReviewsScreen({
             <CardTitle>{communityText(t, "reviewsTitle")}</CardTitle>
             <CardDescription>{communityText(t, "pendingReviews")}</CardDescription>
           </CardHeader>
-          <EmptyCommunity t={t} icon={<FileCheck2 className="h-6 w-6" />} />
+          {queued.length === 0 ? (
+            <EmptyCommunity t={t} icon={<FileCheck2 className="h-6 w-6" />} />
+          ) : (
+            <ul className="divide-border divide-y">
+              {queued.map((conversation) => (
+                <li key={conversation.id} className="py-3 first:pt-0">
+                  <Link
+                    href={`${basePath}/inbox?conversation=${conversation.id}`}
+                    className="text-body text-primary font-semibold hover:underline"
+                    dir="auto"
+                  >
+                    {conversation.body}
+                  </Link>
+                  <p className="text-label text-fg-muted mt-1">
+                    {conversation.authorName ?? communityText(t, "authorUnavailable")} ·{" "}
+                    {conversation.channelType}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
         <Card>
           <CardHeader>
@@ -728,11 +1033,11 @@ function ReviewsScreen({
             <p className="text-label text-fg-muted mt-2">{communityText(t, "noDataDescription")}</p>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button variant="secondary" disabled>
+            <Button variant="secondary" disabled data-testid="community-review-reject-disabled">
               <XCircle className="h-4 w-4" aria-hidden="true" />
               {communityText(t, "disabled")}
             </Button>
-            <Button disabled>
+            <Button disabled data-testid="community-review-approve-disabled">
               <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
               {communityText(t, "review")}
             </Button>
@@ -746,9 +1051,17 @@ function ReviewsScreen({
 function AutomationsScreen({
   t,
   metrics,
+  access,
+  agencySlug,
+  workspaceSlug,
+  canManage,
 }: {
   t: Translator;
   metrics: Awaited<ReturnType<typeof readMetrics>>;
+  access: Awaited<ReturnType<typeof getCommunityWorkspaceAccess>>;
+  agencySlug: string;
+  workspaceSlug: string;
+  canManage: boolean;
 }) {
   return (
     <>
@@ -764,10 +1077,25 @@ function AutomationsScreen({
             </p>
           </div>
         </div>
-        <Button variant="destructive" disabled>
-          <PauseCircle className="h-4 w-4" aria-hidden="true" />
-          {communityText(t, "disabled")}
-        </Button>
+        <CommunityEmergencyStopControl
+          agencySlug={agencySlug}
+          workspaceSlug={workspaceSlug}
+          emergencyStop={access.emergencyStop}
+          canManage={canManage}
+          stopLabel={communityText(t, "stopCommunityActions")}
+          resumeLabel={communityText(t, "resumeCommunityActions")}
+          stoppedLabel={communityText(t, "communityActionsStopped")}
+          runningLabel={communityText(t, "communityActionsRunning")}
+          stopTitle={communityText(t, "stopCommunityActionsTitle")}
+          stopDescription={communityText(t, "stopCommunityActionsDescription")}
+          resumeTitle={communityText(t, "resumeCommunityActionsTitle")}
+          resumeDescription={communityText(t, "resumeCommunityActionsDescription")}
+          confirmLabel={communityText(t, "confirmSafetyChange")}
+          cancelLabel={communityText(t, "cancel")}
+          closeLabel={communityText(t, "close")}
+          successLabel={communityText(t, "safetyChangeSaved")}
+          failureLabel={communityText(t, "safetyChangeFailed")}
+        />
       </div>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
         <Card>
@@ -778,26 +1106,42 @@ function AutomationsScreen({
             </div>
             <Badge variant="outline">{metrics.rules}</Badge>
           </CardHeader>
-          <EmptyCommunity t={t} icon={<Bot className="h-6 w-6" />} />
+          {metrics.automationRows.length === 0 ? (
+            <EmptyCommunity t={t} icon={<Bot className="h-6 w-6" />} />
+          ) : (
+            <ul className="divide-border divide-y">
+              {metrics.automationRows.map((rule) => (
+                <li
+                  key={rule.id}
+                  className="flex flex-wrap items-center justify-between gap-2 py-3"
+                >
+                  <span className="text-body text-fg-primary font-medium">{rule.name}</span>
+                  <span className="flex gap-2">
+                    <Badge variant="outline">{communityText(t, rule.mode)}</Badge>
+                    <Badge variant={rule.status === "published" ? "success" : "outline"}>
+                      {communityText(t, rule.status)}
+                    </Badge>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
         <Card>
           <CardHeader>
             <CardTitle>{communityText(t, "noRules")}</CardTitle>
-            <Button variant="secondary" disabled>
+            <Button
+              variant="secondary"
+              disabled
+              data-testid="community-automation-configure-disabled"
+            >
               <Plus className="h-4 w-4" aria-hidden="true" />
               {communityText(t, "configureAgency")}
             </Button>
           </CardHeader>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="bg-surface-subtle rounded-[var(--radius-control)] p-4">
-              <p className="text-label text-fg-muted">{communityText(t, "ifLabel")}</p>
-              <p className="text-body text-fg-primary mt-1">{communityText(t, "comments")}</p>
-            </div>
-            <div className="bg-surface-subtle rounded-[var(--radius-control)] p-4">
-              <p className="text-label text-fg-muted">{communityText(t, "thenLabel")}</p>
-              <p className="text-body text-fg-primary mt-1">{communityText(t, "review")}</p>
-            </div>
-          </div>
+          <p className="text-label text-fg-secondary mt-3">
+            {communityText(t, "automationSetupUnavailable")}
+          </p>
         </Card>
       </div>
     </>
@@ -818,15 +1162,9 @@ function PlaybooksScreen({
           {communityText(t, "module")}
         </div>
         <div className="space-y-1">
-          <Button className="w-full justify-start" variant="secondary">
-            {communityText(t, "playbooksTitle")}
-          </Button>
-          <Button className="w-full justify-start" variant="ghost">
-            {communityText(t, "source")}
-          </Button>
-          <Button className="w-full justify-start" variant="ghost">
-            {communityText(t, "status")}
-          </Button>
+          <p className="text-label text-fg-secondary px-3 py-2">
+            {communityText(t, "playbooksReadOnly")}
+          </p>
         </div>
       </Card>
       <Card>
@@ -837,7 +1175,28 @@ function PlaybooksScreen({
           </div>
           <Badge variant="outline">{metrics.playbooks}</Badge>
         </CardHeader>
-        <EmptyCommunity t={t} icon={<Database className="h-6 w-6" />} />
+        {metrics.playbookRows.length === 0 ? (
+          <EmptyCommunity t={t} icon={<Database className="h-6 w-6" />} />
+        ) : (
+          <ul className="divide-border divide-y">
+            {metrics.playbookRows.map((playbook) => (
+              <li
+                key={playbook.id}
+                className="flex flex-wrap items-center justify-between gap-3 py-3"
+              >
+                <div>
+                  <p className="text-body text-fg-primary font-medium">{playbook.name}</p>
+                  <p className="text-label text-fg-muted">
+                    {communityText(t, "revisionLabel", { count: playbook.revision })}
+                  </p>
+                </div>
+                <Badge variant={playbook.status === "published" ? "success" : "outline"}>
+                  {communityText(t, playbook.status)}
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
     </div>
   );
@@ -909,40 +1268,35 @@ function AnalyticsScreen({
 }) {
   return (
     <>
-      <div className="border-info/20 bg-info-subtle text-info flex items-start gap-3 rounded-[var(--radius-card)] border p-4">
-        <BarChart3 className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-        <p className="text-label">{communityText(t, "illustrative")}</p>
-      </div>
       <SectionKpis t={t} metrics={metrics} />
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.6fr)]">
         <Card>
           <CardHeader>
             <CardTitle>{communityText(t, "volume")}</CardTitle>
-            <Button variant="secondary" disabled>
-              {communityText(t, "export")}
-            </Button>
           </CardHeader>
-          <div
-            className="border-border flex h-56 items-end gap-3 border-s-0 border-b px-3 pb-3"
-            role="img"
-            aria-label={communityText(t, "volume")}
-          >
-            <div className="bg-primary/20 h-1/4 flex-1 rounded-t" />
-            <div className="bg-primary/35 h-2/5 flex-1 rounded-t" />
-            <div className="bg-primary/50 h-1/3 flex-1 rounded-t" />
-            <div className="bg-primary/70 h-3/5 flex-1 rounded-t" />
-            <div className="bg-primary h-1/2 flex-1 rounded-t" />
-          </div>
-          <p className="text-label text-fg-muted mt-3">{communityText(t, "noDataDescription")}</p>
+          <EmptyState
+            icon={<BarChart3 className="h-6 w-6" />}
+            title={communityText(t, "analyticsUnavailableTitle")}
+            description={communityText(t, "analyticsUnavailableDescription")}
+          />
         </Card>
         <Card>
           <CardHeader>
             <CardTitle>{communityText(t, "channelHealth")}</CardTitle>
           </CardHeader>
           <div className="space-y-4">
-            <MetricLine label={communityText(t, "responseSla")} value="—" />
-            <MetricLine label={communityText(t, "aiQuality")} value="—" />
-            <MetricLine label={communityText(t, "reliability")} value="—" />
+            <MetricLine
+              label={communityText(t, "responseSla")}
+              value={communityText(t, "notMeasured")}
+            />
+            <MetricLine
+              label={communityText(t, "aiQuality")}
+              value={communityText(t, "notMeasured")}
+            />
+            <MetricLine
+              label={communityText(t, "reliability")}
+              value={communityText(t, "notMeasured")}
+            />
           </div>
         </Card>
       </div>
@@ -961,11 +1315,11 @@ function MetricLine({ label, value }: { label: string; value: string }) {
 
 function ConnectionsScreen({
   t,
+  locale,
   metrics,
   agencySlug,
   workspaceSlug,
   canManage,
-  locale,
   timeZone,
 }: {
   locale: LocaleCode;
@@ -1165,34 +1519,102 @@ function ConnectionsScreen({
 
 function TeamScreen({
   t,
+  agencySlug,
+  workspaceSlug,
+  canAssign,
   metrics,
 }: {
   t: Translator;
+  agencySlug: string;
+  workspaceSlug: string;
+  canAssign: boolean;
   metrics: Awaited<ReturnType<typeof readMetrics>>;
 }) {
+  const unassigned = metrics.teamConversations.filter((conversation) => !conversation.assignedTo);
   return (
     <>
-      <SectionKpis t={t} metrics={metrics} />
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <KpiTile
+          icon={<Users className="h-4 w-4" />}
+          label={communityText(t, "teamMembers")}
+          value={metrics.assignees.length}
+        />
+        <KpiTile
+          icon={<Inbox className="h-4 w-4" />}
+          label={communityText(t, "unassignedConversations")}
+          value={unassigned.length}
+          tone={unassigned.length ? "warning" : "default"}
+        />
+        <KpiTile
+          icon={<CheckCircle2 className="h-4 w-4" />}
+          label={communityText(t, "assignedConversations")}
+          value={metrics.teamConversations.length - unassigned.length}
+        />
+      </div>
+      <div className="grid gap-4 xl:grid-cols-[minmax(260px,0.7fr)_minmax(0,1.3fr)]">
         <Card>
           <CardHeader>
             <CardTitle>{communityText(t, "teamTitle")}</CardTitle>
-            <CardDescription>{communityText(t, "assign")}</CardDescription>
+            <CardDescription>{communityText(t, "teamRoutingDescription")}</CardDescription>
           </CardHeader>
-          <EmptyCommunity t={t} icon={<Users className="h-6 w-6" />} />
+          {metrics.assignees.length ? (
+            <ul className="space-y-2">
+              {metrics.assignees.map((member) => (
+                <li
+                  key={member.id}
+                  className="border-border flex items-center justify-between gap-3 rounded-[var(--radius-control)] border p-3"
+                >
+                  <span className="text-body text-fg-primary font-medium">{member.name}</span>
+                  <Badge variant="outline">
+                    {member.openCount} {communityText(t, "assignedConversations")}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyCommunity t={t} icon={<Users className="h-6 w-6" />} />
+          )}
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>{communityText(t, "workload")}</CardTitle>
-            <CardDescription>{communityText(t, "responseSla")}</CardDescription>
+            <CardTitle>{communityText(t, "assignmentQueue")}</CardTitle>
+            <CardDescription>{communityText(t, "assignUnassignedHelp")}</CardDescription>
           </CardHeader>
-          <div className="space-y-3">
-            <MetricLine label={communityText(t, "responseSla")} value="—" />
-            <MetricLine
-              label={communityText(t, "assign")}
-              value={communityText(t, "ownerUnassigned")}
-            />
-          </div>
+          {metrics.teamConversations.length === 0 ? (
+            <EmptyCommunity t={t} icon={<Inbox className="h-6 w-6" />} />
+          ) : (
+            <ul className="divide-border divide-y">
+              {metrics.teamConversations.slice(0, 25).map((conversation) => (
+                <li key={conversation.id} className="space-y-3 py-4 first:pt-0">
+                  <Link
+                    href={`${workspaceBasePath(agencySlug, workspaceSlug)}/engagement/inbox?conversation=${conversation.id}`}
+                    className="text-body text-primary block font-semibold hover:underline"
+                    dir="auto"
+                  >
+                    {conversation.body}
+                  </Link>
+                  <p className="text-label text-fg-muted">
+                    {conversation.authorName ?? communityText(t, "authorUnavailable")} ·{" "}
+                    {conversation.channelType} · {communityText(t, conversation.state)}
+                  </p>
+                  <CommunityAssignmentForm
+                    agencySlug={agencySlug}
+                    workspaceSlug={workspaceSlug}
+                    conversationId={conversation.id}
+                    assignedTo={conversation.assignedTo}
+                    assignees={metrics.assignees}
+                    canAssign={canAssign}
+                    label={communityText(t, "assign")}
+                    unassignedLabel={communityText(t, "ownerUnassigned")}
+                    saveLabel={communityText(t, "saveAssignment")}
+                    savingLabel={communityText(t, "savingAssignment")}
+                    savedLabel={communityText(t, "assignmentSaved")}
+                    failedLabel={communityText(t, "assignmentFailed")}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
       </div>
     </>
@@ -1202,9 +1624,15 @@ function TeamScreen({
 function SettingsScreen({
   t,
   access,
+  agencySlug,
+  workspaceSlug,
+  canManage,
 }: {
   t: Translator;
   access: Awaited<ReturnType<typeof getCommunityWorkspaceAccess>>;
+  agencySlug: string;
+  workspaceSlug: string;
+  canManage: boolean;
 }) {
   const modeLabel =
     access.mode === "controlled_auto"
@@ -1254,20 +1682,25 @@ function SettingsScreen({
           <CardHeader>
             <CardTitle>{communityText(t, "emergencyStop")}</CardTitle>
           </CardHeader>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-body text-fg-primary font-medium">
-                {communityText(t, access.emergencyStop ? "replyPaused" : "replySafetyReady")}
-              </p>
-              <p className="text-label text-fg-muted mt-1">
-                {communityText(t, "noProviderActions")}
-              </p>
-            </div>
-            <Button variant="destructive" disabled>
-              <PauseCircle className="h-4 w-4" aria-hidden="true" />
-              {communityText(t, "disabled")}
-            </Button>
-          </div>
+          <CommunityEmergencyStopControl
+            agencySlug={agencySlug}
+            workspaceSlug={workspaceSlug}
+            emergencyStop={access.emergencyStop}
+            canManage={canManage}
+            stopLabel={communityText(t, "stopCommunityActions")}
+            resumeLabel={communityText(t, "resumeCommunityActions")}
+            stoppedLabel={communityText(t, "communityActionsStopped")}
+            runningLabel={communityText(t, "communityActionsRunning")}
+            stopTitle={communityText(t, "stopCommunityActionsTitle")}
+            stopDescription={communityText(t, "stopCommunityActionsDescription")}
+            resumeTitle={communityText(t, "resumeCommunityActionsTitle")}
+            resumeDescription={communityText(t, "resumeCommunityActionsDescription")}
+            confirmLabel={communityText(t, "confirmSafetyChange")}
+            cancelLabel={communityText(t, "cancel")}
+            closeLabel={communityText(t, "close")}
+            successLabel={communityText(t, "safetyChangeSaved")}
+            failureLabel={communityText(t, "safetyChangeFailed")}
+          />
         </Card>
         <Card>
           <CardHeader>
@@ -1288,8 +1721,8 @@ function SettingsScreen({
 
 function ActivityScreen({
   t,
-  metrics,
   locale,
+  metrics,
   timeZone,
 }: {
   locale: LocaleCode;
@@ -1306,7 +1739,7 @@ function ActivityScreen({
             <CardTitle>{communityText(t, "activityTitle")}</CardTitle>
             <CardDescription>{communityText(t, "activityDescription")}</CardDescription>
           </div>
-          <Button variant="secondary" disabled>
+          <Button variant="secondary" disabled data-testid="community-activity-export-disabled">
             <Activity className="h-4 w-4" aria-hidden="true" />
             {communityText(t, "export")}
           </Button>
@@ -1357,14 +1790,22 @@ function SetupScreen({
     communityText(t, "settingsTitle"),
     communityText(t, "enableWorkspace"),
   ];
+  const stepHrefs = [
+    `${basePath}/connections`,
+    `${basePath}/connections`,
+    `${basePath}/playbooks`,
+    `${basePath}/settings`,
+    `${basePath}/setup`,
+  ];
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(220px,0.55fr)_minmax(0,1.45fr)]">
       <Card padding="sm">
         <div className="space-y-1">
           {steps.map((step, index) => (
-            <div
+            <Link
               key={step}
-              className="flex items-center gap-3 rounded-[var(--radius-control)] px-3 py-3"
+              href={stepHrefs[index] ?? basePath}
+              className="hover:bg-surface-subtle focus-visible:ring-focus-ring flex items-center gap-3 rounded-[var(--radius-control)] px-3 py-3 focus:outline-none focus-visible:ring-2"
             >
               <span
                 className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${index === 0 ? "bg-primary text-white" : "bg-surface-subtle text-fg-muted"}`}
@@ -1372,7 +1813,7 @@ function SetupScreen({
                 {index + 1}
               </span>
               <span className="text-label text-fg-primary font-medium">{step}</span>
-            </div>
+            </Link>
           ))}
         </div>
       </Card>
@@ -1455,19 +1896,28 @@ export default async function CommunityEngagementPage({
   params,
   searchParams,
 }: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
   params: Promise<{ agencySlug: string; slug: string; section?: string[] }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { agencySlug, slug, section } = await params;
   const search = (await searchParams) ?? {};
-  const query = Object.fromEntries(
-    ["conversation", "filter", "q"].map((key) => [
-      key,
-      typeof search[key] === "string" ? search[key] : undefined,
-    ]),
-  ) as CommunityInboxQuery;
+  const selectedConversationId =
+    typeof search.conversation === "string" ? search.conversation : undefined;
+  const requestedFilter = typeof search.filter === "string" ? search.filter : undefined;
+  const queryKind = typeof search.kind === "string" ? search.kind : undefined;
+  const requestedKind =
+    requestedFilter === "private" ? "dms" : requestedFilter === "public" ? "comments" : queryKind;
+  const inboxFilter =
+    requestedFilter ??
+    (queryKind === "dms" ? "private" : queryKind === "comments" ? "public" : undefined);
+  const conversationQuery = typeof search.q === "string" ? search.q : undefined;
+  const query: CommunityInboxQuery = {
+    ...(selectedConversationId ? { conversation: selectedConversationId } : {}),
+    ...(inboxFilter ? { filter: inboxFilter } : {}),
+    ...(conversationQuery ? { q: conversationQuery } : {}),
+  };
   const workspace = await getAccessibleWorkspaceAtPath({ id: session.user.id }, agencySlug, slug);
   if (!workspace) notFound();
   const { t, code } = await tForActive();
@@ -1481,11 +1931,19 @@ export default async function CommunityEngagementPage({
     redirect(basePath);
   }
   const canManage = await canManageCommunityInbox({ id: session.user.id }, workspace);
+  const canAssign =
+    canManage ||
+    (await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["content_planner"]));
   const canReply = await canReplyInCommunityInbox({ id: session.user.id }, workspace);
   const metrics = access.planIncluded
-    ? await readMetrics(workspace.id)
+    ? await readMetrics(workspace.id, {
+        ...(selectedConversationId ? { selectedConversationId } : {}),
+        ...(requestedKind ? { kind: requestedKind } : {}),
+        ...(conversationQuery ? { query: conversationQuery } : {}),
+      })
     : {
         conversations: 0,
+        priorityCounts: {},
         messages: 0,
         reviews: 0,
         channels: 0,
@@ -1496,7 +1954,16 @@ export default async function CommunityEngagementPage({
         events: [],
         rules: 0,
         playbooks: 0,
+        recentEvents: [],
+        automationRows: [],
+        playbookRows: [],
         inboxItems: [],
+        selectedConversation: null,
+        selectedThread: [],
+        kind: "all",
+        query: "",
+        assignees: [],
+        teamConversations: [],
       };
   const spec = SECTION_KEYS[currentSection];
   const title = communityText(t, spec.title);
@@ -1530,7 +1997,9 @@ export default async function CommunityEngagementPage({
       (access.workspaceEnabled || currentSection === "setup") ? (
         currentSection === "overview" ? (
           <Overview t={t} basePath={basePath} metrics={metrics} />
-        ) : currentSection === "inbox" || currentSection === "comments" ? (
+        ) : currentSection === "comments" ? (
+          <CommentsScreen t={t} basePath={basePath} metrics={metrics} />
+        ) : currentSection === "inbox" ? (
           <InboxScreen
             t={t}
             basePath={basePath}
@@ -1538,15 +2007,23 @@ export default async function CommunityEngagementPage({
             agencySlug={agencySlug}
             workspaceSlug={slug}
             canManage={canManage}
+            canAssign={canAssign}
             canReply={canReply}
             emergencyStop={access.emergencyStop}
             locale={code}
-            query={currentSection === "comments" ? { ...query, filter: "public" } : query}
+            query={query}
           />
         ) : currentSection === "reviews" ? (
-          <ReviewsScreen t={t} metrics={metrics} />
+          <ReviewsScreen t={t} basePath={basePath} metrics={metrics} />
         ) : currentSection === "automations" ? (
-          <AutomationsScreen t={t} metrics={metrics} />
+          <AutomationsScreen
+            t={t}
+            metrics={metrics}
+            access={access}
+            agencySlug={agencySlug}
+            workspaceSlug={slug}
+            canManage={canManage}
+          />
         ) : currentSection === "playbooks" ? (
           <PlaybooksScreen t={t} metrics={metrics} />
         ) : currentSection === "test-lab" ? (
@@ -1556,19 +2033,36 @@ export default async function CommunityEngagementPage({
         ) : currentSection === "connections" ? (
           <ConnectionsScreen
             t={t}
+            locale={code as LocaleCode}
             metrics={metrics}
             agencySlug={agencySlug}
             workspaceSlug={slug}
             canManage={canManage}
-            locale={code}
             timeZone={workspace.timezone}
           />
         ) : currentSection === "team" ? (
-          <TeamScreen t={t} metrics={metrics} />
+          <TeamScreen
+            t={t}
+            agencySlug={agencySlug}
+            workspaceSlug={slug}
+            canAssign={canAssign}
+            metrics={metrics}
+          />
         ) : currentSection === "settings" ? (
-          <SettingsScreen t={t} access={access} />
+          <SettingsScreen
+            t={t}
+            access={access}
+            agencySlug={agencySlug}
+            workspaceSlug={slug}
+            canManage={canManage}
+          />
         ) : currentSection === "activity" ? (
-          <ActivityScreen t={t} metrics={metrics} locale={code} timeZone={workspace.timezone} />
+          <ActivityScreen
+            t={t}
+            locale={code as LocaleCode}
+            metrics={metrics}
+            timeZone={workspace.timezone}
+          />
         ) : (
           <SetupScreen
             t={t}

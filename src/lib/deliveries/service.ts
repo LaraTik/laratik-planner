@@ -15,7 +15,13 @@ import {
   workspaces,
   workspaceSettings,
 } from "@/lib/db/schema";
-import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
+import {
+  hasWorkspaceRole,
+  requirePolicy,
+  canDecideClientCreative,
+  PermissionDeniedError,
+  type Actor,
+} from "@/lib/auth/policy";
 import { z } from "zod";
 import {} from "next/cache";
 import { deriveCreativeApprovalOutcome } from "@/lib/deliveries/approval-workflow";
@@ -41,7 +47,7 @@ import {
 
 export const SubmitDeliverySchema = z
   .object({
-    contentItemId: z.string().uuid(),
+    contentItemId: z.string().guid(),
     // The description is optional because the stored files are the
     // deliverable. A designer should not have to duplicate their filenames
     // in a narrative field just to advance the workflow.
@@ -57,7 +63,7 @@ export const SubmitDeliverySchema = z
     // would have to be duplicated in the service guard and the form.
     // `submitDelivery` owns the conditional floor; the `.max(20)` bound
     // stays here because it is unconditional.
-    mediaAssetIds: z.array(z.string().uuid()).max(20),
+    mediaAssetIds: z.array(z.string().guid()).max(20),
   })
   .strict();
 
@@ -72,6 +78,7 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
       status: contentItems.status,
       changeRequestGate: contentItems.changeRequestGate,
       mediaRequired: contentItems.mediaRequired,
+      designerId: contentItems.designerId,
     })
     .from(contentItems)
     .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
@@ -83,6 +90,27 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
     hasWorkspaceRole(actor, item.workspaceId, ["designer", "workspace_manager"]),
     "submit_delivery",
   );
+
+  // A designer may only submit work on items ASSIGNED TO THEM.
+  // Master prompt §9 gives the designer "W" on "Submit delivery" and
+  // "W on assigned item" on "Edit production details" — the role
+  // permits the work, the assignment scopes it. Without this check
+  // any designer in the workspace could submit (and thereby claim)
+  // another designer's delivery, overwriting the work the assigned
+  // designer produced. `updateFormatPayload` already enforces the
+  // same rule for the brief copy, so this closes the second door on
+  // the same class rather than leaving it half-open.
+  if (
+    (await hasWorkspaceRole(actor, item.workspaceId, ["designer"])) &&
+    !(await hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager"]))
+  ) {
+    if (item.designerId !== actor.id) {
+      // A typed, code-bearing error: the action turns it into a stable
+      // code and the client translates it, so an Arabic user never
+      // reads an English sentence. See `SubmitDeliveryErrorCode`.
+      throw new PermissionDeniedError("submit_delivery_not_assigned");
+    }
+  }
 
   // The media floor. Most posts must ship creative; a caption-only
   // announcement or a thread post legitimately has none, and that
@@ -284,16 +312,30 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
 }
 
 export const DecideApprovalSchema = z.object({
-  approvalRequestId: z.string().uuid(),
+  approvalRequestId: z.string().guid(),
   decision: z.enum(["approved", "changes_requested"]),
   feedback: z.string().max(2000).optional(),
 });
 
 export type DecideApprovalInput = z.infer<typeof DecideApprovalSchema>;
 
+export type ApprovalDecisionErrorCode =
+  "validation_failed" | "not_found" | "conflict" | "invalid_transition";
+
+/** Expected approval failures that callers can safely translate for users. */
+export class ApprovalDecisionError extends Error {
+  constructor(
+    public readonly code: ApprovalDecisionErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ApprovalDecisionError";
+  }
+}
+
 export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
   if (input.decision === "changes_requested" && !input.feedback) {
-    throw new Error("changes_requested requires non-empty feedback");
+    throw new ApprovalDecisionError("validation_failed", "Changes require feedback");
   }
 
   const [req] = await db
@@ -301,8 +343,10 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
     .from(approvalRequests)
     .where(eq(approvalRequests.id, input.approvalRequestId))
     .limit(1);
-  if (!req) throw new Error("Approval request not found");
-  if (req.status !== "pending") throw new Error(`Request is ${req.status}`);
+  if (!req) throw new ApprovalDecisionError("not_found", "Approval request not found");
+  if (req.status !== "pending") {
+    throw new ApprovalDecisionError("conflict", "Approval request is no longer pending");
+  }
 
   // Resolve workspace for policy check
   const [item] = await db
@@ -311,7 +355,7 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
     .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
     .where(eq(contentItems.id, req.contentItemId))
     .limit(1);
-  if (!item) throw new Error("Content item not found");
+  if (!item) throw new ApprovalDecisionError("not_found", "Content item not found");
 
   const role =
     req.gate === "content"
@@ -320,7 +364,15 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
         ? ["internal_reviewer"]
         : ["client_reviewer"];
 
-  await requirePolicy(hasWorkspaceRole(actor, item.workspaceId, role), "decide_approval");
+  if (req.gate === "creative_client") {
+    // The agency admin holds full authority on the client creative
+    // gate (master prompt §9 "Client creative review | F") but does
+    // not hold the `client_reviewer` role, so the plain role check
+    // below would refuse them a decision the spec says they own.
+    await requirePolicy(canDecideClientCreative(actor, item.workspaceId), "decide_approval");
+  } else {
+    await requirePolicy(hasWorkspaceRole(actor, item.workspaceId, role), "decide_approval");
+  }
 
   return await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT id FROM approval_request WHERE id = ${req.id} FOR UPDATE`);
@@ -330,7 +382,7 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
       .where(eq(approvalRequests.id, req.id))
       .limit(1);
     if (!lockedRequest || lockedRequest.status !== "pending") {
-      throw new Error("Approval request is no longer pending");
+      throw new ApprovalDecisionError("conflict", "Approval request is no longer pending");
     }
 
     const [settings] = await tx
@@ -357,7 +409,10 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
       .where(eq(approvalRequests.id, req!.id));
 
     if (lockedRequest.gate === "content") {
-      throw new Error("Content approvals must use the content workflow command");
+      throw new ApprovalDecisionError(
+        "invalid_transition",
+        "Content approvals must use the content workflow command",
+      );
     }
 
     const outcome = deriveCreativeApprovalOutcome({
@@ -367,7 +422,9 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
     });
 
     if (outcome.createClientRequest) {
-      if (!lockedRequest.deliveryVersionId) throw new Error("Delivery version is required");
+      if (!lockedRequest.deliveryVersionId) {
+        throw new ApprovalDecisionError("validation_failed", "Delivery version is required");
+      }
       await tx.insert(approvalRequests).values({
         contentItemId: lockedRequest.contentItemId,
         gate: "creative_client",
@@ -901,7 +958,7 @@ export async function listDeliveryVersionsForItem(
  */
 export const SetMediaRequiredSchema = z
   .object({
-    contentItemId: z.string().uuid(),
+    contentItemId: z.string().guid(),
     mediaRequired: z.boolean(),
   })
   .strict();

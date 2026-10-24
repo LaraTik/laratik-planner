@@ -31,11 +31,11 @@ export const PlanningInstructionPackManifestSchema = z.object({
   ),
   requiredInputs: z.array(z.string().min(1).max(120)).max(100),
   blockingQuestions: z.array(z.string().min(1).max(1000)).max(50),
-  decisionRules: z.record(z.unknown()),
-  outputSchema: z.record(z.unknown()),
+  decisionRules: z.record(z.string(), z.unknown()),
+  outputSchema: z.record(z.string(), z.unknown()),
   qualityChecks: z.array(z.string().min(1).max(160)).max(100),
-  riskHandling: z.record(z.unknown()),
-  languageBehavior: z.record(z.unknown()),
+  riskHandling: z.record(z.string(), z.unknown()),
+  languageBehavior: z.record(z.string(), z.unknown()),
 });
 
 export type PlanningInstructionPackManifest = z.infer<typeof PlanningInstructionPackManifestSchema>;

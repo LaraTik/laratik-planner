@@ -1,17 +1,17 @@
 # Production UAT and release verdict
 
-> **Read this first.** This file describes the §23 30-step **UAT** gate, which is independent from the **deploy** gate in `PRODUCTION_READINESS_TRACKER.md`. Both gates must pass for `READY`; either failing blocks release. As of 2026-08-21 the shared release verdict across both this file and `PRODUCTION_READINESS_TRACKER.md` is `READY FOR INDEPENDENT REVIEW`. The independent reviewer (Task 13) flips it to `READY` after the §23 journey and the external owner gates below are signed.
+> **Current status — 2026-10-24: NOT READY TO DEPLOY.** This file describes the §23 30-step **UAT** gate, which is independent from the **deploy** gate in `PRODUCTION_READINESS_TRACKER.md`. Both gates must pass for `READY`; either failing blocks release. Local verification evidence is current through application SHA `68a63d5a43773deb43e4e7773b3f543bd51fc923` and is recorded in `TEST_EVIDENCE.md`. The Workspace AI Assistant's separated-account journey, MiniMax model/tool and privacy UAT, production backup/rollback proof, and recorded independent PR approval are still outstanding. The historical 2026-08-21 readiness note below is superseded by this current status.
 
 ## Two-gate summary
 
-| Gate                                      | Owner                | Status as of 2026-08-21                                                                            | How it flips                                                                                                                                                   |
-| ----------------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Deploy**                                | Implementation       | `READY FOR INDEPENDENT REVIEW` (awaiting independent reviewer sign-off → `READY`)                  | Independent reviewer flips to `READY` after the §23 journey and external owner gates are signed.                                                               |
-| **UAT (§23 journey + external services)** | Independent reviewer | `READY FOR INDEPENDENT REVIEW` (evidence contracts in place; §23 journey and owner checks pending) | Run the 30-step primary journey with separated Maya / Omar / Elena / Jon / Sophie / Daniel accounts; complete the owner checks below; sign the final decision. |
+| Gate                                      | Owner                | Current status (2026-10-24)                                                               | How it flips                                                                                                                                                      |
+| ----------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Deploy**                                | Implementation       | `BLOCKED` — see `PRODUCTION_READINESS_TRACKER.md`                                         | Complete the code review and all local, external-service, browser, backup, and rollback gates; deploy the reviewed main SHA.                                      |
+| **UAT (§23 journey + external services)** | Independent reviewer | `PENDING` — the 30-step journey and external owner checks are not signed for this release | Run the journey with separate Maya / Omar / Elena / Jon / Sophie / Daniel accounts; complete the owner checks below; record evidence and sign the final decision. |
 
 ## UAT verdict
 
-`READY FOR INDEPENDENT REVIEW — 2026-08-21`
+`NOT READY TO DEPLOY — 2026-10-24`
 
 The evidence contracts are in place:
 
@@ -21,7 +21,7 @@ The evidence contracts are in place:
 - The manual accessibility checklist is captured in
   [`ACCESSIBILITY_CHECKLIST.md`](./ACCESSIBILITY_CHECKLIST.md) (27 canonical surfaces, one row each).
 
-The complete 30-step primary acceptance journey must pass with separate Maya, Omar, Elena, Jon, Sophie and Daniel accounts. A failure in any numbered step blocks release. The journey cannot be automated (each step is a real human-in-the-loop action with a different identity), so it stays `Pending` until an operator runs it against the first deployed build. The temporary `READY FOR INDEPENDENT REVIEW` verdict is **not** the final `READY` verdict; the orchestrator flips it back to `READY` only after independent sign-off (Task 13). Until then the UAT gate remains `Partial`: contracts in place, evidence not yet collected.
+The complete 30-step primary acceptance journey must pass with separate Maya, Omar, Elena, Jon, Sophie and Daniel accounts. A failure in any numbered step blocks release. The journey cannot be automated (each step is a real human-in-the-loop action with a different identity), so it stays `Pending` until an operator records the run. The UAT gate remains `Pending` until the journey, external owner checks, accessibility review, and independent sign-off have evidence recorded below.
 
 ## External owner gates (UAT-side)
 

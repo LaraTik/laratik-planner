@@ -136,7 +136,7 @@ export async function deleteWorkspaceTrendDataAction(
   // Permission gate. Same destructive gate as the bulk-reset.
   try {
     await requirePlatformPermission(actor, "platform.destructive.execute");
-  } catch (error) {
+  } catch {
     recordAudit({
       actorId: actor.id,
       workspaceId: "",
@@ -145,7 +145,7 @@ export async function deleteWorkspaceTrendDataAction(
       reason: parsed.data.reason,
       typedPhraseMatch: false,
       counts: {},
-      errorMessage: error instanceof Error ? error.message : "Permission denied",
+      errorMessage: "permission_denied",
     });
     return {
       ok: false,
@@ -291,7 +291,7 @@ export async function deleteWorkspaceTrendDataAction(
       reason: parsed.data.reason,
       typedPhraseMatch: true,
       counts,
-      errorMessage: error instanceof Error ? error.message : "Unknown DB error",
+      errorMessage: "persistence_failure",
     });
     return {
       ok: false,

@@ -1,12 +1,10 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
-
-vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
-  updateAudienceCopyAction: vi.fn(),
-}));
+import { describe, expect, it } from "vitest";
 
 import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { AudienceCopyPanel } from "@/components/planning/messages-panel";
+
+const saveAction = async () => ({});
 
 /**
  * AudienceCopyPanel — Copy-tab header slim (Copy-tab slim PR, 2026-09-18).
@@ -23,6 +21,7 @@ describe("AudienceCopyPanel — Copy tab header", () => {
     render(
       <LocaleProvider locale="en">
         <AudienceCopyPanel
+          saveAction={saveAction}
           agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"
@@ -44,6 +43,7 @@ describe("AudienceCopyPanel — Copy tab header", () => {
     render(
       <LocaleProvider locale="en">
         <AudienceCopyPanel
+          saveAction={saveAction}
           agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"
@@ -62,6 +62,7 @@ describe("AudienceCopyPanel — Copy tab header", () => {
     render(
       <LocaleProvider locale="en">
         <AudienceCopyPanel
+          saveAction={saveAction}
           agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"
@@ -80,6 +81,7 @@ describe("AudienceCopyPanel — Copy tab header", () => {
     render(
       <LocaleProvider locale="ar">
         <AudienceCopyPanel
+          saveAction={saveAction}
           agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"

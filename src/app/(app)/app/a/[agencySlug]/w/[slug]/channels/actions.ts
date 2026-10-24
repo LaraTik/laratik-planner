@@ -10,6 +10,7 @@ import { ChannelCommandSchema } from "@/lib/channels/command";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { LimitExceededError, releaseCapacity, reserveCapacity } from "@/lib/entitlements";
+import { logError } from "@/lib/observability/logger";
 import {
   linkProfile,
   setConnectionStatus,
@@ -155,7 +156,7 @@ const finalizeProfileSchema = z.object({
 });
 
 const finalizeSelectionSchema = z.object({
-  connectionId: z.string().uuid(),
+  connectionId: z.string().guid(),
   profiles: z.array(finalizeProfileSchema).min(1).max(50),
 });
 
@@ -217,9 +218,13 @@ export async function finalizeMetaSelectionAction(
       const linked: string[] = [];
       const linkedByProviderAccount = new Map<string, string>();
       for (const profile of parsed.data.profiles) {
-        const existing = candidates.find((c) => c.externalAccountId === profile.providerAccountId);
+        const existing = candidates.find(
+          (c) =>
+            c.externalAccountId === profile.providerAccountId && c.platform === profile.platform,
+        );
         const result = await linkProfile(tx, {
           connectionId: parsed.data.connectionId,
+          workspaceId: workspace.id,
           agencyId: context.agencyId,
           profile: profile as ConnectedProfile,
           ...(existing?.id ? { existingChannelId: existing.id } : {}),
@@ -249,7 +254,8 @@ export async function finalizeMetaSelectionAction(
     });
   } catch (err) {
     if (err instanceof LimitExceededError) return { error: err.message };
-    return { error: err instanceof Error ? err.message : "Failed to link profiles." };
+    logError("social.channel_profile_link_failed", { err });
+    return { error: "Failed to link profiles." };
   }
   // _previous is the form prevState from useFormState; reserved.
   void _previous;

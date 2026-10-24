@@ -2,9 +2,9 @@ import "server-only";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { activityEvents, contentPillars } from "@/lib/db/schema";
-import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
+import type { Actor } from "@/lib/auth/policy";
+import { requirePlanningLibraryWrite } from "./library-policy";
 import { z } from "zod";
-import {} from "next/cache";
 
 /**
  * Planning library — content pillar service (FEAT-06).
@@ -36,30 +36,29 @@ export async function createPillar(
   if (!parsed.success) {
     throw new Error(parsed.error.issues.map((i) => i.message).join("; "));
   }
-  await requirePolicy(
-    hasWorkspaceRole(actor, workspaceId, ["workspace_manager", "content_planner"]),
-    "create_pillar",
-  );
+  await requirePlanningLibraryWrite(actor, workspaceId, "create_pillar");
   try {
-    const [created] = await db
-      .insert(contentPillars)
-      .values({
+    return await db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(contentPillars)
+        .values({
+          workspaceId,
+          name: parsed.data.name,
+          ...(parsed.data.color ? { color: parsed.data.color } : {}),
+          ...(parsed.data.description ? { description: parsed.data.description } : {}),
+          createdBy: actor.id,
+        })
+        .returning({ id: contentPillars.id });
+      if (!created) throw new Error("Failed to create pillar");
+      await tx.insert(activityEvents).values({
         workspaceId,
-        name: parsed.data.name,
-        ...(parsed.data.color ? { color: parsed.data.color } : {}),
-        ...(parsed.data.description ? { description: parsed.data.description } : {}),
-        createdBy: actor.id,
-      })
-      .returning({ id: contentPillars.id });
-    if (!created) throw new Error("Failed to create pillar");
-    await db.insert(activityEvents).values({
-      workspaceId,
-      actorId: actor.id,
-      kind: "create",
-      summary: `Created pillar "${parsed.data.name}"`,
-      afterData: { pillarId: created.id },
+        actorId: actor.id,
+        kind: "create",
+        summary: `Created pillar "${parsed.data.name}"`,
+        afterData: { pillarId: created.id },
+      });
+      return { id: created.id };
     });
-    return { id: created.id };
   } catch (err) {
     // The partial-unique index on lower(name) WHERE archived_at IS NULL
     // surfaces a 23505 to the caller; translate to a friendlier message.
@@ -75,31 +74,31 @@ export async function archivePillar(
   workspaceId: string,
   pillarId: string,
 ): Promise<void> {
-  await requirePolicy(
-    hasWorkspaceRole(actor, workspaceId, ["workspace_manager", "content_planner"]),
-    "archive_pillar",
-  );
-  const [existing] = await db
-    .select({
-      id: contentPillars.id,
-      name: contentPillars.name,
-      archivedAt: contentPillars.archivedAt,
-    })
-    .from(contentPillars)
-    .where(and(eq(contentPillars.id, pillarId), eq(contentPillars.workspaceId, workspaceId)))
-    .limit(1);
-  if (!existing) throw new Error("Pillar not found");
-  if (existing.archivedAt) return; // idempotent
-  await db
-    .update(contentPillars)
-    .set({ archivedAt: new Date(), updatedAt: new Date() })
-    .where(eq(contentPillars.id, pillarId));
-  await db.insert(activityEvents).values({
-    workspaceId,
-    actorId: actor.id,
-    kind: "update",
-    summary: `Archived pillar "${existing.name}"`,
-    afterData: { pillarId, archived: true },
+  await requirePlanningLibraryWrite(actor, workspaceId, "archive_pillar");
+  await db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({
+        id: contentPillars.id,
+        name: contentPillars.name,
+        archivedAt: contentPillars.archivedAt,
+      })
+      .from(contentPillars)
+      .where(and(eq(contentPillars.id, pillarId), eq(contentPillars.workspaceId, workspaceId)))
+      .for("update")
+      .limit(1);
+    if (!existing) throw new Error("Pillar not found");
+    if (existing.archivedAt) return; // idempotent
+    await tx
+      .update(contentPillars)
+      .set({ archivedAt: new Date(), updatedAt: new Date() })
+      .where(eq(contentPillars.id, pillarId));
+    await tx.insert(activityEvents).values({
+      workspaceId,
+      actorId: actor.id,
+      kind: "update",
+      summary: `Archived pillar "${existing.name}"`,
+      afterData: { pillarId, archived: true },
+    });
   });
 }
 
@@ -114,31 +113,31 @@ export async function restorePillar(
   workspaceId: string,
   pillarId: string,
 ): Promise<void> {
-  await requirePolicy(
-    hasWorkspaceRole(actor, workspaceId, ["workspace_manager", "content_planner"]),
-    "restore_pillar",
-  );
-  const [existing] = await db
-    .select({
-      id: contentPillars.id,
-      name: contentPillars.name,
-      archivedAt: contentPillars.archivedAt,
-    })
-    .from(contentPillars)
-    .where(and(eq(contentPillars.id, pillarId), eq(contentPillars.workspaceId, workspaceId)))
-    .limit(1);
-  if (!existing) throw new Error("Pillar not found");
-  if (!existing.archivedAt) return; // idempotent
-  await db
-    .update(contentPillars)
-    .set({ archivedAt: null, updatedAt: new Date() })
-    .where(eq(contentPillars.id, pillarId));
-  await db.insert(activityEvents).values({
-    workspaceId,
-    actorId: actor.id,
-    kind: "update",
-    summary: `Restored pillar "${existing.name}"`,
-    afterData: { pillarId, archived: false },
+  await requirePlanningLibraryWrite(actor, workspaceId, "restore_pillar");
+  await db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({
+        id: contentPillars.id,
+        name: contentPillars.name,
+        archivedAt: contentPillars.archivedAt,
+      })
+      .from(contentPillars)
+      .where(and(eq(contentPillars.id, pillarId), eq(contentPillars.workspaceId, workspaceId)))
+      .for("update")
+      .limit(1);
+    if (!existing) throw new Error("Pillar not found");
+    if (!existing.archivedAt) return; // idempotent
+    await tx
+      .update(contentPillars)
+      .set({ archivedAt: null, updatedAt: new Date() })
+      .where(eq(contentPillars.id, pillarId));
+    await tx.insert(activityEvents).values({
+      workspaceId,
+      actorId: actor.id,
+      kind: "update",
+      summary: `Restored pillar "${existing.name}"`,
+      afterData: { pillarId, archived: false },
+    });
   });
 }
 

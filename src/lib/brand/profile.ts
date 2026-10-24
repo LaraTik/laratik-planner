@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { activityEvents, brandProfileRevisions, brandProfiles } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
+import { logWarn } from "@/lib/observability/logger";
 
 const Csv = z.array(z.string().trim().min(1).max(160)).max(30);
 
@@ -58,9 +59,11 @@ export async function getBrandProfile(workspaceId: string): Promise<{
     .slice(0, 3)
     .map((i) => `${i.path.join(".") || "<root>"}: ${i.code}`)
     .join("; ");
-  console.warn(
-    `[brand-kit] getBrandProfile: stored profile for workspace ${workspaceId} failed validation — returning empty defaults. Issues: ${issues}`,
-  );
+  logWarn("brand_profile.invalid_stored_value", {
+    workspaceId,
+    issueSummary: issues,
+    fallback: "empty_defaults",
+  });
   return { profile: BrandProfileSchema.parse({}), revision: row.revision };
 }
 

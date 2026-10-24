@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   CANONICAL_SURFACES,
+  APP_ONLY_SURFACES,
   ADVERTISING_REPORTING_SURFACE,
   ADVERTISING_REPORTING_VIEWPORTS,
   PLANNING_DETAIL_VIEWPORTS,
@@ -124,10 +125,21 @@ describe("visual regression harness contract (Task 7)", () => {
     expect(widths).toEqual([375, 768, 1024, 1440]);
   });
 
-  it("routes Research and Advertising Reporting to 5-viewport matrices, planning to M5, and other surfaces to the 3-viewport legacy", () => {
-    const researchViewports = viewportsForSurface("/app/w/acme/research");
-    expect(researchViewports).toBe(RESEARCH_VIEWPORTS);
-    expect(researchViewports.map((v) => v.width)).toEqual([375, 768, 1024, 1280, 1440]);
+  it("routes dense and bilingual surfaces to 5 viewports, planning to M5, and other surfaces to 3", () => {
+    for (const surface of [
+      "/app/w/acme/research",
+      "/app/w/acme/ai-settings",
+      "/app/w/acme/ai-assistant",
+      "/app/w/acme/settings",
+      "/app/w/acme/media",
+    ]) {
+      const viewports = viewportsForSurface(surface);
+      expect(viewports).toBe(RESEARCH_VIEWPORTS);
+      expect(viewports.map((v) => v.width)).toEqual([375, 768, 1024, 1280, 1440]);
+    }
+
+    expect(CANONICAL_SURFACES).toContain("/app/w/acme/media");
+    expect(APP_ONLY_SURFACES).toContain("/app/w/acme/ai-assistant");
 
     const advertisingViewports = viewportsForSurface(ADVERTISING_REPORTING_SURFACE);
     expect(advertisingViewports).toBe(ADVERTISING_REPORTING_VIEWPORTS);
@@ -145,14 +157,13 @@ describe("visual regression harness contract (Task 7)", () => {
       expect(viewports).toBe(PLANNING_DETAIL_VIEWPORTS);
       expect(viewports.map((v) => v.width)).toEqual([375, 768, 1024, 1440]);
     }
-    // Non-planning surfaces stay on the legacy 3-viewport matrix.
+    // Ordinary non-planning surfaces stay on the legacy 3-viewport matrix.
     for (const surface of [
       "/app/w/acme/board",
       "/app/w/acme/calendar",
       "/app/w/acme/brand-kit",
       "/app/w/acme/reviews",
       "/app/w/acme/channels",
-      "/app/w/acme/settings",
     ]) {
       const viewports = viewportsForSurface(surface);
       expect(viewports).toBe(REGRESSION_VIEWPORTS);
@@ -176,6 +187,18 @@ describe("visual regression harness contract (Task 7)", () => {
         expect(resolved).toContain("agency-456");
       }
     }
+  });
+
+  it("resolves workspace visual routes through the canonical agency path", () => {
+    expect(resolveStitchRoute("/app/w/acme", { contentItemId: "item-1" })).toBe(
+      "/app/a/test-agency/w/acme?month=2026-09",
+    );
+    expect(resolveStitchRoute("/app/w/acme/planning", { contentItemId: "item-1" })).toBe(
+      "/app/a/test-agency/w/acme/planning?month=2026-09",
+    );
+    expect(resolveStitchRoute("/app/w/acme/media", { contentItemId: "item-1" })).toBe(
+      "/app/a/test-agency/w/acme/media",
+    );
   });
 
   it("uses the platform-owner session for platform Stitch screens", () => {

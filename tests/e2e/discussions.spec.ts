@@ -11,13 +11,16 @@ import { bootstrapTestSession, devSeed } from "./_helpers";
  */
 
 async function createDraftAndOpen(page: import("@playwright/test").Page, title: string) {
-  await page.goto("/app/w/acme/planning/new");
+  await page.goto("/app/a/test-agency/w/acme/planning/new");
   await page.getByLabel(/Title/i).first().fill(title);
   await page.getByRole("button", { name: /Create draft/i }).click();
-  await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/, {
-    timeout: 20_000,
-    waitUntil: "commit",
-  });
+  await page.waitForURL(
+    /\/app\/a\/test-agency\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/,
+    {
+      timeout: 20_000,
+      waitUntil: "commit",
+    },
+  );
   // Discussion is intentionally a drawer affordance in the refined
   // detail layout, not an inline section on the Overview tab.
   await page.getByTestId("discussion-trigger").click();
@@ -45,7 +48,9 @@ test.describe("Discussions (Goal 8)", () => {
     await page.getByPlaceholder(/Add a comment/i).fill(body);
     await page.getByRole("button", { name: /^Comment$/i }).click();
 
-    await expect(page.getByText(body)).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.locator('[data-testid^="comment-body-"]').filter({ hasText: body }),
+    ).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText(/\(1 open\)/)).toBeVisible();
   });
 
@@ -57,14 +62,18 @@ test.describe("Discussions (Goal 8)", () => {
     const body = `Resolve me ${Date.now()}`;
     await page.getByPlaceholder(/Add a comment/i).fill(body);
     await page.getByRole("button", { name: /^Comment$/i }).click();
-    await expect(page.getByText(body)).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.locator('[data-testid^="comment-body-"]').filter({ hasText: body }),
+    ).toBeVisible({ timeout: 10_000 });
 
     // Resolve
     await page
       .getByRole("button", { name: /^Resolve$/i })
       .first()
       .click();
-    await expect(page.getByText(/resolved/i).first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("button", { name: /^Unresolve$/i })).toBeVisible({
+      timeout: 10_000,
+    });
     // When all comments are resolved, the "(N open)" badge disappears
     // (the header just shows "Discussion" without a count)
     await expect(page.getByText(/\(1 open\)/)).not.toBeVisible();
@@ -75,6 +84,7 @@ test.describe("Discussions (Goal 8)", () => {
       .first()
       .click();
     await expect(page.getByText(/\(1 open\)/)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("button", { name: /^Resolve$/i })).toBeVisible();
   });
 
   test("the visibility selector defaults to 'Client visible' for an admin/planner who can post both", async ({
@@ -104,9 +114,15 @@ test.describe("Discussions (Goal 8)", () => {
     await page.getByPlaceholder(/Add a comment/i).fill(body);
     await page.getByRole("button", { name: /^Comment$/i }).click();
 
-    await expect(page.getByText(body)).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.locator('[data-testid^="comment-body-"]').filter({ hasText: body }),
+    ).toBeVisible({ timeout: 10_000 });
     // The visibility badge for the comment should say "client"
-    await expect(page.getByText("client").first()).toBeVisible();
+    const comment = page
+      .locator('[data-testid^="comment-body-"]')
+      .filter({ hasText: body })
+      .locator("xpath=../..");
+    await expect(comment.getByText("Client", { exact: true })).toBeVisible();
   });
 
   // TEST-12 (GAP-FULL-REVIEW-2026-08-25): @mention coverage was
@@ -134,8 +150,13 @@ test.describe("Discussions (Goal 8)", () => {
     await page.getByPlaceholder(/Add a comment/i).fill(body);
     await page.getByRole("button", { name: /^Comment$/i }).click();
 
-    await expect(page.getByText(body)).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.locator('[data-testid^="comment-body-"]').filter({ hasText: body }),
+    ).toBeVisible({ timeout: 10_000 });
     // The "1 mention" badge appears under the comment.
+    await expect(
+      page.locator('[data-testid^="comment-body-"]').filter({ hasText: body }),
+    ).toBeVisible();
     await expect(page.getByText(/1 mention\b/i)).toBeVisible();
   });
 
@@ -161,8 +182,14 @@ test.describe("Discussions (Goal 8)", () => {
     const body = `Internal note ${Date.now()}`;
     await page.getByPlaceholder(/Add a comment/i).fill(body);
     await page.getByRole("button", { name: /^Comment$/i }).click();
-    await expect(page.getByText(body)).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("Internal", { exact: true })).toBeVisible();
+    await expect(
+      page.locator('[data-testid^="comment-body-"]').filter({ hasText: body }),
+    ).toBeVisible({ timeout: 10_000 });
+    const comment = page
+      .locator('[data-testid^="comment-body-"]')
+      .filter({ hasText: body })
+      .locator("xpath=../..");
+    await expect(comment.getByText("Internal", { exact: true })).toBeVisible();
   });
 });
 

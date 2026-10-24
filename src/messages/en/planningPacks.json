@@ -12,6 +12,13 @@
   "save": "Save draft",
   "saving": "Saving…",
   "saved": "Planning pack saved as a draft.",
+  "errors": {
+    "notSignedIn": "Sign in to save a planning pack.",
+    "forbidden": "Only agency admins can edit planning packs.",
+    "invalid": "Check the planning pack details and manifest format.",
+    "notFound": "This planning pack could not be found.",
+    "saveFailed": "The planning pack could not be saved. Try again."
+  },
   "existingTitle": "Saved packs",
   "existingDescription": "Only published packs are injected into planning sessions.",
   "revision": "Revision {revision}",

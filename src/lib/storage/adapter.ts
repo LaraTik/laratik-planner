@@ -35,6 +35,7 @@ export interface ObjectStorageAdapter {
   }): Promise<void>;
   completeUpload(input: { objectKey: string }): Promise<ObjectMetadata>;
   headObject(input: { objectKey: string }): Promise<ObjectMetadata>;
+  copyObject(input: { sourceObjectKey: string; objectKey: string }): Promise<void>;
   createReadUrl(input: { objectKey: string; expiresInSeconds?: number }): Promise<string>;
   deleteObject(input: { objectKey: string }): Promise<void>;
   abortUpload(input: { objectKey: string }): Promise<void>;

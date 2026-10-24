@@ -39,7 +39,7 @@ vi.mock("next/cache", () => ({
 }));
 
 // Mock the underlying reads so the test is hermetic.
-vi.mock("@/lib/notifications/service", () => ({
+vi.mock("@/lib/notifications/inbox", () => ({
   listNotificationsForUser: vi.fn(async (actor: { id: string }, opts: { limit: number }) => [
     {
       id: `${actor.id}-${opts.limit}-1`,

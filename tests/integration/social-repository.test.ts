@@ -20,6 +20,7 @@ import {
   createOauthState,
   createPendingConnection,
   disconnectProfile,
+  linkProfile,
   markSyncSuccess,
   openConnectionCredentials,
   saveSnapshot,
@@ -193,6 +194,105 @@ describe("M4 — repository", () => {
           connectedBy: userId,
         }),
       ).rejects.toBeInstanceOf(DekNotEnabledError);
+    });
+  });
+
+  describe("linkProfile workspace isolation", () => {
+    it("links an existing manual channel only within the connection's workspace", async () => {
+      const connectionId = await seedConnection();
+      const [manualChannel] = await db
+        .insert(socialChannels)
+        .values({
+          workspaceId,
+          platform: "instagram",
+          accountName: "Manual channel",
+          connectionStatus: "manual",
+        })
+        .returning();
+
+      const result = await db.transaction((tx) =>
+        linkProfile(tx, {
+          connectionId,
+          workspaceId,
+          agencyId,
+          profile: {
+            providerAccountId: "page-1",
+            platform: "instagram",
+            accountName: "Instagram account",
+            handle: null,
+            profileUrl: null,
+            avatarUrl: null,
+            parentProviderAccountId: null,
+          },
+          existingChannelId: manualChannel!.id,
+        }),
+      );
+
+      expect(result.channel.id).toBe(manualChannel!.id);
+      expect(result.created).toBe(false);
+      expect(result.channel.workspaceId).toBe(workspaceId);
+      expect(result.channel.socialConnectionId).toBe(connectionId);
+      expect(result.channel.connectionStatus).toBe("connected");
+    });
+
+    it("rejects a connection from another workspace without changing the manual channel", async () => {
+      const [manualChannel] = await db
+        .insert(socialChannels)
+        .values({
+          workspaceId,
+          platform: "instagram",
+          accountName: "Manual channel",
+          connectionStatus: "manual",
+        })
+        .returning();
+      const [otherWorkspace] = await db
+        .insert(workspaces)
+        .values({
+          agencyId,
+          slug: `other-${Math.random().toString(36).slice(2, 8)}`,
+          name: "Other workspace",
+          createdBy: userId,
+        })
+        .returning();
+      const foreignConnection = await createPendingConnection(db, {
+        workspaceId: otherWorkspace!.id,
+        provider: "meta",
+        providerSubjectId: `foreign-${Math.random().toString(36).slice(2, 8)}`,
+        scopes: ["pages_show_list"],
+        credentials: { accessToken: "foreign-token" },
+        accessTokenExpiresAt: null,
+        refreshTokenExpiresAt: null,
+        connectedBy: userId,
+      });
+
+      await expect(
+        db.transaction((tx) =>
+          linkProfile(tx, {
+            connectionId: foreignConnection.id,
+            workspaceId,
+            agencyId,
+            profile: {
+              providerAccountId: "foreign-page",
+              platform: "facebook",
+              accountName: "Foreign page",
+              handle: null,
+              profileUrl: null,
+              avatarUrl: null,
+              parentProviderAccountId: null,
+            },
+            existingChannelId: manualChannel!.id,
+          }),
+        ),
+      ).rejects.toThrow("Pending connection not found in workspace");
+
+      const [unchanged] = await db
+        .select()
+        .from(socialChannels)
+        .where(sql`id = ${manualChannel!.id}`)
+        .limit(1);
+      expect(unchanged!.workspaceId).toBe(workspaceId);
+      expect(unchanged!.connectionStatus).toBe("manual");
+      expect(unchanged!.socialConnectionId).toBeNull();
     });
   });
 

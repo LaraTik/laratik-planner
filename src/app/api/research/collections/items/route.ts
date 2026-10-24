@@ -11,9 +11,9 @@ import { mutatingApiHeaders } from "@/lib/security/headers";
 
 const itemSchema = z.object({
   workspaceSlug: z.string().trim().min(1).max(120),
-  collectionId: z.string().uuid(),
+  collectionId: z.string().guid(),
   itemKind: z.enum(["bookmark", "teardown"]),
-  itemId: z.string().uuid(),
+  itemId: z.string().guid(),
 });
 
 async function context(workspaceSlug: string) {
@@ -123,6 +123,11 @@ export async function DELETE(request: NextRequest) {
     );
   const ctx = await context(parsed.data.workspaceSlug);
   if ("response" in ctx) return ctx.response;
+  if (!(await canUseCollection(ctx.workspace.id, ctx.actor.id, parsed.data.collectionId)))
+    return NextResponse.json(
+      { error: "collection_not_accessible" },
+      { status: 403, headers: mutatingApiHeaders() },
+    );
   if (parsed.data.itemKind === "bookmark") {
     await db
       .update(researchBookmarks)

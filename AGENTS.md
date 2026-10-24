@@ -32,8 +32,8 @@
 ./scripts/project.sh backup       # pg_dump → ./tmp/backups
 
 # Deploy to VPS
-./scripts/deploy.sh               # pulls :latest
-./scripts/deploy.sh <sha>         # pulls specific commit
+./scripts/deploy.sh <full-sha>    # on the VPS, deploys the exact 40-char SHA built and published locally
+# See docs/operations/runbook.md#local-review-release-and-deployment for the procedure.
 
 # Daily ops report (read-only; see docs/operations/daily-report.md)
 PLANNER_TOKEN=<read-only token> python3 scripts/daily-report.py
@@ -110,7 +110,7 @@ it before re-capturing. Key reminders:
 
 | Layer     | Choice                                          | Why                                                                                       |
 | --------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Framework | Next.js 16.3 (App Router) + TypeScript strict   | Per STUDIOFLOW_MASTER_PROMPT §4                                                           |
+| Framework | Next.js 16.4 (App Router) + TypeScript strict   | Per STUDIOFLOW_MASTER_PROMPT §4                                                           |
 | UI        | Tailwind 4 + shadcn/ui + Radix                  | Per master prompt §4, §17                                                                 |
 | DB        | Postgres 16 (sidecar container)                 | Dedicated, isolated, Drizzle-first-class                                                  |
 | ORM       | Drizzle                                         | Type-safe, no codegen daemon, SQL-flavored migrations                                     |
@@ -118,7 +118,7 @@ it before re-capturing. Key reminders:
 | Email     | Nodemailer → Mailcow SMTP                       | No new vendor, free, `mail.laratik.com` already running                                   |
 | AI        | MiniMax (`MiniMax-M3`, Anthropic-compat)        | Goal 11 only; provider config is env-backed, agency enablement/capabilities are DB-backed |
 | Tests     | Vitest (unit) + Playwright (E2E + a11y)         | Per master prompt §4, §20                                                                 |
-| CI        | GitHub Actions → GHCR                           | Free, public-image-friendly                                                               |
+| Release   | Local checks + Docker Buildx → GHCR → VPS       | Operator-controlled; GitHub Actions retained only as legacy recovery tooling              |
 | Deploy    | GHCR → `docker compose pull` on VPS via Traefik | Matches `mavis-trader` / `laratik-social-platform` pattern                                |
 
 ## Repo layout
@@ -136,9 +136,9 @@ laratik-planner/
 ├── docker-compose.yml              # prod: app + postgres (Traefik labels)
 ├── docker-compose.dev.yml          # local: postgres only (app runs native)
 ├── .github/workflows/
-│   ├── ci.yml                      # deploy-gate: integration/audit/build/smoke/smtp-cert/lint-meta
+│   ├── ci.yml                      # legacy manual workflow; normal release gates run locally
 │   ├── advisory-quality.yml        # non-blocking coverage + browser quality checks
-│   └── deploy.yml                  # workflow_run: CI success → build+push GHCR → ssh deploy
+│   └── deploy.yml                  # legacy manual deploy; normal deploy is locally initiated over SSH
 #                                    # Release-gate contract: docs/testing/strategy.md (Release gates)
 #                                    # Local E2E recipes: docs/operations/runbook.md (Local E2E)
 ├── src/
@@ -168,7 +168,7 @@ laratik-planner/
 │   └── testing/strategy.md
 └── scripts/
     ├── dev.sh                      # one-shot local dev
-    ├── deploy.sh                   # local → VPS deploy
+    ├── deploy.sh                   # VPS transactional deploy for an immutable SHA
     ├── project.sh                  # daily ops wrapper
     └── vps/                        # rsynced to /opt/laratik-planner/scripts/
         ├── logs.sh
@@ -198,6 +198,13 @@ laratik-planner/
 
 ## Hard rules
 
+Architecture ownership, import direction, shared-code extraction criteria,
+and the touched-page review checklist are defined in
+[`docs/architecture/module-ownership.md`](docs/architecture/module-ownership.md)
+and summarized in [`docs/contributing/conventions.md`](docs/contributing/conventions.md).
+Apply those rules during incremental feature migrations; do not move the repo
+in one pass or extract code only to reduce file length.
+
 - ❌ Never commit `.env` — gitignored, only `.env.example` is committed
 - ❌ Never run `docker compose down -v` on prod — destroys the Postgres volume
 - ❌ Never paste real secrets into source, examples, fixtures, screenshots, or PR descriptions
@@ -208,9 +215,9 @@ laratik-planner/
 - ✅ Every migration must be registered in `src/lib/db/migrations/meta/_journal.json`, target the exact table names in the Drizzle schema, and include forward, compatibility, backup, rollback, from-zero, and upgrade evidence. A successful build does not prove that a migration runs.
 - ✅ Record verification against the exact clean commit SHA. If the branch advances or becomes dirty after verification, rerun the affected gates before calling the work complete.
 - ✅ Pre-commit hook catches lint/format/typecheck/unit-test issues early — keep it fast by keeping its scope tight (lint-staged on staged files, `vitest related` on staged sources, sentinel-driven `tsc --noEmit`). Skip with `git commit --no-verify` or `SKIP_TYPECHECK=1` for WIP / hotfixes.
-- ✅ Pre-push hook runs affected unit/integration checks for the pushed range; it does not run E2E. Use `pnpm test:affected -- --layer browser` for local affected E2E and `pnpm test:e2e:release` for the strict full browser + visual release-candidate check. CI runs targeted Chromium against the exact pushed SHA and the full matrix nightly/dispatch. Skip with `git push --no-verify`, `SKIP_PREPUSH=1`, or `SKIP_INTEGRATION=1` for trivial pushes.
-- ✅ Always merge finished work to `main` — review, commit, push as soon as `pnpm verify` is green and the local pre-merge E2E checklist (full 5-browser matrix + visual) is complete on the release-candidate branch. No half-finished work sitting in the local working tree or on a stale local branch. The deploy workflow fires on `workflow_run: CI success`, so the change is live on production the moment the deploy job finishes.
-- ✅ CI is authoritative — local git hooks are optional and never replace CI
+- ✅ Pre-push hook runs affected unit and integration checks selected from the pushed commit range; it does not run the full integration suite or E2E. The full integration suite runs once for a release candidate against disposable `planner_test`. Use `pnpm test:affected -- --layer browser` for local affected E2E and `pnpm test:e2e:release` for the strict full browser + visual release-candidate check. GitHub Actions are not part of the normal feature or release path; do not dispatch them for branch checks or deployment. Skip hooks only for a documented reason.
+- ✅ Review and verify locally before merging: inspect the complete diff, obtain the independent review required by the production-readiness tracker, run `pnpm verify`, and complete the applicable local integration, migration, bilingual browser, accessibility, and visual gates. Record evidence against the exact clean SHA. GitHub hosts the source/PR and records the merge; its Actions results are not a release gate.
+- ✅ Always merge finished work to `main` after local review and required gates pass. Push the reviewed `main` SHA to `origin`; then build, publish the SHA-tagged app and migrator images, and invoke the VPS deployment from the local operator machine using the runbook. Do not use GitHub Actions to build, review, deploy, or publish a release. No finished work sits in a dirty tree or stale branch.
 - ✅ Keep the remote Planner MCP current on every change: update the implementation, `docs/api/mcp.md`, `docs/api/README.md`, `docs/api/mcp-evaluation.xml`, affected bilingual Account UI copy, tests, and production-readiness evidence together. Follow [`docs/operations/mcp-maintenance.md`](docs/operations/mcp-maintenance.md); never ship a new tool, scope, error, or transport behavior with stale client documentation.
 - ✅ Staging before production: not yet (single-environment for v1, see Goal 14)
 - ✅ Disk hygiene before deploy: ensure VPS `/` is < 70% (use the vps-ops `disk-cleanup.sh apply` if needed)
@@ -506,7 +513,7 @@ The independent reviewer (Task 13) flips the verdict to `READY` after the
 30-step §23 journey and the owner checks in
 `docs/production-readiness/EXTERNAL_SERVICES_UAT.md` are signed.
 
-> Workflow contract — see `docs/testing/strategy.md` (Release gates). `ci.yml` is the **deploy-gate** (full unit/integration, audit, build, Docker smoke, SMTP-cert probe, workflow linters). `advisory-quality.yml` runs changed-line coverage and targeted Chromium against the exact pushed SHA on non-documentation `main` pushes, then strict coverage and the full browser/visual matrix nightly and for release candidates. Local E2E is explicit via `pnpm test:affected -- --layer browser` or `pnpm test:e2e:release`; pre-push runs affected unit/integration only. `deploy.yml` fires on `workflow_run: CI success` and only deploys the exact `head_sha` (no `:latest`-only deploys).
+> Workflow contract — see `docs/testing/strategy.md` (Release gates), ADR 0019, and ADR 0021. GitHub Actions are disabled for the normal review/release process; local checks and the local operator deployment path are authoritative. The workflows are retained as legacy/manual recovery tooling and must not be dispatched for ordinary branches or releases. Local E2E uses `pnpm test:affected -- --layer browser` or `pnpm test:e2e:release`; pre-push runs affected unit and integration checks selected from the pushed range. The full integration suite is a release-candidate gate, not a per-push hook.
 
 ## Activity log rendering
 
@@ -559,9 +566,9 @@ diff shapes, and extension recipe.
 
 - **Commits:** `<type>(<scope>): <description>`. Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `upgrade`. Scopes: `db`, `auth`, `content`, `planning`, `workflow`, `discussions`, `deliveries`, `publishing`, `notifications`, `ai`, `infra`, `ci`, `deps`, `i18n`, `format-payload`.
 - **Branches:** `main` is production. `feat/*` for features, `fix/*` for hotfixes, `chore/*` for chores. Squash-merge.
-- **PRs:** must pass CI (`pnpm verify` + build + smoke e2e). Reference the goal number in the PR title.
+- **PRs:** local review and the applicable local release gates must be complete before merge. Reference the goal number in the PR title. Do not wait for or dispatch GitHub Actions.
 - **ADRs:** material deviations from the master prompt go in `docs/decisions/`. The first one (`docs/decisions/0001-vps-port.md`) records the choice to self-host on the LaraTik VPS instead of Supabase + Vercel.
-- **Merge on completion:** when a change is finished and `pnpm verify` is green AND the local pre-merge E2E checklist (`pnpm test:e2e:isolated` + `pnpm test:visual` on the release-candidate branch) is complete, commit it with a `<type>(<scope>): <description>` message and push to `main`. The deploy workflow fires on `workflow_run: CI success`, so the change is live on production the moment the deploy job finishes. No finished work sits in the local working tree or on a stale local branch; feature branches (`feat/*`, `fix/*`, `chore/*`) are temporary scratch space.
+- **Merge on completion:** when independent local review, `pnpm verify`, and the applicable local integration/migration/browser/accessibility/visual gates are complete and recorded against the exact clean SHA, commit with a `<type>(<scope>): <description>` message, merge to `main`, and push. Build and publish immutable SHA-tagged app/migrator images locally, then start the VPS deploy from the local operator machine as documented in the runbook. No GitHub Actions run is required. No finished work sits in a dirty tree or stale branch; feature branches (`feat/*`, `fix/*`, `chore/*`) are temporary scratch space.
 
 ## Product UI/UX Engineering Rules
 
@@ -834,6 +841,106 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 - Tests covering A1→A2, A1→B1, B1→A1, browser refresh, browser back, direct URL, workspace removed, stale cached API response live in `tests/unit/workspace-isolation.test.ts` and `tests/e2e/workspace.spec.ts`.
 
 ## Changelog
+
+### 2026-10-20 — a permission is one table, checked twice, not two lists
+
+A full review of user permission assignment found the planning flow's
+role model had drifted from master prompt §9 in six independent ways,
+and the same class of drift in seven whole-application write paths.
+None of the failures was exotic: every one was a **second copy** of a
+rule that had fallen behind the first.
+
+- **A role is a table, not a list.** `WORKFLOW_RULES` is the engine's
+  authority table and the master prompt §9 matrix is the contract.
+  When they disagree, the engine is wrong. `approve_content` listed
+  `workspace_manager`, so the person who submitted content for review
+  could also approve it — the gate they submitted into was one they
+  controlled. Fix the table, not the symptom.
+
+- **The UI must be derived from the table, and the server must not
+  trust the UI.** The workflow rail hard-coded its own action→role
+  map, so it offered a manager a "Request changes" button the server
+  rejected, and a planner an "Assign designer" button that assigned
+  the designer and _then_ failed the transition — stranding the item
+  with a designer nobody could claim. Where a second copy exists, the
+  two drift. Where a second copy is unavoidable, add a test that
+  asserts the two agree.
+
+- **A guard that exists only in the UI is not a guard.** The
+  workspace's `workflow_scenario` was read by two pages and by nothing
+  else: `resolveWorkflowTransition` accepts a scenario and filters
+  with it, and the MCP tool's own description promised the filter
+  applied — but no server path ever passed one. Master prompt §9: "Every
+  server command repeats authorization even if the UI hides the
+  action." A shipped tool description is a contract; make it true.
+
+- **Enforcing a guard can expose the bug it was hiding.** Wiring the
+  scenario into the server revealed that `lightweight` had no path out
+  of `draft` at all: `approve_content` is the only rule that reaches
+  `approved_for_design`, so filtering the submit action out of the
+  table stranded every item. The fix was not to soften the filter but
+  to make an omitted stage **skipped** rather than blocked — and to
+  stop creating an approval request for a gate that does not exist. A
+  guard that turns a broken path into a visibly broken path is doing
+  its job.
+
+- **A source-stage filter is a trap wearing a guard's clothes.**
+  Rejecting a transition whose SOURCE stage the scenario omits
+  rejects _every_ action out of that status — including `cancel` and
+  `block`, which are exactly the escape hatches. A workspace that
+  switches scenario mid-flight strands its items with no way forward
+  and no way out, which is the opposite of what the filter looks like
+  it does. **Filter on the TARGET**: refuse a move _into_ a stage the
+  scenario omits, and let an item that is already in an omitted stage
+  be _finished_. Ask of every filter: "if the item is already here,
+  what does the user get to do?" — and if the answer is "nothing",
+  the filter is a trap.
+
+- **A role permits; an assignment scopes.** §9 gives the designer "W"
+  — work on assigned or owned items. `submitDelivery` checked the
+  `designer` role and never the assignment (`designer_id` was not even
+  selected), so any designer could submit another designer's delivery.
+  `updateFormatPayload` already had this right for the brief copy:
+  the class was half-closed, and one door fixed is not a fix at the
+  class.
+
+- **An admin override belongs at the gate, not in the role set.** The
+  agency admin holds "F" on every approval gate but no
+  `client_reviewer` role — deliberately, since that role also carries
+  the restricted client-surface read access. Encoding the override as
+  an explicit check at the gate (`canDecideClientCreative`) keeps both
+  facts true; widening the admin's role set would have silently
+  changed what the team screen shows about them.
+
+- **A union of every rule is not a statement about the next step.**
+  `responsibleRolesForStatus` unioned the roles of all rules leaving a
+  status — including `cancel` and `block`, which are legal from
+  everywhere and belong to the manager. So the manager was reported as
+  owning the next step on every row. Cancelling is always available;
+  it is not what the item is waiting on. Exclude the destructive rules
+  from a "who acts next" derivation.
+
+- **A read gate is not a write gate.** Seven write paths gated on
+  `INTERNAL_WORKSPACE_ROLES`, which includes `viewer`, because they
+  reused the scope check that reads need. A write needs
+  `WRITE_CAPABLE_ROLES` — and anything that publishes to the whole
+  workspace is a workspace _setting_, which is manager-only.
+
+- **A missing key must be visible, and the fallback must actually
+  work.** The translator returns `[key]`, never the bare key, so ten
+  call sites guarded with `value === key` never fell back and rendered
+  `[contentDetail.workflow.approvalFailed]` on screen. Use the shared
+  `isMissingTranslation` helper. And the catalog-completeness test
+  scanned `t(...)` but not `tr(...)` — extend the pattern when you add
+  a call form, or the gate has a hole in it.
+
+The executable form of §9 now lives in
+`tests/unit/planning-permission-assignment.test.ts` (pure engine
+calls, no mocks), with the service-level contracts in
+`tests/unit/content-service.test.ts`,
+`tests/unit/deliveries-service.test.ts`,
+`tests/unit/auth-policy.test.ts` and
+`tests/unit/media/collection-service-revoke.test.ts`.
 
 ### 2026-10-17 — a read must not fail because one of its enrichments failed
 

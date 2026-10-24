@@ -2,9 +2,9 @@ import "server-only";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { activityEvents, contentFormatEnum, contentTemplates } from "@/lib/db/schema";
-import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
+import type { Actor } from "@/lib/auth/policy";
+import { requirePlanningLibraryWrite } from "./library-policy";
 import { z } from "zod";
-import {} from "next/cache";
 
 /**
  * Planning library — content template service (FEAT-06).
@@ -27,12 +27,12 @@ export const CreateTemplateSchema = z.object({
   name: z.string().trim().min(2).max(120),
   format: z.enum(FORMAT_VALUES),
   briefTemplate: z.string().trim().max(8000).optional(),
-  contentPillarId: z.string().uuid().optional(),
-  defaultChannelIds: z.array(z.string().uuid()).optional().default([]),
-  defaultDesignerId: z.string().uuid().optional(),
-  defaultReviewerId: z.string().uuid().optional(),
-  formatPayload: z.record(z.unknown()).optional(),
-  relativeScheduleRule: z.record(z.unknown()).optional(),
+  contentPillarId: z.string().guid().optional(),
+  defaultChannelIds: z.array(z.string().guid()).optional().default([]),
+  defaultDesignerId: z.string().guid().optional(),
+  defaultReviewerId: z.string().guid().optional(),
+  formatPayload: z.record(z.string(), z.unknown()).optional(),
+  relativeScheduleRule: z.record(z.string(), z.unknown()).optional(),
 });
 export type CreateTemplateInput = z.infer<typeof CreateTemplateSchema>;
 
@@ -45,42 +45,41 @@ export async function createTemplate(
   if (!parsed.success) {
     throw new Error(parsed.error.issues.map((i) => i.message).join("; "));
   }
-  await requirePolicy(
-    hasWorkspaceRole(actor, workspaceId, ["workspace_manager", "content_planner"]),
-    "create_template",
-  );
+  await requirePlanningLibraryWrite(actor, workspaceId, "create_template");
   try {
-    const [created] = await db
-      .insert(contentTemplates)
-      .values({
+    return await db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(contentTemplates)
+        .values({
+          workspaceId,
+          name: parsed.data.name,
+          format: parsed.data.format,
+          ...(parsed.data.briefTemplate ? { briefTemplate: parsed.data.briefTemplate } : {}),
+          ...(parsed.data.contentPillarId ? { contentPillarId: parsed.data.contentPillarId } : {}),
+          defaultChannelIds: parsed.data.defaultChannelIds,
+          ...(parsed.data.defaultDesignerId
+            ? { defaultDesignerId: parsed.data.defaultDesignerId }
+            : {}),
+          ...(parsed.data.defaultReviewerId
+            ? { defaultReviewerId: parsed.data.defaultReviewerId }
+            : {}),
+          ...(parsed.data.formatPayload ? { formatPayload: parsed.data.formatPayload } : {}),
+          ...(parsed.data.relativeScheduleRule
+            ? { relativeScheduleRule: parsed.data.relativeScheduleRule }
+            : {}),
+          createdBy: actor.id,
+        })
+        .returning({ id: contentTemplates.id });
+      if (!created) throw new Error("Failed to create template");
+      await tx.insert(activityEvents).values({
         workspaceId,
-        name: parsed.data.name,
-        format: parsed.data.format,
-        ...(parsed.data.briefTemplate ? { briefTemplate: parsed.data.briefTemplate } : {}),
-        ...(parsed.data.contentPillarId ? { contentPillarId: parsed.data.contentPillarId } : {}),
-        defaultChannelIds: parsed.data.defaultChannelIds,
-        ...(parsed.data.defaultDesignerId
-          ? { defaultDesignerId: parsed.data.defaultDesignerId }
-          : {}),
-        ...(parsed.data.defaultReviewerId
-          ? { defaultReviewerId: parsed.data.defaultReviewerId }
-          : {}),
-        ...(parsed.data.formatPayload ? { formatPayload: parsed.data.formatPayload } : {}),
-        ...(parsed.data.relativeScheduleRule
-          ? { relativeScheduleRule: parsed.data.relativeScheduleRule }
-          : {}),
-        createdBy: actor.id,
-      })
-      .returning({ id: contentTemplates.id });
-    if (!created) throw new Error("Failed to create template");
-    await db.insert(activityEvents).values({
-      workspaceId,
-      actorId: actor.id,
-      kind: "create",
-      summary: `Created template "${parsed.data.name}"`,
-      afterData: { templateId: created.id, format: parsed.data.format },
+        actorId: actor.id,
+        kind: "create",
+        summary: `Created template "${parsed.data.name}"`,
+        afterData: { templateId: created.id, format: parsed.data.format },
+      });
+      return { id: created.id };
     });
-    return { id: created.id };
   } catch (err) {
     if (isUniqueViolation(err)) {
       throw new Error("A template with that name already exists in this workspace");
@@ -94,31 +93,33 @@ export async function archiveTemplate(
   workspaceId: string,
   templateId: string,
 ): Promise<void> {
-  await requirePolicy(
-    hasWorkspaceRole(actor, workspaceId, ["workspace_manager", "content_planner"]),
-    "archive_template",
-  );
-  const [existing] = await db
-    .select({
-      id: contentTemplates.id,
-      name: contentTemplates.name,
-      archivedAt: contentTemplates.archivedAt,
-    })
-    .from(contentTemplates)
-    .where(and(eq(contentTemplates.id, templateId), eq(contentTemplates.workspaceId, workspaceId)))
-    .limit(1);
-  if (!existing) throw new Error("Template not found");
-  if (existing.archivedAt) return; // idempotent
-  await db
-    .update(contentTemplates)
-    .set({ archivedAt: new Date(), updatedAt: new Date() })
-    .where(eq(contentTemplates.id, templateId));
-  await db.insert(activityEvents).values({
-    workspaceId,
-    actorId: actor.id,
-    kind: "update",
-    summary: `Archived template "${existing.name}"`,
-    afterData: { templateId, archived: true },
+  await requirePlanningLibraryWrite(actor, workspaceId, "archive_template");
+  await db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({
+        id: contentTemplates.id,
+        name: contentTemplates.name,
+        archivedAt: contentTemplates.archivedAt,
+      })
+      .from(contentTemplates)
+      .where(
+        and(eq(contentTemplates.id, templateId), eq(contentTemplates.workspaceId, workspaceId)),
+      )
+      .for("update")
+      .limit(1);
+    if (!existing) throw new Error("Template not found");
+    if (existing.archivedAt) return; // idempotent
+    await tx
+      .update(contentTemplates)
+      .set({ archivedAt: new Date(), updatedAt: new Date() })
+      .where(eq(contentTemplates.id, templateId));
+    await tx.insert(activityEvents).values({
+      workspaceId,
+      actorId: actor.id,
+      kind: "update",
+      summary: `Archived template "${existing.name}"`,
+      afterData: { templateId, archived: true },
+    });
   });
 }
 

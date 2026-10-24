@@ -24,7 +24,7 @@ import {
   resolveFolderPath,
   type MediaLibraryRow,
 } from "./media-asset-shared";
-import type { MediaFolderTreeRow } from "@/lib/media/service";
+import type { MediaFolderTreeRow } from "@/lib/media/folder-tree";
 import type { MediaKind, MediaSourceType } from "@/lib/media/contract";
 
 type WorkspaceOption = { id: string; name: string; slug: string };

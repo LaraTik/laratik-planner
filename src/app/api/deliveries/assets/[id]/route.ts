@@ -35,7 +35,7 @@ export async function GET(
   if (!session?.user?.id) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
   const { id } = await params;
-  if (!z.string().uuid().safeParse(id).success) {
+  if (!z.string().guid().safeParse(id).success) {
     return NextResponse.json({ error: "Delivery asset not found" }, { status: 404 });
   }
   const [row] = await db

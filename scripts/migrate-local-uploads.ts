@@ -589,9 +589,6 @@ async function migrateFile(
       byteSize: inspected.byteSize,
       checksumSha256: inspected.checksumSha256,
     });
-    if (cleanup === "skipped_changed") {
-      console.warn(`Keeping changed legacy file: ${workspaceId}/${fileName}`);
-    }
     return {
       skipped: false,
       bytes: inspected.byteSize,

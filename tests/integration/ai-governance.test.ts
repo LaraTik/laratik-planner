@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 
 const TEST_DB_URL = process.env.TEST_DATABASE_URL;
@@ -193,6 +193,48 @@ describe("M3.6 — AI governance (integration)", () => {
     expect(snapshot.requestCount).toBe(1);
   });
 
+  it("reserves additional tool-round tokens without counting another request", async () => {
+    const { agencyId, userId } = await seedAgencyAndAdmin();
+    const schema = await import("@/lib/db/schema");
+    await db.transaction((tx) =>
+      governance.enforceAiBudget({
+        tx,
+        agencyId,
+        userId,
+        capability: "caption_drafts",
+        estimatedInputTokens: 100,
+        estimatedOutputTokens: 200,
+        requestId: "tool-rounds",
+      }),
+    );
+
+    await governance.reserveAdditionalAiBudgetTokens({
+      agencyId,
+      inputTokens: 900,
+      outputTokens: 300,
+    });
+
+    const counters = await db
+      .select({
+        resourceKey: schema.agencyUsageCounters.resourceKey,
+        value: schema.agencyUsageCounters.currentValue,
+      })
+      .from(schema.agencyUsageCounters)
+      .where(eq(schema.agencyUsageCounters.agencyId, agencyId));
+    expect(
+      Object.fromEntries(counters.map((counter) => [counter.resourceKey, Number(counter.value)])),
+    ).toMatchObject({
+      ai_requests_month: 1,
+      ai_input_tokens_month: 1_000,
+      ai_output_tokens_month: 500,
+    });
+    await expect(
+      governance.getUserDailyBudgetSnapshot({ agencyId, userId }),
+    ).resolves.toMatchObject({
+      requestCount: 1,
+    });
+  });
+
   it("enforceAiBudget respects the daily cap (LimitExceededError when exceeded)", async () => {
     const { agencyId, userId } = await seedAgencyAndAdminWithLowCap();
     // The seeded plan has daily_ai_requests_per_user = 1. The
@@ -254,6 +296,80 @@ describe("M3.6 — AI governance (integration)", () => {
     // refund). We don't read them back directly here because the
     // reservation / reconciliation flow is exercised by the
     // route's integration test in the larger journey suite.
+  });
+
+  it("releases failed token reservations and persists structured request usage", async () => {
+    const { agencyId, userId } = await seedAgencyAndAdmin();
+    const schema = await import("@/lib/db/schema");
+    const [workspace] = await db
+      .insert(schema.workspaces)
+      .values({
+        agencyId,
+        name: "AI Governance",
+        slug: `ai-governance-${Date.now()}`,
+        createdBy: userId,
+      })
+      .returning({ id: schema.workspaces.id });
+    if (!workspace) throw new Error("workspace seed failed");
+
+    await db.transaction((tx) =>
+      governance.enforceAiBudget({
+        tx,
+        agencyId,
+        userId,
+        capability: "caption_drafts",
+        estimatedInputTokens: 100,
+        estimatedOutputTokens: 200,
+        requestId: "failed-ai-request",
+      }),
+    );
+    await expect(
+      governance.releaseAiBudgetReservation({ agencyId, inputTokens: 100, outputTokens: 200 }),
+    ).resolves.toBe(true);
+
+    const counters = await db
+      .select({
+        resourceKey: schema.agencyUsageCounters.resourceKey,
+        value: schema.agencyUsageCounters.currentValue,
+      })
+      .from(schema.agencyUsageCounters)
+      .where(eq(schema.agencyUsageCounters.agencyId, agencyId));
+    expect(
+      Object.fromEntries(counters.map((counter) => [counter.resourceKey, Number(counter.value)])),
+    ).toMatchObject({
+      ai_requests_month: 1,
+      ai_input_tokens_month: 0,
+      ai_output_tokens_month: 0,
+    });
+
+    await governance.recordAiUsageEvent({
+      agencyId,
+      workspaceId: workspace.id,
+      userId,
+      capability: "caption_drafts",
+      model: "MiniMax-M3",
+      inputTokens: 0,
+      outputTokens: 0,
+      requestId: "failed-ai-request",
+      succeeded: false,
+      contextCategories: ["title", "brief", "title"],
+    });
+    const [event] = await db
+      .select()
+      .from(schema.aiUsageEvents)
+      .where(eq(schema.aiUsageEvents.requestId, "failed-ai-request"));
+    expect(event).toMatchObject({
+      agencyId,
+      workspaceId: workspace.id,
+      userId,
+      capability: "caption_drafts",
+      model: "MiniMax-M3",
+      inputTokens: 0,
+      outputTokens: 0,
+      requestId: "failed-ai-request",
+      succeeded: false,
+      contextManifest: { categories: ["title", "brief"] },
+    });
   });
 });
 

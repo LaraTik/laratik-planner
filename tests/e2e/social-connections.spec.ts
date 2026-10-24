@@ -39,15 +39,13 @@ import { bootstrapRoleSession } from "./_helpers";
 test.describe("M4 — social connections (workspace_manager)", () => {
   test("renders the channels page with the new connection-status badge", async ({ page }) => {
     await bootstrapRoleSession(page, "workspace_manager");
-    await page.goto("/app/w/acme/channels");
+    await page.goto("/app/a/test-agency/w/acme/channels");
     await expect(page.getByTestId("channels-table")).toBeVisible();
   });
 
-  test("disconnect preserves the channel row and sets status=disconnected", async ({ page }) => {
+  test("renders the Add channel form when the workspace has no connections", async ({ page }) => {
     await bootstrapRoleSession(page, "workspace_manager");
-    await page.goto("/app/w/acme/channels");
-    // The page is empty in the dev seed; the test only verifies the
-    // page renders without errors and the form is reachable.
+    await page.goto("/app/a/test-agency/w/acme/channels");
     await expect(page.getByTestId("channel-add-card")).toBeVisible();
   });
 
@@ -65,7 +63,7 @@ test.describe("M4 — social connections (workspace_manager)", () => {
     page,
   }) => {
     await bootstrapRoleSession(page, "workspace_manager");
-    await page.goto("/app/w/acme/channels");
+    await page.goto("/app/a/test-agency/w/acme/channels");
     await expect(page.getByTestId("channel-add-card")).toBeVisible();
     await expect(page.getByTestId("retest-button")).toHaveCount(0);
   });

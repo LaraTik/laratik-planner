@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Download, FileText, Languages, ShieldAlert, Video } from "lucide-react";
-import { publicMediaCollectionForToken } from "@/lib/media/collection-service";
+import { publicMediaCollectionForToken } from "@/features/media/server";
 import { MEDIA_ZIP_MAX_BYTES } from "@/lib/media/contract";
 import { resolveLocale, type LocaleCode } from "@/lib/i18n/locales";
 import { tFor } from "@/messages";

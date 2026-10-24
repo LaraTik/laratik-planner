@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 import {
   classifyChangedFiles,
   globToRegExp,
@@ -11,6 +13,7 @@ import {
   parsePushRanges,
   selectedBrowserArgs,
 } from "../../../scripts/test-affected";
+import { TEST_OWNERSHIP } from "../../../scripts/test-ownership";
 
 const manifest: TestOwnershipManifest = {
   unitSelection: {
@@ -43,6 +46,238 @@ const manifest: TestOwnershipManifest = {
 };
 
 describe("test affected core", () => {
+  it("uses the canonical section-title utility backed by the design token", () => {
+    const sourceRoot = join(process.cwd(), "src");
+    const collectSourceFiles = (directory: string): string[] =>
+      readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+        const path = join(directory, entry.name);
+        if (entry.isDirectory()) return collectSourceFiles(path);
+        return /\.(tsx?|css)$/.test(entry.name) ? [path] : [];
+      });
+    const staleUtilityFiles = collectSourceFiles(sourceRoot).filter((path) =>
+      readFileSync(path, "utf8").includes("text-section-title"),
+    );
+    const theme = readFileSync(join(sourceRoot, "app/globals.css"), "utf8");
+
+    expect(staleUtilityFiles).toEqual([]);
+    expect(theme).toContain("--text-title-section:");
+  });
+
+  it("maps every App Router page to browser tests and inherited loading/error boundaries", () => {
+    const appRoot = join(process.cwd(), "src/app");
+    const collectPages = (directory: string): string[] =>
+      readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+        const path = join(directory, entry.name);
+        return entry.isDirectory()
+          ? collectPages(path)
+          : entry.name === "page.tsx"
+            ? [relative(process.cwd(), path)]
+            : [];
+      });
+
+    const unmapped = collectPages(appRoot).flatMap((sourcePath) => {
+      const result = classifyChangedFiles([sourcePath], TEST_OWNERSHIP);
+      const hasBoundary = (name: "loading.tsx" | "error.tsx") => {
+        let directory = join(process.cwd(), dirname(sourcePath));
+        while (directory.startsWith(appRoot)) {
+          if (existsSync(join(directory, name))) return true;
+          directory = dirname(directory);
+        }
+        return false;
+      };
+      return result.kind === "targeted" &&
+        result.browser.length > 0 &&
+        hasBoundary("loading.tsx") &&
+        hasBoundary("error.tsx")
+        ? []
+        : [{ sourcePath, result }];
+    });
+
+    expect(unmapped).toEqual([]);
+  });
+
+  it("validates ownership-manifest edits with the focused architecture unit area", () => {
+    const result = classifyChangedFiles(["scripts/test-ownership.ts"], TEST_OWNERSHIP);
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toEqual(["architecture"]);
+    expect(result.unitFiles).toContain("tests/unit/testing/test-affected-core.test.ts");
+    expect(result.runAllIntegration).toBe(false);
+    expect(result.runAllBrowser).toBe(false);
+  });
+
+  it("keeps isolated E2E runner changes in the focused architecture area", () => {
+    const result = classifyChangedFiles(["scripts/run-e2e-tests.ts"], TEST_OWNERSHIP);
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toEqual(["architecture"]);
+    expect(result.unitFiles).toContain("tests/unit/testing/run-e2e-tests-core.test.ts");
+    expect(result.integrationFiles).toEqual([]);
+    expect(result.runAllIntegration).toBe(false);
+    expect(result.runAllBrowser).toBe(false);
+  });
+
+  it("maps canonical agency-qualified workspace routes to their feature areas", () => {
+    const cases = [
+      ["src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/new/page.tsx", "content"],
+      [
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/publish-package-form.tsx",
+        "publishing",
+      ],
+      ["src/app/(app)/app/a/[agencySlug]/w/[slug]/page.tsx", "workspace"],
+      ["src/app/(app)/app/a/[agencySlug]/w/[slug]/settings/page.tsx", "workspace-pages"],
+      ["src/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/page.tsx", "brand-kit"],
+      ["src/app/(app)/app/a/[agencySlug]/w/[slug]/channels/page.tsx", "channels-social"],
+      ["src/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/page.tsx", "channels-social"],
+      ["src/app/api/social/providers/analytics-test/route.ts", "channels-social"],
+      ["src/app/(app)/app/a/[agencySlug]/w/[slug]/ai-settings/page.tsx", "ai"],
+      ["src/app/api/ai/monthly-planning/route.ts", "ai"],
+      ["src/app/api/community/test-lab/route.ts", "ai"],
+      [
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/workspace-shell.tsx",
+        "notifications-discussions",
+      ],
+      [
+        "tests/e2e/visual-regression.spec.ts-snapshots/responsive/app-w-acme-settings-defaults-mobile-s.png",
+        "visual-regression",
+      ],
+    ] as const;
+
+    for (const [sourcePath, expectedArea] of cases) {
+      const result = classifyChangedFiles([sourcePath], TEST_OWNERSHIP);
+      expect(result.kind, sourcePath).toBe("targeted");
+      expect(result.areaIds, sourcePath).toContain(expectedArea);
+    }
+  });
+
+  it("selects the cross-tenant browser regression for the legacy workspace redirect", () => {
+    const result = classifyChangedFiles(
+      ["src/app/(app)/app/w/[...legacy]/page.tsx"],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("workspace");
+    expect(result.browser).toContainEqual(
+      expect.objectContaining({ spec: "tests/e2e/tenant-isolation.spec.ts" }),
+    );
+  });
+
+  it("selects focused action-state tests instead of escalating to the full repository", () => {
+    const result = classifyChangedFiles(["src/lib/validation/action-state.ts"], TEST_OWNERSHIP);
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toEqual(["action-state"]);
+    expect(result.unitFiles).toContain("tests/unit/validation/field-errors-from-zod.test.ts");
+    expect(result.unitFiles).toContain("tests/unit/content/claim-action-errors.test.ts");
+    expect(result.integrationFiles).toEqual([]);
+    expect(result.runAllIntegration).toBe(false);
+    expect(result.runAllBrowser).toBe(false);
+  });
+
+  it("keeps environment and provider validation with the security test area", () => {
+    const result = classifyChangedFiles(
+      ["src/lib/validation/provider-configuration.ts"],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toEqual(["security-observability"]);
+    expect(result.unitFiles).toContain("src/lib/validation/provider-configuration.test.ts");
+  });
+
+  it("selects the content area for its English and Arabic message catalogs", () => {
+    for (const sourcePath of [
+      "src/messages/en/contentDetail.json",
+      "src/messages/ar/contentDetail.json",
+    ]) {
+      const result = classifyChangedFiles([sourcePath], TEST_OWNERSHIP);
+
+      expect(result.kind, sourcePath).toBe("targeted");
+      expect(result.areaIds, sourcePath).toEqual(["content"]);
+      expect(result.runAllBrowser, sourcePath).toBe(false);
+    }
+  });
+
+  it("selects the workspace settings deadline regression for settings-route changes", () => {
+    const result = classifyChangedFiles(
+      ["src/app/(app)/app/a/[agencySlug]/w/[slug]/settings/page.tsx"],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.unitFiles).toContain("tests/unit/workspace-settings/**");
+    expect(result.runAllUnit).toBe(false);
+
+    const directTestFile = classifyChangedFiles(
+      ["tests/unit/workspace-settings/lead-times-form.test.tsx"],
+      TEST_OWNERSHIP,
+    );
+    expect(directTestFile.kind).toBe("targeted");
+    expect(directTestFile.areaIds).toContain("workspace-pages");
+    expect(directTestFile.runAllUnit).toBe(false);
+  });
+
+  it("keeps the destructive idea action on its focused content test area", () => {
+    const cases = [
+      ["src/lib/content/reset-idea-action.ts", "tests/unit/reset-idea-action.test.ts"],
+      ["src/lib/content/reset-all-ideas-action.ts", "tests/unit/reset-all-ideas-action.test.ts"],
+    ] as const;
+
+    for (const [sourcePath, testPath] of cases) {
+      const result = classifyChangedFiles([sourcePath], TEST_OWNERSHIP);
+
+      expect(result.kind, sourcePath).toBe("targeted");
+      expect(result.areaIds, sourcePath).toContain("content");
+      expect(result.unitFiles, sourcePath).toContain(testPath);
+      expect(result.runAllUnit, sourcePath).toBe(false);
+    }
+  });
+
+  it("selects bilingual browser coverage for agency support review changes", () => {
+    const result = classifyChangedFiles(
+      ["src/app/(app)/app/agency-settings/plan/support/page.tsx"],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.browser).toContainEqual({
+      spec: "tests/e2e/locale-rtl.spec.ts",
+      projects: ["chromium"],
+      grep: "agency support request review",
+    });
+    expect(result.runAllBrowser).toBe(false);
+  });
+
+  it("selects monthly proposal transaction coverage for AI route changes", () => {
+    const result = classifyChangedFiles(
+      ["src/app/api/ai/monthly-planning/route.ts"],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("ai");
+    expect(result.integrationFiles).toContain("tests/integration/monthly-planning-apply.test.ts");
+
+    const directTest = classifyChangedFiles(
+      ["tests/integration/monthly-planning-apply.test.ts"],
+      TEST_OWNERSHIP,
+    );
+    expect(directTest.kind).toBe("targeted");
+    expect(directTest.areaIds).toContain("ai");
+  });
+
+  it("selects AI and Community Test Lab units for the shared budget route", () => {
+    const result = classifyChangedFiles(
+      ["src/app/api/community/test-lab/route.ts"],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("ai");
+    expect(result.unitFiles).toContain("tests/unit/community-test-lab-route.test.ts");
+  });
+
   it("matches recursive and single-segment globs without matching partial paths", () => {
     expect(globToRegExp("src/lib/auth/**").test("src/lib/auth/policy.ts")).toBe(true);
     expect(globToRegExp("src/lib/auth/**").test("src/lib/author.ts")).toBe(false);
@@ -103,11 +338,149 @@ describe("test affected core", () => {
     expect(result.browser).toHaveLength(1);
   });
 
+  it("maps the password-reset feature to its focused auth checks", () => {
+    const result = classifyChangedFiles(["src/features/auth/server.ts"], TEST_OWNERSHIP);
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("auth");
+    expect(result.unitFiles).toContain("tests/unit/auth/**");
+    expect(result.browser).toContainEqual(
+      expect.objectContaining({ spec: "tests/e2e/password-reset-enumeration.spec.ts" }),
+    );
+  });
+
   it("maps a changed test file to its owning area", () => {
     const result = classifyChangedFiles(["tests/unit/auth/policy.test.ts"], manifest);
 
     expect(result.kind).toBe("targeted");
     expect(result.areaIds).toEqual(["auth"]);
+  });
+
+  it("keeps user invitation action changes in the focused users area", () => {
+    const result = classifyChangedFiles(
+      [
+        "src/app/(app)/app/users/invitation-list.tsx",
+        "tests/unit/users-membership-actions.test.ts",
+      ],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("users");
+    expect(result.unitFiles).toContain("tests/unit/users-membership-actions.test.ts");
+  });
+
+  it("keeps planning-library action changes in the focused content area", () => {
+    const result = classifyChangedFiles(
+      [
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/library/actions.ts",
+        "tests/unit/planning-library-actions.test.ts",
+      ],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("content");
+    expect(result.unitFiles).toContain("tests/unit/planning-library-actions.test.ts");
+  });
+
+  it("keeps platform agency edits in the focused platform area", () => {
+    const result = classifyChangedFiles(
+      [
+        "src/app/(app)/app/platform/agencies/[agencyId]/actions.ts",
+        "tests/unit/platform/edit-agency-action.test.ts",
+      ],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("platform");
+    expect(result.unitFiles).toContain("tests/unit/platform/edit-agency-action.test.ts");
+  });
+
+  it("keeps platform overview feature queries in the focused platform area", () => {
+    const result = classifyChangedFiles(
+      [
+        "src/features/platform/overview/queries.server.ts",
+        "tests/unit/platform/platform-overview-query.test.ts",
+      ],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("platform");
+    expect(result.unitFiles).toContain("tests/unit/platform/**");
+  });
+
+  it("keeps account overview feature queries in the focused account area", () => {
+    const result = classifyChangedFiles(
+      [
+        "src/features/account/overview-query.server.ts",
+        "tests/unit/account/account-overview-query.test.ts",
+      ],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("account");
+    expect(result.unitFiles).toContain("tests/unit/account/**");
+  });
+
+  it("keeps platform-access localization in its owning area", () => {
+    const result = classifyChangedFiles(
+      [
+        "src/messages/en/platform.json",
+        "src/messages/ar/platform.json",
+        "tests/unit/platform/platform-access-actions.test.ts",
+      ],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("platform");
+    expect(result.unitFiles).toContain("tests/unit/platform/**");
+  });
+
+  it("keeps agency settings edits in the focused agency-settings area", () => {
+    const result = classifyChangedFiles(
+      [
+        "src/app/(app)/app/agency-settings/actions.ts",
+        "tests/unit/agency-settings/edit-agency-action.test.ts",
+      ],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("agency-settings");
+    expect(result.unitFiles).toContain("tests/unit/agency-settings/**");
+  });
+
+  it("selects both agency action areas for their shared error mapper", () => {
+    const result = classifyChangedFiles(
+      [
+        "src/lib/agencies/action-errors.ts",
+        "tests/unit/agency-settings/edit-agency-action.test.ts",
+        "tests/unit/platform/edit-agency-action.test.ts",
+      ],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("agency-settings");
+    expect(result.areaIds).toContain("platform");
+    expect(result.unitFiles).toContain("tests/unit/agency-settings/**");
+    expect(result.unitFiles).toContain("tests/unit/platform/**");
+  });
+
+  it("escalates an unmapped changed test even when another changed file has an owner", () => {
+    const result = classifyChangedFiles(
+      ["src/lib/content/service.ts", "tests/e2e/unmapped.spec.ts"],
+      manifest,
+    );
+
+    expect(result.kind).toBe("escalated");
+    expect(result.escalationReason).toContain("tests/e2e/unmapped.spec.ts");
+    expect(result.runAllBrowser).toBe(true);
   });
 
   it("reports stale manifest paths before a command can run", () => {
@@ -199,10 +572,8 @@ describe("test affected core", () => {
       ]),
     ).toEqual([
       "--",
-      "--project",
-      "chromium",
-      "--project",
-      "firefox",
+      "--project=chromium",
+      "--project=firefox",
       "tests/e2e/auth-gate.spec.ts",
       "tests/e2e/content-flow.spec.ts",
       "--grep",

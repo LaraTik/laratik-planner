@@ -11,7 +11,7 @@ process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
  * Covers three fan-outs removed in this change:
  *   1. `app/media/page.tsx` — two per-workspace role loops → one
  *      `getActorWorkspaceRoleIndex` call.
- *   2. `lib/media/service.ts` — `listMediaFolders` and
+ *   2. `features/media/folders.server.ts` — `listMediaFolders` and
  *      `listMediaFoldersTree` issuing the same folder + access query twice.
  *   3. `lib/support/access.ts` — `listRequestsForAgency` called once per
  *      agency, i.e. O(number of agencies on the platform).
@@ -29,7 +29,7 @@ describe("read-path batching — media page + platform support", () => {
   let sql: typeof import("drizzle-orm").sql;
   let schema: typeof import("@/lib/db/schema");
   let policy: typeof import("@/lib/auth/policy");
-  let media: typeof import("@/lib/media/service");
+  let media: typeof import("@/features/media/server");
   let support: typeof import("@/lib/support/access");
 
   beforeAll(async () => {
@@ -37,7 +37,7 @@ describe("read-path batching — media page + platform support", () => {
     ({ sql } = await import("drizzle-orm"));
     schema = await import("@/lib/db/schema");
     policy = await import("@/lib/auth/policy");
-    media = await import("@/lib/media/service");
+    media = await import("@/features/media/server");
     support = await import("@/lib/support/access");
   });
 

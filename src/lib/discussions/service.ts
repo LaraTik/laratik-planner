@@ -91,8 +91,8 @@ function extractMentions(
 
 // ─── Schemas ────────────────────────────────────────────────────────────
 export const CreateCommentSchema = z.object({
-  contentItemId: z.string().uuid(),
-  parentCommentId: z.string().uuid().optional(),
+  contentItemId: z.string().guid(),
+  parentCommentId: z.string().guid().optional(),
   body: z.string().min(1).max(10_000),
   visibility: z.enum(VISIBILITY_VALUES),
   label: z.enum(LABEL_VALUES).optional(),
@@ -100,7 +100,7 @@ export const CreateCommentSchema = z.object({
 export type CreateCommentInput = z.infer<typeof CreateCommentSchema>;
 
 export const ResolveCommentSchema = z.object({
-  commentId: z.string().uuid(),
+  commentId: z.string().guid(),
   resolved: z.boolean(),
 });
 export type ResolveCommentInput = z.infer<typeof ResolveCommentSchema>;

@@ -39,6 +39,7 @@ function renderTimeline(overrides: Partial<ApprovalTimelineProps> = {}) {
       isManager: false,
       isInternalReviewer: true,
       isClientReviewer: false,
+      isAgencyAdmin: false,
     },
     onApprove: vi.fn(),
     onRequestChanges: vi.fn(async () => "request_changes"),
@@ -63,7 +64,12 @@ describe("ApprovalTimeline", () => {
   it("approved: shows the result and renders no action buttons", () => {
     renderTimeline({
       approvals: [{ ...baseRequest, status: "approved" }],
-      roles: { isManager: true, isInternalReviewer: true, isClientReviewer: true },
+      roles: {
+        isManager: true,
+        isInternalReviewer: true,
+        isClientReviewer: true,
+        isAgencyAdmin: false,
+      },
     });
     expect(screen.getByText("Approved")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^approve$/i })).toBeNull();
@@ -73,7 +79,12 @@ describe("ApprovalTimeline", () => {
   it("changes_requested: shows the result and renders no action buttons", () => {
     renderTimeline({
       approvals: [{ ...baseRequest, status: "changes_requested" }],
-      roles: { isManager: true, isInternalReviewer: true, isClientReviewer: true },
+      roles: {
+        isManager: true,
+        isInternalReviewer: true,
+        isClientReviewer: true,
+        isAgencyAdmin: false,
+      },
     });
     expect(screen.getByText("Changes requested")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^approve$/i })).toBeNull();
@@ -86,7 +97,12 @@ describe("ApprovalTimeline", () => {
     const onRequestChanges = vi.fn(async () => "request_changes");
     renderTimeline({
       approvals: [{ ...baseRequest, gate: "creative_internal", status: "pending" }],
-      roles: { isManager: false, isInternalReviewer: true, isClientReviewer: false },
+      roles: {
+        isManager: false,
+        isInternalReviewer: true,
+        isClientReviewer: false,
+        isAgencyAdmin: false,
+      },
       onApprove,
       onRequestChanges,
     });
@@ -103,7 +119,12 @@ describe("ApprovalTimeline", () => {
   it("pending client reviewer: shows pending state, Approve + Request changes enabled for client_reviewer", () => {
     renderTimeline({
       approvals: [{ ...baseRequest, gate: "creative_client", status: "pending" }],
-      roles: { isManager: false, isInternalReviewer: false, isClientReviewer: true },
+      roles: {
+        isManager: false,
+        isInternalReviewer: false,
+        isClientReviewer: true,
+        isAgencyAdmin: false,
+      },
     });
     expect(screen.getByText("Pending")).toBeInTheDocument();
     const approve = screen.getByRole("button", { name: /^approve$/i });
@@ -118,7 +139,12 @@ describe("ApprovalTimeline", () => {
     // decision the actor cannot actually record.
     renderTimeline({
       approvals: [{ ...baseRequest, gate: "creative_client", status: "pending" }],
-      roles: { isManager: false, isInternalReviewer: true, isClientReviewer: false },
+      roles: {
+        isManager: false,
+        isInternalReviewer: true,
+        isClientReviewer: false,
+        isAgencyAdmin: false,
+      },
     });
     expect(screen.getByText("Pending")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^approve$/i })).toBeNull();
@@ -128,7 +154,12 @@ describe("ApprovalTimeline", () => {
   it("pending + actor has no approval role at all: no action buttons (unauthorized pending)", () => {
     renderTimeline({
       approvals: [{ ...baseRequest, status: "pending" }],
-      roles: { isManager: false, isInternalReviewer: false, isClientReviewer: false },
+      roles: {
+        isManager: false,
+        isInternalReviewer: false,
+        isClientReviewer: false,
+        isAgencyAdmin: false,
+      },
     });
     expect(screen.getByText("Pending")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^approve$/i })).toBeNull();
@@ -142,7 +173,12 @@ describe("ApprovalTimeline", () => {
     // they should be disabled to prevent re-entry.
     renderTimeline({
       approvals: [{ ...baseRequest, status: "pending" }],
-      roles: { isManager: false, isInternalReviewer: true, isClientReviewer: false },
+      roles: {
+        isManager: false,
+        isInternalReviewer: true,
+        isClientReviewer: false,
+        isAgencyAdmin: false,
+      },
       disabled: true,
     });
     const approve = screen.getByRole("button", { name: /^approve$/i });
@@ -151,12 +187,57 @@ describe("ApprovalTimeline", () => {
     expect(request).toBeDisabled();
   });
 
-  it("manager override: an isManager actor sees the buttons for any gate", () => {
+  it("workspace manager does NOT get the client-gate buttons (the server would reject them)", () => {
+    // Master prompt §9: "Client creative review | Agency Admin F |
+    // Workspace Manager -". The manager used to be granted the button
+    // here, and clicking it produced "Not authorized to
+    // decide_approval" — the server only ever accepts the assigned
+    // client reviewer or the agency admin.
     renderTimeline({
       approvals: [{ ...baseRequest, gate: "creative_client", status: "pending" }],
-      roles: { isManager: true, isInternalReviewer: false, isClientReviewer: false },
+      roles: {
+        isManager: true,
+        isInternalReviewer: false,
+        isClientReviewer: false,
+        isAgencyAdmin: false,
+      },
+    });
+    expect(screen.queryByRole("button", { name: /^approve$/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /request changes/i })).toBeNull();
+  });
+
+  it("agency admin override: the admin decides the client gate without holding client_reviewer", () => {
+    // The admin holds no workspace role that covers the client gate,
+    // so the timeline has to be told about the membership flag
+    // explicitly — otherwise the admin is shown no way to act.
+    renderTimeline({
+      approvals: [{ ...baseRequest, gate: "creative_client", status: "pending" }],
+      roles: {
+        isManager: true,
+        isInternalReviewer: false,
+        isClientReviewer: false,
+        isAgencyAdmin: true,
+      },
     });
     expect(screen.getByRole("button", { name: /^approve$/i })).toBeEnabled();
+  });
+
+  it("the content gate renders no buttons — that gate is decided by the workflow command", () => {
+    // `decideApproval` refuses a content-gate request outright
+    // ("Content approvals must use the content workflow command"), so
+    // offering Approve / Request changes here could only ever fail.
+    renderTimeline({
+      approvals: [{ ...baseRequest, gate: "content", status: "pending" }],
+      roles: {
+        isManager: true,
+        isInternalReviewer: true,
+        isClientReviewer: true,
+        isAgencyAdmin: true,
+      },
+    });
+    expect(screen.getByText("Pending")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^approve$/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /request changes/i })).toBeNull();
   });
 
   it("humanizes the gate name in the row heading", () => {
@@ -204,7 +285,12 @@ describe("ApprovalTimeline", () => {
   it("pending state uses the info variant badge so the color matches the textual 'pending' label", () => {
     const { container } = renderTimeline({
       approvals: [{ ...baseRequest, status: "pending" }],
-      roles: { isManager: false, isInternalReviewer: false, isClientReviewer: false },
+      roles: {
+        isManager: false,
+        isInternalReviewer: false,
+        isClientReviewer: false,
+        isAgencyAdmin: false,
+      },
     });
     const info = container.querySelector('[class*="text-info"]');
     expect(info).not.toBeNull();
@@ -215,7 +301,12 @@ describe("ApprovalTimeline", () => {
     const onRequestChanges = vi.fn(async () => "request_changes");
     renderTimeline({
       approvals: [{ ...baseRequest, status: "pending" }],
-      roles: { isManager: false, isInternalReviewer: true, isClientReviewer: false },
+      roles: {
+        isManager: false,
+        isInternalReviewer: true,
+        isClientReviewer: false,
+        isAgencyAdmin: false,
+      },
       onRequestChanges,
     });
     const request = screen.getByRole("button", { name: /request changes/i });
@@ -230,7 +321,12 @@ describe("ApprovalTimeline", () => {
     const onRequestChanges = vi.fn(async () => "request_changes");
     renderTimeline({
       approvals: [{ ...baseRequest, status: "pending" }],
-      roles: { isManager: false, isInternalReviewer: true, isClientReviewer: false },
+      roles: {
+        isManager: false,
+        isInternalReviewer: true,
+        isClientReviewer: false,
+        isAgencyAdmin: false,
+      },
       onRequestChanges,
     });
     const request = screen.getByRole("button", { name: /request changes/i });

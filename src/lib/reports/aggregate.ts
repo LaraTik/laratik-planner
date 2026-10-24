@@ -52,6 +52,7 @@ export interface AgencyReachAggregate {
 }
 
 export interface ReportAggregateOptions {
+  agencyId: string;
   workspaceIds: string[];
   channelIds: string[];
   /** Inclusive lower bound (UTC). */
@@ -100,6 +101,7 @@ export async function aggregateAgencyReach(
       and(
         inArray(socialChannels.workspaceId, args.workspaceIds),
         inArray(socialChannels.id, args.channelIds),
+        eq(workspaces.agencyId, args.agencyId),
         eq(socialChannels.isActive, true),
       ),
     );
@@ -107,6 +109,9 @@ export async function aggregateAgencyReach(
   if (channels.length === 0) {
     return emptyAggregate(args);
   }
+  // Only use channel ids returned by the agency-scoped ownership query.
+  // Client-supplied ids must never reach metric queries directly.
+  const authorizedChannelIds = channels.map((channel) => channel.channelId);
 
   // ── source 2: metrics aggregate ────────────────────────────────────
   const metrics = await db
@@ -122,7 +127,7 @@ export async function aggregateAgencyReach(
     .from(socialProfileDailyMetrics)
     .where(
       and(
-        inArray(socialProfileDailyMetrics.socialChannelId, args.channelIds),
+        inArray(socialProfileDailyMetrics.socialChannelId, authorizedChannelIds),
         gte(socialProfileDailyMetrics.metricDate, toDateOnly(args.from)),
         lte(socialProfileDailyMetrics.metricDate, toDateOnly(args.to)),
       ),
@@ -153,7 +158,7 @@ export async function aggregateAgencyReach(
     .from(socialProfileDailyMetrics)
     .where(
       and(
-        inArray(socialProfileDailyMetrics.socialChannelId, args.channelIds),
+        inArray(socialProfileDailyMetrics.socialChannelId, authorizedChannelIds),
         gte(socialProfileDailyMetrics.metricDate, toDateOnly(args.from)),
         lte(socialProfileDailyMetrics.metricDate, toDateOnly(args.to)),
       ),
@@ -259,7 +264,7 @@ export function resolvePeriodPreset(preset: "7d" | "30d" | "90d", now: Date = ne
 }
 
 export function resolveCustomPeriod(from: Date, to: Date): Period {
-  if (from.getTime() > to.getTime()) {
+  if (!Number.isFinite(from.getTime()) || !Number.isFinite(to.getTime()) || from > to) {
     throw new Error("Period start must be before period end.");
   }
   return { from, to, preset: "custom", label: "custom" };

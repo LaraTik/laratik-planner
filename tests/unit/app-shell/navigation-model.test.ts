@@ -138,8 +138,8 @@ describe("buildWorkspaceNavigation", () => {
         "advertising-campaigns",
         "advertising-adsets",
         "advertising-ads",
-        "advertising-creatives",
         "advertising-audience",
+        "advertising-creatives",
         "advertising-targeting",
       ]);
       if (advertising.children[0]?.kind === "link") {
@@ -295,6 +295,7 @@ describe("buildAgencyNavigation", () => {
         "agency-settings-general",
         "agency-settings-plan",
         "agency-settings-ai",
+        "agency-settings-ai-skills",
         "agency-settings-planning-packs",
         "agency-settings-trend-sources",
         "agency-settings-social",

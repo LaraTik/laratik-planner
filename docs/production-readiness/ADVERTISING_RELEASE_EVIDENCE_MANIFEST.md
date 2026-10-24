@@ -8,11 +8,11 @@ flag changes, provider writes, or release approval.
 
 | Identity                   | Value                                                                                                                                                                                                                                             |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Implementation commit      | `a54629e4a5fcd61556d1d734fdea5e51168d1d91`                                                                                                                                                                                                        |
-| Evidence/deployment commit | `a54629e4a5fcd61556d1d734fdea5e51168d1d91`                                                                                                                                                                                                        |
-| Database migration head    | `0085`                                                                                                                                                                                                                                            |
-| Drizzle migration ledger   | `86/86` in the disposable migration drill                                                                                                                                                                                                         |
-| Production version         | `a54629e` confirmed by `/api/health`                                                                                                                                                                                                              |
+| Implementation commit      | `9f3c4022` (`feat(advertising): complete reporting exports and taxonomy`)                                                                                                                                                                         |
+| Evidence/deployment commit | `9f3c4022` — exact clean implementation commit under test                                                                                                                                                                                         |
+| Database migration head    | `0089` (`advertising_reporting_metadata`)                                                                                                                                                                                                         |
+| Drizzle migration ledger   | `90/90` in the disposable migration drill                                                                                                                                                                                                         |
+| Production version         | `9f3c4022` local release candidate; no production deployment authorized                                                                                                                                                                           |
 | CI workflow artifact       | [CI](https://github.com/LaraTik/laratik-planner/actions/runs/38696125682), [Deploy](https://github.com/LaraTik/laratik-planner/actions/runs/38698789956), [Release](https://github.com/LaraTik/laratik-planner/actions/runs/38698989956) — passed |
 
 The source commit is the only code identity to which the results below may be
@@ -24,9 +24,11 @@ All database commands use a disposable `planner_test` database.
 
 | Gate                                   | Result                                                                                                    |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Verification                           | Pass — formatting, lint, strict typecheck, 509 unit files / 4,728 tests, production build                 |
+| Verification                           | Pass — formatting, lint, strict typecheck, 543 unit files / 4,887 tests, production build                 |
 | Advertising integration                | Pass — focused lifecycle 6/6 and tenant guards 17/17, including Graph-version migration and lease fencing |
-| Full migration safety                  | Pass — 5/5 drills, 86/86 ledger rows, backup/restore included                                             |
+| Full migration safety                  | Pass — 5/5 drills, 90/90 ledger rows, backup/restore included                                             |
+| Advertising visual matrix              | Pass — 5/5 responsive baselines reviewed (375/768/1024/1280/1440)                                         |
+| Advertising reporting browser gate     | Pass — English/Arabic Chromium dashboard checks 2/2                                                       |
 | Advertising functional browser gate    | Pass — 15/15 across Chromium, Firefox, WebKit, mobile Chrome, mobile Safari                               |
 | Advertising accessibility browser gate | Pass — 15/15 across the same five projects; serious/critical axe findings absent                          |
 | Combined advertising browser gate      | Pass — **30/30**                                                                                          |
@@ -35,6 +37,8 @@ Exact command forms:
 
 ```text
 pnpm verify
+TEST_DATABASE_URL=… pnpm test:e2e:isolated -- tests/e2e/advertising-reporting.spec.ts --project=chromium --timeout=60000
+TEST_DATABASE_URL=… pnpm test:visual -- --grep 'analytics/advertising'
 TEST_DATABASE_URL=… pnpm test:integration tests/integration/advertising-credential-lifecycle.test.ts tests/integration/advertising-tenant-guards.test.ts
 TEST_DATABASE_URL=… pnpm migration-drill
 TEST_DATABASE_URL=… pnpm test:e2e:isolated -- tests/e2e/advertising-admin.spec.ts tests/e2e/advertising-reporting.spec.ts --grep 'advertising|Advertising'

@@ -38,8 +38,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (!remote) return NextResponse.json({ error: "Object not found" }, { status: 404 });
     const headers = new Headers({
       "Content-Type": object.mimeType,
-      "Cache-Control": "private, max-age=86400",
-      Vary: "Cookie",
+      // Re-authorize every read; workspace permissions can change while the
+      // user's session cookie remains the same.
+      "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
     });
     // Pass-through order: don't include `content-type` here because

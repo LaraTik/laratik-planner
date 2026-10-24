@@ -4,6 +4,7 @@ import * as React from "react";
 import { AlertOctagon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { isMissingTranslation } from "@/messages";
 
 /**
  * FormSummary — top-of-form error card.
@@ -63,7 +64,10 @@ export function FormSummary({
   className,
 }: FormSummaryProps) {
   const t = useLocaleT();
-  const tr = (key: string, fallback: string) => (t(key) === key ? fallback : t(key));
+  const tr = (key: string, fallback: string) => {
+    const value = t(key);
+    return isMissingTranslation(value, key) ? fallback : value;
+  };
 
   // Don't render an empty card.
   const fields = fieldErrors ? Object.entries(fieldErrors).filter(([, v]) => Boolean(v)) : [];

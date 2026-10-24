@@ -2,6 +2,7 @@ import "server-only";
 import { mkdir, readFile as fsReadFile, writeFile as fsWriteFile } from "node:fs/promises";
 import { normalize, resolve, sep } from "node:path";
 import { randomUUID } from "node:crypto";
+import { logWarn } from "@/lib/observability/logger";
 import {
   signDownloadPath,
   signUploadPath,
@@ -181,9 +182,9 @@ export function getSignedDownloadUrl(storagePath: string): string {
  *
  * Behaviour:
  *   - empty / non-string input → returns `null` (no throw, no warn)
- *   - throws `StoragePathError` → returns `null` + one console.warn
+ *   - throws `StoragePathError` → returns `null` + one structured warning
  *     per workspace so the operator can find and clean the bad row
- *   - any other throw → returns `null` + console.warn (no path exposed
+ *   - any other throw → returns `null` + structured warning (no path exposed
  *     in logs)
  */
 export function safeGetSignedDownloadUrl(storagePath: string | null | undefined): string | null {
@@ -192,13 +193,9 @@ export function safeGetSignedDownloadUrl(storagePath: string | null | undefined)
     return getSignedDownloadUrl(storagePath);
   } catch (err) {
     if (err instanceof StoragePathError) {
-      console.warn(
-        `[brand-kit] safeGetSignedDownloadUrl: storagePath missing workspace prefix; skipping render. path=${storagePath.split("/")[0] ?? "<empty>"}/<redacted>`,
-      );
+      logWarn("storage.invalid_workspace_prefix");
     } else {
-      console.warn(
-        `[brand-kit] safeGetSignedDownloadUrl: unexpected error signing download url; skipping render.`,
-      );
+      logWarn("storage.signed_download_url_failed");
     }
     return null;
   }

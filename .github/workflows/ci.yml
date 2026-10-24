@@ -1,56 +1,27 @@
 name: CI
 
-# Authoritative release-gate workflow. The deploy workflow only fires
-# when this workflow is green on `main`, so every required release
-# contract must run here:
+# Authoritative release-gate workflow. Run it only when an operator
+# explicitly dispatches it; a green run does not deploy production.
+# GitHub deploy gates; the full integration suite is a mandatory local
+# pre-push gate (ADR 0020), not a GitHub Actions step:
 #
 #   1. format, lint, typecheck, and unit correctness
-#   2. integration + migration drill
+#   2. migration drill
 #   3. production build + Docker smoke
 #   4. zero critical/high production audit findings
 #   5. SMTP cert probe (deploy-blocker)
 #   6. workflow / Dockerfile / shell linters (deploy-blocker)
 #   7. Trend sidecar boot and unit suite
 #
-# Local hooks remain the fast feedback loop, but CI repeats the static
-# and unit gates authoritatively. Coverage and browser checks run in the
-# independent advisory workflow; strict browser/coverage audits remain
-# release-candidate and nightly checks. See `docs/testing/strategy.md`.
+# Local pre-push runs the full integration suite. CI repeats the static
+# and unit gates authoritatively. Coverage and browser checks run only
+# when the independent advisory workflow is dispatched.
 on:
-  push:
-    branches: [main]
-    # `paths-ignore` is OR-based: a workflow run is triggered as
-    # long as ANY changed file does NOT match a pattern. So a PR
-    # that touches `docs/foo.md` AND `.github/workflows/ci.yml`
-    # still runs (the workflow change overrides the docs ignore).
-    # This saves the full ~30 min CI budget on docs-only changes
-    # while keeping the deploy-gate contract intact for code, dep,
-    # workflow, and Docker changes.
-    paths-ignore:
-      - "docs/**"
-      - "**.md"
-  pull_request:
-    branches: [main]
-    paths-ignore:
-      - "docs/**"
-      - "**.md"
-  # Schedule removed 2026-08-23: was a daily 06:00 UTC CI run that also
-  # auto-deployed via the deploy.yml workflow_run chain. The SMTP cert
-  # check is still exercised on every push to main; if the cert approaches
-  # expiry while no one is pushing, `scripts/vps/check-smtp-cert.sh`
-  # should be re-enabled on a host-level cron if a daily safety net is
-  # required again.
+  workflow_dispatch:
 
-# Cancel in-flight runs. The group is per-PR for pull_request events
-# (so a force-push on PR #123 only cancels other runs of PR #123) and
-# per-ref for main pushes (so a `main` push does not cancel a still
-# running `main` deploy). Falls back to the workflow name only when
-# no PR number is available (e.g. on a tag push, which is not a
-# trigger today but is a safe default).
+# Cancel an earlier manually dispatched run for the same ref.
 concurrency:
-  group: >-
-    ${{ github.workflow }}-
-    ${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 # Default deny: every job must opt-in to the GitHub token scopes it
@@ -61,10 +32,11 @@ permissions:
 
 jobs:
   unit-quality:
+    if: github.ref == 'refs/heads/main'
     # Local hooks provide fast feedback; these same checks run here so
     # deploy eligibility never depends on a developer machine or hook
     # configuration.
-    name: Quality, integration, audit
+    name: Quality, migration, audit
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -83,40 +55,11 @@ jobs:
           --health-timeout 3s
           --health-retries 10
 
-      # Mailpit catches every email the integration tests send
-      # (invitation, magic-link, password reset) on 1025 SMTP and
-      # exposes them on 8025 HTTP for debug. Without it, SMTP at
-      # localhost:1025 (the env below) refuses every connection and
-      # the §23 journey fails at step 6 (invite 5 members). The
-      # mirror of the service in `docker-compose.dev.yml`.
-      mailpit:
-        # Pinned to v1.27.4 (latest stable). zizmor rejects `latest` and
-        # floating minor tags (e.g. v1.27) per its unpinned-images
-        # audit. Keep the comment in `docker-compose.dev.yml` in sync.
-        image: axllent/mailpit:v1.27.4@sha256:df6c2541907e1be6fac21f509927cf6ed771617a1f4b361ef66d97bd05593d2d
-        ports:
-          - 1025:1025
-          - 8025:8025
-        env:
-          MP_MAX_MESSAGES: "5000"
-          MP_SMTP_AUTH_ACCEPT_ANY: "1"
-          MP_SMTP_AUTH_ALLOW_INSECURE: "1"
-        options: >-
-          --health-cmd "wget -qO- http://localhost:8025/api/v1/info >/dev/null 2>&1 || exit 1"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-
     env:
       DATABASE_URL: postgresql://planner:planner_ci@localhost:5432/planner_test
       AUTH_SECRET: ci_secret_only_not_for_production_xxxxxxxxxxxxxxxx
       AUTH_URL: http://localhost:3000
       AUTH_TRUST_HOST: "true"
-      SMTP_HOST: localhost
-      SMTP_PORT: 1025
-      SMTP_USER: ci
-      SMTP_PASSWORD: ci-only
-      SMTP_FROM: "ci <ci@planner.test>"
       TEST_DATABASE_URL: postgresql://planner:planner_ci@localhost:5432/planner_test
 
     steps:
@@ -167,16 +110,12 @@ jobs:
         run: pnpm migration-drill
         timeout-minutes: 20
 
-      - name: Integration tests
-        run: pnpm test:integration
-        timeout-minutes: 20
-
       # The `--audit-level high` is deliberate and matches the contract in
       # this file's header: a deploy is blocked by critical/high production
       # advisories, not by every low/moderate finding. Without it pnpm
       # defaults to `low`, which silently made the gate stricter than the
       # stated contract and blocked routine pushes on background noise.
-      # The nightly Advisory quality workflow reports the lower severities so
+      # The manually dispatched Advisory quality workflow reports lower severities so
       # nothing is invisible.
       - name: Dependency audit
         run: pnpm audit --prod --audit-level high
@@ -189,13 +128,14 @@ jobs:
   # and publishing the exact SHA.
   #
   # Rationale: this job burned ~30 min of the 2,000 min/month free
-  # tier on every push. The 3-viewport responsive matrix is
+  # tier on each CI run. The 3-viewport responsive matrix is
   # deterministic enough to run on a dev laptop with the committed
   # baselines in `tests/e2e/visual-regression.spec.ts-snapshots/`.
   # See `docs/testing/strategy.md` (Release gates) and
   # `docs/decisions/0013-advisory-quality-gates.md` for the rationale.
 
   build-smoke:
+    if: github.ref == 'refs/heads/main'
     name: Build, Docker image, health smoke, GHCR push
     runs-on: ubuntu-latest
     needs: [unit-quality, trends-quality]
@@ -284,10 +224,10 @@ jobs:
       - name: Smoke e2e (liveness)
         # Smoke-test the production image's process startup. We hit
         # /api/health/live (liveness only — no DB check) so this smoke stays
-        # independent from the Postgres service used by integration tests.
-        # Readiness (DB + schema) is verified by the unit-quality +
-        # integration jobs above and by Traefik's loadbalancer probe in
-        # production.
+        # independent from the Postgres service used by the migration drill.
+        # Database-backed integration tests run locally in the pre-push hook.
+        # Production readiness is checked by the migration gate and Traefik's
+        # loadbalancer probe after deployment.
         #
         # Why 127.0.0.1 (not localhost): IPv6 trap — the GHA runner
         # resolves "localhost" to ::1 first and Next.js binds 0.0.0.0
@@ -349,7 +289,7 @@ jobs:
         # does not push a half-broken image to the registry. If the
         # smoke step exits non-zero, this step is skipped via `if:` and
         # the job fails before the push.
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: success() && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -363,7 +303,7 @@ jobs:
         # previous push (in deploy.yml's build job) is gone as of the
         # 2026-08-28 single-build change; this is the only place the
         # production image is published.
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: success() && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
         run: |
           docker push "ghcr.io/laratik/laratik-planner:${GITHUB_SHA}"
           docker push ghcr.io/laratik/laratik-planner:latest
@@ -372,6 +312,7 @@ jobs:
         timeout-minutes: 5
 
   trends-quality:
+    if: github.ref == 'refs/heads/main'
     # Build the sidecar's test-only target so the tests run against the same
     # Python and production dependency graph that the runtime image uses.
     # The target is not published; build-smoke depends on this job so a
@@ -391,6 +332,7 @@ jobs:
         timeout-minutes: 25
 
   check-smtp-cert:
+    if: github.ref == 'refs/heads/main'
     # Gates deploys on the production SMTP cert not being within 14
     # days of expiry. Why this is a deploy-gate job: the moment the cert
     # expires, every Nodemailer send (invitation resend, magic-link
@@ -455,6 +397,7 @@ jobs:
         timeout-minutes: 1
 
   lint-meta:
+    if: github.ref == 'refs/heads/main'
     # Static-analysis linters for the deploy chain itself. Runs in
     # parallel with the heavier unit-quality + build-smoke jobs. Every
     # finding that escapes into `main` is a deploy-time surprise (or a

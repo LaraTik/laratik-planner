@@ -136,7 +136,7 @@ export function PlanningOverviewSummary({
         aria-label={t("contentDetail.overview.details")}
       >
         <div className="border-border bg-surface rounded-[var(--radius-card)] border p-4">
-          <h3 className="text-section-title text-fg-primary font-semibold">
+          <h3 className="text-title-section text-fg-primary font-semibold">
             {t("contentDetail.overview.details")}
           </h3>
           <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -160,7 +160,7 @@ export function PlanningOverviewSummary({
           data-testid="overview-needs-attention"
         >
           <div className="flex items-baseline justify-between gap-2">
-            <h3 className="text-section-title text-fg-primary font-semibold">
+            <h3 className="text-title-section text-fg-primary font-semibold">
               {t("contentDetail.overview.needsAttention")}
             </h3>
             <span className="text-label text-fg-muted">
@@ -197,7 +197,7 @@ export function PlanningOverviewSummary({
         data-testid="overview-readiness-summary"
       >
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="text-section-title text-fg-primary font-semibold">
+          <h3 className="text-title-section text-fg-primary font-semibold">
             {t("contentDetail.overview.readiness")}
           </h3>
           <span
@@ -258,7 +258,7 @@ export function PlanningOverviewSummary({
         data-testid="overview-recent-activity"
       >
         <div className="flex items-baseline justify-between gap-2">
-          <h3 className="text-section-title text-fg-primary font-semibold">
+          <h3 className="text-title-section text-fg-primary font-semibold">
             {t("contentDetail.overview.recentActivity")}
           </h3>
           <Link

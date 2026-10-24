@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { searchMentionableUsers } from "@/lib/mentions/search";
+import { logError } from "@/lib/observability/logger";
 
 /**
  * GET /api/mentions/search?workspace=<slug>&q=<query>
@@ -55,7 +56,7 @@ export async function GET(req: NextRequest) {
     // The search service is defensive — any internal failure
     // surfaces as an empty list (the picker is non-critical),
     // not a 500. Log the error so it's not silently swallowed.
-    console.error("[mentions] search failed", err);
+    logError("mentions.search.failed", { err });
     return NextResponse.json({ users: [] });
   }
 }

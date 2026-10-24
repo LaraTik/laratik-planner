@@ -21,7 +21,8 @@
   "supportStatus": {
     "pending": "Pending",
     "approved": "Approved",
-    "rejected": "Rejected"
+    "rejected": "Rejected",
+    "expired": "Expired"
   },
   "supportScopeMetadata": "Metadata only",
   "supportScopeWorkspace": "Workspace {prefix}…",
@@ -33,6 +34,33 @@
   "supportEmptyTitle": "No support access requests",
   "supportEmptyBody": "No platform administrator has filed a support access request for your agency.",
   "supportRecentHeading": "Recent decisions",
+  "supportReviewTitle": "Review support access",
+  "supportReviewDescription": "Review each platform support request for this agency. Approvals are temporary, scoped, and audited.",
+  "backToPlan": "Back to Plan & Usage",
+  "supportPendingHeading": "Pending requests ({count})",
+  "supportNoPendingTitle": "No requests need review",
+  "supportNoPendingBody": "New support access requests for this agency will appear here.",
+  "supportRequestedAt": "Submitted {date}",
+  "supportDurationHours": "{count} hours",
+  "supportReason": "Reason for access",
+  "supportDecisionReason": "Decision note",
+  "supportDecisionReasonPlaceholder": "Explain why you approved or rejected this request.",
+  "supportDecisionAllowDownloads": "Allow downloads for this grant",
+  "supportDecisionApprove": "Approve temporary access",
+  "supportDecisionReject": "Reject request",
+  "supportDecisionSaving": "Submitting decision…",
+  "supportDecisionSuccess": {
+    "approved": "Access approved. The temporary grant is now active.",
+    "rejected": "Request rejected. No access grant was created."
+  },
+  "supportDecisionErrors": {
+    "unauthorized": "Your agency access changed. Refresh the page and try again.",
+    "invalid_input": "Enter a decision note and try again.",
+    "not_found": "This request is not available in the active agency.",
+    "already_decided": "This request has already been decided or expired. Refresh the page.",
+    "rate_limited": "Too many decisions. Wait briefly and try again.",
+    "decision_failed": "Could not save this decision. Try again."
+  },
   "levels": {
     "healthy": "Healthy",
     "warning": "Warning",

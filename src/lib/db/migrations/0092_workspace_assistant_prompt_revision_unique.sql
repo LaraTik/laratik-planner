@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "workspace_assistant_prompt_revision_identity_idx" ON "workspace_assistant_prompt_revision" USING btree ("prompt_id","revision");

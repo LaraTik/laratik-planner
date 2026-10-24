@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
-import { isCronAuthorized } from "@/lib/cron/auth";
+import { authorizeCronRequest } from "@/lib/cron/route-auth";
 import { runAdvertisingSyncTick } from "@/lib/advertising/sync-worker";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 import { serverEnv } from "@/lib/validation/env";
@@ -19,12 +19,9 @@ export const runtime = "nodejs";
 
 const MAX_RUNTIME_MS = 50_000;
 
-function unauthorized(): NextResponse {
-  return new NextResponse("Unauthorized", { status: 401, headers: mutatingApiHeaders() });
-}
-
 async function handle(req: NextRequest): Promise<NextResponse> {
-  if (!isCronAuthorized(req.headers)) return unauthorized();
+  const authResponse = authorizeCronRequest(req.headers);
+  if (authResponse) return authResponse;
 
   if (!serverEnv.ADVERTISING_SYNC_ENABLED) {
     return NextResponse.json({ skipped: "flag-off" }, { headers: mutatingApiHeaders() });

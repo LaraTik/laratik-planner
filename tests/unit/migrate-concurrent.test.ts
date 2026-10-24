@@ -9,7 +9,7 @@
  *  - `--max-retries` / `--wait-ms` flag parsing (numeric
  *    validation, exit codes).
  *  - `--> statement-breakpoint` split (mirrors Drizzle).
- *  - Index-name extraction from `CREATE INDEX [CONCURRENTLY]`
+ *  - Index-name extraction from `CREATE INDEX CONCURRENTLY`
  *    for the cleanup-command path.
  *  - Argument validation (missing file, unknown flag, etc.).
  *
@@ -19,26 +19,13 @@
  * before it reaches the operator.
  */
 import { describe, expect, it } from "vitest";
-
-/**
- * Re-implement the small pure helpers here so the test is
- * self-contained (the script's helpers are not exported).
- * If the production shape changes, mirror the change below
- * so the contract stays locked.
- */
-function splitStatements(sql: string): string[] {
-  return sql
-    .split("--> statement-breakpoint")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-}
-
-function extractIndexName(statement: string): string | null {
-  const m = statement.match(
-    /CREATE\s+(UNIQUE\s+)?INDEX\s+(CONCURRENTLY\s+)?(IF\s+NOT\s+EXISTS\s+)?"?([A-Za-z_][A-Za-z0-9_]*)"?/i,
-  );
-  return m?.[4] ?? null;
-}
+import {
+  extractIndexName,
+  formatConcurrentMigrationError,
+  isInsideDirectory,
+  splitStatements,
+  validateConcurrentIndexStatements,
+} from "../../scripts/migrate-concurrent-sql";
 
 type Args = { file: string; maxRetries: number; waitMs: number };
 
@@ -106,17 +93,55 @@ describe("migrate-concurrent — statement split (mirrors Drizzle)", () => {
   });
 });
 
-describe("migrate-concurrent — index name extraction", () => {
-  it("extracts the name from a plain CREATE INDEX", () => {
-    expect(extractIndexName('CREATE INDEX "my_idx" ON "t" ("c");')).toBe("my_idx");
+describe("migrate-concurrent — input safety guards", () => {
+  it("accepts only breakpoint-separated concurrent index commands", () => {
+    expect(() =>
+      validateConcurrentIndexStatements(
+        splitStatements(`
+          -- online index build
+          CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS \"ready_idx\"
+            ON \"assets\" (\"workspace_id\") WHERE \"status\" = 'ready; archived';
+          --> statement-breakpoint
+          /* second independent index */
+          CREATE INDEX CONCURRENTLY \"created_idx\" ON \"assets\" (\"created_at\");
+        `),
+      ),
+    ).not.toThrow();
   });
 
+  it("rejects regular indexes that would take a write-blocking lock", () => {
+    expect(() =>
+      validateConcurrentIndexStatements(['CREATE INDEX \"unsafe_idx\" ON \"assets\" (id);']),
+    ).toThrow(/CREATE \[UNIQUE\] INDEX CONCURRENTLY/);
+  });
+
+  it("rejects non-index DDL", () => {
+    expect(() =>
+      validateConcurrentIndexStatements(['ALTER TABLE \"assets\" ADD COLUMN x text;']),
+    ).toThrow(/CREATE \[UNIQUE\] INDEX CONCURRENTLY/);
+  });
+
+  it("rejects a second command in the same breakpoint-delimited chunk", () => {
+    expect(() =>
+      validateConcurrentIndexStatements([
+        'CREATE INDEX CONCURRENTLY \"safe_idx\" ON \"assets\" (id); DROP TABLE \"assets\";',
+      ]),
+    ).toThrow(/CREATE \[UNIQUE\] INDEX CONCURRENTLY/);
+  });
+
+  it("recognizes Drizzle migration paths and paths outside the ledger", () => {
+    expect(
+      isInsideDirectory("/repo/src/lib/db/migrations/0001.sql", "/repo/src/lib/db/migrations"),
+    ).toBe(true);
+    expect(
+      isInsideDirectory("/repo/scripts/migrations/0001.sql", "/repo/src/lib/db/migrations"),
+    ).toBe(false);
+  });
+});
+
+describe("migrate-concurrent — index name extraction", () => {
   it("extracts the name from CREATE INDEX CONCURRENTLY", () => {
     expect(extractIndexName('CREATE INDEX CONCURRENTLY "my_idx" ON "t" ("c");')).toBe("my_idx");
-  });
-
-  it("handles UNIQUE INDEX", () => {
-    expect(extractIndexName('CREATE UNIQUE INDEX "u_idx" ON "t" ("c");')).toBe("u_idx");
   });
 
   it("handles UNIQUE INDEX CONCURRENTLY", () => {
@@ -125,16 +150,37 @@ describe("migrate-concurrent — index name extraction", () => {
     );
   });
 
-  it("handles IF NOT EXISTS", () => {
-    expect(extractIndexName('CREATE INDEX IF NOT EXISTS "i" ON "t" ("c");')).toBe("i");
-  });
-
   it("handles IF NOT EXISTS + CONCURRENTLY", () => {
     expect(extractIndexName('CREATE INDEX CONCURRENTLY IF NOT EXISTS "i" ON "t" ("c");')).toBe("i");
   });
 
+  it("does not extract names from non-concurrent indexes", () => {
+    expect(extractIndexName('CREATE INDEX "i" ON "t" ("c");')).toBeNull();
+  });
+
   it("returns null for a non-matching statement", () => {
     expect(extractIndexName("ALTER TABLE foo ADD COLUMN bar text;")).toBeNull();
+  });
+});
+
+describe("migrate-concurrent — safe operator diagnostics", () => {
+  it("keeps database message details out of retained logs while preserving the error code", () => {
+    const error = Object.assign(new Error("duplicate value: private-customer@example.test"), {
+      code: "23505",
+    });
+
+    const diagnostic = formatConcurrentMigrationError(error);
+    expect(diagnostic).toBe("Error (code 23505)");
+    expect(diagnostic).not.toContain("private-customer@example.test");
+  });
+
+  it("rejects untrusted error names and codes", () => {
+    const error = Object.assign(new Error("sensitive detail"), {
+      name: "Bad Name: secret",
+      code: "SQLSTATE=secret",
+    });
+
+    expect(formatConcurrentMigrationError(error)).toBe("Error");
   });
 });
 

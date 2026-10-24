@@ -7,6 +7,7 @@ import {
   resolveWorkflowTransition,
   stageIncluded,
   type WorkflowScenarioId,
+  type WorkspaceRole,
 } from "@/lib/content/workflow";
 
 /**
@@ -74,26 +75,126 @@ describe("effectiveTransitions", () => {
 });
 
 describe("resolveWorkflowTransition + scenario filter", () => {
-  it("rejects content-review transitions when scenario omits content_review", () => {
+  it("skips the content-review gate when the scenario omits content_review", () => {
+    // `lightweight` promises "Planning → Design → Creative approval →
+    // Publishing setup → Published" with "No pre-design content
+    // review". `approve_content` is the only rule that reaches
+    // `approved_for_design`, so simply filtering `submit_content_review`
+    // out of the table would strand every lightweight item at `draft` —
+    // which ADR 0014 forbids ("a scenario switch can never trap an
+    // in-flight item"). The submit action therefore lands on the next
+    // spine stage instead.
+    const out = resolveWorkflowTransition({
+      action: "submit_content_review",
+      currentStatus: "draft",
+      actorRoles: ["content_planner"],
+      scenario: WORKFLOW_SCENARIOS.lightweight,
+    });
+    expect(out.to).toBe("approved_for_design");
+  });
+
+  it("never traps an in-flight item that sits in a stage the scenario omits", () => {
+    // A workspace can switch to `lightweight` while an item is in
+    // `content_review` — a stage the new scenario omits. ADR 0014
+    // requires that "a scenario switch can never trap an in-flight
+    // item", so the item must still be FINISHABLE and still be
+    // cancellable / blockable. A source-stage filter would reject
+    // every action out of that status, including the escape hatches.
+    const finished = resolveWorkflowTransition({
+      action: "approve_content",
+      currentStatus: "content_review",
+      actorRoles: ["internal_reviewer"],
+      scenario: WORKFLOW_SCENARIOS.lightweight,
+    });
+    expect(finished.to).toBe("approved_for_design");
+
+    const cancelled = resolveWorkflowTransition({
+      action: "cancel",
+      currentStatus: "content_review",
+      actorRoles: ["workspace_manager"],
+      reason: "No longer needed",
+      scenario: WORKFLOW_SCENARIOS.lightweight,
+    });
+    expect(cancelled.to).toBe("cancelled");
+
+    const blocked = resolveWorkflowTransition({
+      action: "block",
+      currentStatus: "content_review",
+      actorRoles: ["workspace_manager"],
+      reason: "Waiting on the client",
+      scenario: WORKFLOW_SCENARIOS.lightweight,
+    });
+    expect(blocked.to).toBe("blocked");
+  });
+
+  it("still refuses a move INTO a stage the scenario omits", () => {
+    // The target filter is the one that matters: a transition may not
+    // park an item in a gate the workspace's spine does not have.
     expect(() =>
       resolveWorkflowTransition({
         action: "submit_content_review",
         currentStatus: "draft",
         actorRoles: ["content_planner"],
-        scenario: WORKFLOW_SCENARIOS.lightweight,
+        scenario: WORKFLOW_SCENARIOS.standard,
+      }),
+    ).not.toThrow();
+    // …and a target with no bypass is refused rather than silently
+    // landing somewhere else.
+    expect(() =>
+      resolveWorkflowTransition({
+        action: "record_published",
+        currentStatus: "ready_to_publish",
+        actorRoles: ["publisher"],
+        scenario: {
+          ...WORKFLOW_SCENARIOS.lightweight,
+          stages: WORKFLOW_SCENARIOS.lightweight.stages.filter((stage) => stage !== "published"),
+        },
       }),
     ).toThrowError(expect.objectContaining({ code: "invalid_transition" }));
   });
 
-  it("rejects approve_content from lightweight (status not reachable)", () => {
+  it("allows a creative-gate revision to be re-submitted under lightweight", () => {
+    // `changes_requested` is a derived status: it records that work went
+    // BACK to a gate, it does not own a stage. Gating it on the fixed
+    // content_review mapping would make a creative revision impossible
+    // to deliver in a workspace that skips content review.
     expect(() =>
       resolveWorkflowTransition({
-        action: "approve_content",
-        currentStatus: "content_review",
-        actorRoles: ["internal_reviewer"],
+        action: "submit_delivery",
+        currentStatus: "changes_requested",
+        actorRoles: ["designer"],
         scenario: WORKFLOW_SCENARIOS.lightweight,
       }),
-    ).toThrowError(expect.objectContaining({ code: "invalid_transition" }));
+    ).not.toThrow();
+  });
+
+  it("allows a creative-gate change request to be raised under lightweight", () => {
+    expect(() =>
+      resolveWorkflowTransition({
+        action: "request_creative_changes",
+        currentStatus: "creative_review",
+        actorRoles: ["internal_reviewer"],
+        reason: "off-brand",
+        scenario: WORKFLOW_SCENARIOS.lightweight,
+      }),
+    ).not.toThrow();
+  });
+
+  it("finishes an in-flight content_review item under lightweight instead of trapping it", () => {
+    // The ORIGINAL expectation here was a rejection: "status not
+    // reachable". That turned out to be the trap ADR 0014 forbids —
+    // a source-stage filter rejects EVERY action out of an omitted
+    // stage, including `cancel` and `block`, so a workspace switched
+    // to `lightweight` mid-flight would strand its items with no way
+    // out. The item is now FINISHED: the content gate is skipped and
+    // the item lands on the next included stage.
+    const out = resolveWorkflowTransition({
+      action: "approve_content",
+      currentStatus: "content_review",
+      actorRoles: ["internal_reviewer"],
+      scenario: WORKFLOW_SCENARIOS.lightweight,
+    });
+    expect(out.to).toBe("approved_for_design");
   });
 
   it("allows assigning a designer straight from approved_for_design under lightweight", () => {
@@ -168,10 +269,13 @@ describe("resolveWorkflowTransition + scenario filter", () => {
   it("preserves the standard error code shape (DomainError)", () => {
     try {
       resolveWorkflowTransition({
-        action: "submit_content_review",
-        currentStatus: "draft",
-        actorRoles: ["content_planner"],
-        scenario: WORKFLOW_SCENARIOS.lightweight,
+        action: "record_published",
+        currentStatus: "ready_to_publish",
+        actorRoles: ["publisher"],
+        scenario: {
+          ...WORKFLOW_SCENARIOS.lightweight,
+          stages: WORKFLOW_SCENARIOS.lightweight.stages.filter((stage) => stage !== "published"),
+        },
       });
       throw new Error("expected throw");
     } catch (err) {
@@ -207,5 +311,76 @@ describe("WORKFLOW_SCENARIOS catalog", () => {
     expect(new Set(WORKFLOW_SCENARIOS.standard.stages)).toEqual(allSix);
     expect(WORKFLOW_SCENARIOS.self_publish.publishingSetupRequired).toBe(false);
     expect(WORKFLOW_SCENARIOS.lightweight.stages.includes("content_review")).toBe(false);
+  });
+});
+
+describe("workflow scenarios — a scenario must never trap an item", () => {
+  /**
+   * ADR 0014: "Conditions (blocked, cancelled) always pass through so a
+   * scenario switch can never trap an in-flight item."
+   *
+   * `lightweight` omits the `content_review` stage, and
+   * `approve_content` is the ONLY rule that reaches
+   * `approved_for_design`. If the submit action were merely REJECTED
+   * under this scenario, every lightweight item would be stranded at
+   * `draft` and the scenario's own promise ("Planning → Design →
+   * Creative approval → Publishing setup → Published") would be
+   * unreachable. The omitted stage is SKIPPED instead, so the spine
+   * stays whole.
+   */
+  const SPINE: Array<{
+    action: Parameters<typeof resolveWorkflowTransition>[0]["action"];
+    from: Parameters<typeof resolveWorkflowTransition>[0]["currentStatus"];
+    roles: WorkspaceRole[];
+    to: string;
+  }> = [
+    {
+      action: "submit_content_review",
+      from: "draft",
+      roles: ["content_planner"],
+      to: "approved_for_design",
+    },
+    {
+      action: "assign_designer",
+      from: "approved_for_design",
+      roles: ["workspace_manager"],
+      to: "in_design",
+    },
+    { action: "submit_delivery", from: "in_design", roles: ["designer"], to: "creative_review" },
+    {
+      action: "approve_internal_creative",
+      from: "creative_review",
+      roles: ["internal_reviewer"],
+      to: "ready_to_publish",
+    },
+    { action: "record_published", from: "ready_to_publish", roles: ["publisher"], to: "published" },
+  ];
+
+  it("walks the whole lightweight spine from draft to published", () => {
+    for (const step of SPINE) {
+      const out = resolveWorkflowTransition({
+        action: step.action,
+        currentStatus: step.from,
+        actorRoles: step.roles,
+        scenario: WORKFLOW_SCENARIOS.lightweight,
+      });
+      expect(out.to, `${step.action} under lightweight`).toBe(step.to);
+    }
+  });
+
+  it("keeps the standard spine identical — the filter is a no-op there", () => {
+    for (const step of SPINE) {
+      const out = resolveWorkflowTransition({
+        action: step.action,
+        currentStatus: step.from,
+        actorRoles: step.roles,
+        scenario: WORKFLOW_SCENARIOS.standard,
+      });
+      // Under `standard` the content gate exists, so the submit action
+      // lands in content_review; the reviewer then approves it.
+      expect(out.to, `${step.action} under standard`).toBe(
+        step.action === "submit_content_review" ? "content_review" : step.to,
+      );
+    }
   });
 });

@@ -17,7 +17,7 @@ test.describe("Command Center accessibility", () => {
     await bootstrapRoleSession(page, "workspace_manager", "command-center-a11y-light", {
       socialAnalyticsFixture: true,
     });
-    await page.goto("/app/w/command-center-a11y-light");
+    await page.goto("/app/a/test-agency/w/command-center-a11y-light");
     await expect(page.getByTestId("command-center-panel")).toBeVisible();
     await expect(page.getByTestId("command-center-evidence")).toContainText("Latest metric");
     await expect(page.getByTestId("command-center-account-health")).toBeVisible();
@@ -31,7 +31,7 @@ test.describe("Command Center accessibility", () => {
     await page.goto("/app/account");
     await page.getByTestId("account-theme-input").selectOption("dark");
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await page.goto("/app/w/command-center-a11y-dark");
+    await page.goto("/app/a/test-agency/w/command-center-a11y-dark");
     await expect(page.getByTestId("command-center-panel")).toBeVisible();
     await expect(page.getByTestId("command-center-evidence")).toContainText("Latest metric");
     await expectNoSeriousViolations(page);
@@ -41,7 +41,7 @@ test.describe("Command Center accessibility", () => {
     await bootstrapRoleSession(page, "workspace_manager", "command-center-inventory", {
       socialAnalyticsFixture: true,
     });
-    await page.goto("/app/w/command-center-inventory");
+    await page.goto("/app/a/test-agency/w/command-center-inventory");
     const inventory = page.getByTestId("command-center-inventory");
     await expect(inventory).toBeVisible();
     await expect(

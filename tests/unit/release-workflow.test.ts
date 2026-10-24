@@ -5,10 +5,9 @@ import { describe, expect, it } from "vitest";
 describe("production release workflow", () => {
   const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/release.yml"), "utf8");
 
-  it("runs for successful deploys and explicit backfill dispatches", () => {
-    expect(workflow).toContain(
-      "if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'",
-    );
+  it("runs only on explicit dispatch", () => {
+    expect(workflow).toContain("on:\n  workflow_dispatch:");
+    expect(workflow).not.toMatch(/\n  (push|pull_request|schedule|workflow_run):\n/);
   });
 
   it("treats a missing tag reference as empty instead of as an API error body", () => {

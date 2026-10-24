@@ -51,6 +51,13 @@ and is threaded explicitly into every agency-scoped helper. See
 - Production configuration validates complete provider combinations before serving traffic.
 - The authenticated app shell renders on every navigation, so its query cost is a constant budget rather than a per-workspace multiple. Resolve set questions ("what can this actor see across all their workspaces?") with set-based helpers, never a per-workspace loop. See [`app-shell-performance.md`](app-shell-performance.md).
 
+Module ownership and gradual feature-first migration rules are defined in
+[`module-ownership.md`](./module-ownership.md). Route files remain Next.js
+adapters; feature behavior has one canonical owner; and platform-wide
+capabilities stay in `src/lib/` and genuinely shared presentation stays in
+`src/components/`. The existing layout is migrated incrementally rather than
+reorganized in one pass.
+
 ## Workflow source of truth
 
 `src/lib/content/workflow.ts` defines statuses, actions, permitted roles, required reasons, approval gates, and return targets. Delivery and publishing modules derive their outcomes through typed pure functions and then persist those outcomes transactionally. UI labels and actions must consume the same domain definitions.

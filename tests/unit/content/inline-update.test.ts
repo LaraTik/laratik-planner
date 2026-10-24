@@ -45,6 +45,9 @@ vi.mock("@/lib/auth/policy", () => policyMock);
 const materialityMock = vi.hoisted(() => ({ recordMaterialityEvent: vi.fn() }));
 vi.mock("@/lib/publishing/materiality", () => materialityMock);
 
+const loggerMock = vi.hoisted(() => ({ logError: vi.fn() }));
+vi.mock("@/lib/observability/logger", () => loggerMock);
+
 import {
   inlineUpdateBriefAction,
   inlineUpdateDateAction,
@@ -242,10 +245,14 @@ describe("inlineUpdateBriefAction", () => {
     });
   });
 
-  it("surfaces a transaction failure as an error and skips materiality", async () => {
-    dbMock.db.transaction.mockRejectedValue(new Error("deadlock detected"));
+  it("sanitizes and logs transaction failures, then skips materiality", async () => {
+    const failure = new Error("postgres://planner:private-password@db.internal/planner");
+    dbMock.db.transaction.mockRejectedValue(failure);
     expect(await inlineUpdateBriefAction(SLUG, ITEM_ID, "new brief")).toEqual({
-      error: "deadlock detected",
+      error: "Could not save the brief.",
+    });
+    expect(loggerMock.logError).toHaveBeenCalledWith("content.inline_update.brief_write_failed", {
+      err: failure,
     });
     expect(materialityMock.recordMaterialityEvent).not.toHaveBeenCalled();
   });
@@ -257,13 +264,17 @@ describe("inlineUpdateBriefAction", () => {
     });
   });
 
-  it("says the brief saved when only the materiality record failed", async () => {
-    materialityMock.recordMaterialityEvent.mockRejectedValue(new Error("no reviewer found"));
+  it("keeps materiality failure copy safe and says the brief was saved", async () => {
+    const failure = new Error("postgres://planner:private-password@db.internal/planner");
+    materialityMock.recordMaterialityEvent.mockRejectedValue(failure);
     const result = await inlineUpdateBriefAction(SLUG, ITEM_ID, "new brief");
     // The row IS saved. Telling the planner it failed would make them
     // re-save, and approval history remains intentionally valid.
-    expect(result.error).toBe(
-      "no reviewer found Brief was saved and approval history remains unchanged.",
+    expect(result.error).toBe("Brief saved and approval history remains unchanged.");
+    expect(result.error).not.toContain("private-password");
+    expect(loggerMock.logError).toHaveBeenCalledWith(
+      "content.inline_update.brief_materiality_failed",
+      { err: failure },
     );
   });
 
@@ -314,8 +325,10 @@ describe("inlineUpdateTitleAction", () => {
   });
 
   it("uses the title-specific failure wording", async () => {
-    dbMock.db.transaction.mockRejectedValue(new Error("boom"));
-    expect(await inlineUpdateTitleAction(SLUG, ITEM_ID, "New title")).toEqual({ error: "boom" });
+    dbMock.db.transaction.mockRejectedValue(new Error("database connection secret"));
+    expect(await inlineUpdateTitleAction(SLUG, ITEM_ID, "New title")).toEqual({
+      error: "Could not save the title.",
+    });
 
     dbMock.db.transaction.mockRejectedValue("raw");
     expect(await inlineUpdateTitleAction(SLUG, ITEM_ID, "New title")).toEqual({
@@ -327,7 +340,7 @@ describe("inlineUpdateTitleAction", () => {
     primeTransaction({ title: "Old" });
     materialityMock.recordMaterialityEvent.mockRejectedValue(new Error("x"));
     expect(await inlineUpdateTitleAction(SLUG, ITEM_ID, "New title")).toEqual({
-      error: "x Title was saved and approval history remains unchanged.",
+      error: "Title saved and approval history remains unchanged.",
     });
 
     materialityMock.recordMaterialityEvent.mockRejectedValue({});
@@ -386,8 +399,10 @@ describe("inlineUpdateDateAction", () => {
   });
 
   it("uses the date-specific failure wording", async () => {
-    dbMock.db.transaction.mockRejectedValue(new Error("boom"));
-    expect(await inlineUpdateDateAction(SLUG, ITEM_ID, NEW_DATE)).toEqual({ error: "boom" });
+    dbMock.db.transaction.mockRejectedValue(new Error("database connection secret"));
+    expect(await inlineUpdateDateAction(SLUG, ITEM_ID, NEW_DATE)).toEqual({
+      error: "Could not save the date.",
+    });
 
     dbMock.db.transaction.mockRejectedValue("raw");
     expect(await inlineUpdateDateAction(SLUG, ITEM_ID, NEW_DATE)).toEqual({
@@ -398,7 +413,7 @@ describe("inlineUpdateDateAction", () => {
     primeTransaction({ plannedPublishAt: new Date("2026-03-01T00:00:00.000Z") });
     materialityMock.recordMaterialityEvent.mockRejectedValue(new Error("x"));
     expect(await inlineUpdateDateAction(SLUG, ITEM_ID, NEW_DATE)).toEqual({
-      error: "x Date was saved and approval history remains unchanged.",
+      error: "Date saved and approval history remains unchanged.",
     });
 
     materialityMock.recordMaterialityEvent.mockRejectedValue({});

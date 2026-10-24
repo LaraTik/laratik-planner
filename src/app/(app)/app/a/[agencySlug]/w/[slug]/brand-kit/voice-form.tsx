@@ -2,10 +2,11 @@
 import * as React from "react";
 import { useActionState } from "react";
 import { createVoiceRuleAction } from "./actions";
-import { useSuccessReset } from "@/lib/brand/use-success-reset";
+import { useSuccessReset } from "@/features/brand-kit";
 import { Card } from "@/components/ui/card";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
+import { FormActionError } from "@/components/forms/form-action-error";
 import { CharacterCountInput } from "@/components/workspace/character-count-input";
 import { VoiceRuleSuggestions } from "./voice-rule-suggestions";
 import { useLocaleT } from "@/components/i18n/locale-provider";
@@ -132,11 +133,7 @@ function RuleSubForm({
           pendingLabel={tr("users.voiceForm.adding", "Adding…")}
         />
       </div>
-      {state?.error ? (
-        <p role="alert" className="text-label text-danger">
-          {state.error}
-        </p>
-      ) : null}
+      {state?.error ? <FormActionError>{state.error}</FormActionError> : null}
     </form>
   );
 }

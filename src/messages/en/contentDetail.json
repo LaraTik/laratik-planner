@@ -199,6 +199,14 @@
     "saveStateUnsaved": "Unsaved changes",
     "saveStateError": "Save failed — your edits are still here"
   },
+  "contentMutationErrors": {
+    "unauthorized": "You do not have permission to change this content item.",
+    "invalid_transition": "This content item can no longer be changed in its current state.",
+    "validation_failed": "Check the content details and selected channels, then try again.",
+    "conflict": "The content item changed while you were working. Refresh and try again.",
+    "not_found": "The selected content or research source is no longer available.",
+    "failed": "The content item could not be saved. Please try again."
+  },
   "readinessPanel": {
     "readyTitle": "Ready for publishing",
     "readyDescription": "No blockers, no recommendations. This item can go live.",
@@ -418,6 +426,7 @@
     "rowAssetsUnapprovedOne": "{count} version, none approved",
     "rowAssetsUnapprovedMany": "{count} versions, none approved",
     "rowPublishing": "Publishing setup",
+    "rowPublishingUnavailable": "Readiness could not be checked. Retry before publishing.",
     "rowPublishingUpcoming": "Available after content and assets are approved",
     "rowPublishingReady": "Channels configured",
     "rowPublishingNoChannels": "No channels",
@@ -565,7 +574,14 @@
     "staleOverride": "Custom override — shared copy changed",
     "publishHandoff": "Publishing is where you choose each channel language, add destinations and disclosures, and approve the final copy.",
     "approvedBeforeLaterEdits": "Approved before later edits. Approval remains valid according to workspace policy.",
-    "backToPlanning": "Back to planning"
+    "backToPlanning": "Back to planning",
+    "perChannelMetaLabel": "Channel copy summary",
+    "languageShort": "Lang",
+    "charactersShort": "Chars",
+    "hashtagsShort": "Tags",
+    "channelsCount": "channels",
+    "overridesCount": "with custom override",
+    "staleCount": "marked stale"
   },
   "createNavigator": {
     "label": "Create sections"
@@ -652,6 +668,22 @@
     "description": "Internal notes are administrative and do not reset approvals or revisions."
   },
   "workflow": {
+    "errors": {
+      "unauthorized": "You do not have permission to make this workflow change.",
+      "invalid_transition": "This item can no longer make that workflow change. Refresh and try again.",
+      "validation_failed": "Check the item details and try again.",
+      "conflict": "The item changed while you were working. Refresh and try again.",
+      "not_found": "This item is no longer available. Refresh and try again.",
+      "failed": "The workflow action failed. Please try again."
+    },
+    "claimErrors": {
+      "not_found": "This item is no longer available. Refresh and try again.",
+      "already_assigned": "This item has already been claimed by a designer.",
+      "invalid_status": "This item is not ready to be claimed.",
+      "claim_conflict": "Someone else claimed this item first. Refresh and try again.",
+      "forbidden": "You do not have permission to claim this item.",
+      "failed": "The claim could not be completed. Please try again."
+    },
     "requestChangesTitle": "Request content changes",
     "requestChangesDescription": "Describe the revision needed before this content can move forward.",
     "requestChangesConfirm": "Request changes",
@@ -864,7 +896,8 @@
     "assigning": "Assigning…",
     "noDesigners": "No designers in this workspace yet. Invite one from Settings, or wait for a designer to claim the item themselves.",
     "closeWorkflow": "Close workflow",
-    "close": "Close"
+    "close": "Close",
+    "approvalFailed": "The approval action failed."
   },
   "deliveries": {
     "title": "Deliveries",
@@ -980,6 +1013,10 @@
       "figma": "Figma",
       "canva": "Canva",
       "other": "Other"
+    },
+    "submitError": {
+      "notAssignedDesigner": "This delivery belongs to another designer. Only the assigned designer can submit it.",
+      "updateFailed": "The delivery could not be submitted. Try again."
     }
   },
   "preview": {
@@ -1224,7 +1261,15 @@
     "readinessForbidden": "You do not have permission to confirm readiness.",
     "readinessNotFound": "The content item was not found.",
     "readinessInvalid": "The content item is not ready for this action.",
-    "readinessFailed": "Could not confirm publishing readiness."
+    "readinessFailed": "Could not confirm publishing readiness.",
+    "recordOutcome": {
+      "validation_failed": "Check the publication outcome details and try again.",
+      "not_found": "The channel or content item is no longer available. Refresh and try again.",
+      "invalid_transition": "This item is no longer ready for publication updates. Refresh and try again.",
+      "conflict": "The item changed while you were working. Refresh and try again.",
+      "unauthorized": "You do not have permission to record this publication outcome.",
+      "failed": "Could not record the publication outcome. Please try again."
+    }
   },
   "messages": {
     "captionLabel": "Caption",

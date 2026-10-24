@@ -1,18 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { and, desc, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
-import { db } from "@/lib/db";
-import { mediaFolderReconcileLogs, users } from "@/lib/db/schema";
-import { isAgencyMember } from "@/lib/auth/policy";
+import { getMediaFolderAudit, MediaPermissionError } from "@/features/media/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const Query = z.object({
-  agencyId: z.string().uuid(),
-  workspaceId: z.string().uuid(),
+  agencyId: z.string().guid(),
+  workspaceId: z.string().guid(),
   limit: z.coerce.number().int().min(1).max(50).optional(),
 });
 
@@ -35,46 +32,13 @@ export async function GET(req: NextRequest) {
   });
   if (!parsed.success) return NextResponse.json({ error: "Invalid query" }, { status: 400 });
 
-  if (!(await isAgencyMember(actor, parsed.data.agencyId))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  try {
+    const events = await getMediaFolderAudit(actor, parsed.data);
+    return NextResponse.json({ events }, { headers: { "Cache-Control": "private, max-age=30" } });
+  } catch (error) {
+    if (error instanceof MediaPermissionError) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    throw error;
   }
-  const limit = parsed.data.limit ?? 20;
-
-  const rows = await db
-    .select({
-      id: mediaFolderReconcileLogs.id,
-      reason: mediaFolderReconcileLogs.reason,
-      fromFolderId: mediaFolderReconcileLogs.fromFolderId,
-      toFolderId: mediaFolderReconcileLogs.toFolderId,
-      contentItemId: mediaFolderReconcileLogs.contentItemId,
-      mediaAssetId: mediaFolderReconcileLogs.mediaAssetId,
-      reconciledAt: mediaFolderReconcileLogs.reconciledAt,
-      actorName: users.name,
-    })
-    .from(mediaFolderReconcileLogs)
-    .leftJoin(users, eq(users.id, mediaFolderReconcileLogs.actorId))
-    .where(
-      and(
-        eq(mediaFolderReconcileLogs.agencyId, parsed.data.agencyId),
-        eq(mediaFolderReconcileLogs.workspaceId, parsed.data.workspaceId),
-      ),
-    )
-    .orderBy(desc(mediaFolderReconcileLogs.reconciledAt))
-    .limit(limit);
-
-  return NextResponse.json(
-    {
-      events: rows.map((row) => ({
-        id: row.id,
-        reason: row.reason,
-        fromFolderId: row.fromFolderId,
-        toFolderId: row.toFolderId,
-        contentItemId: row.contentItemId,
-        mediaAssetId: row.mediaAssetId,
-        reconciledAt: row.reconciledAt.toISOString(),
-        actorName: row.actorName ?? "Unknown",
-      })),
-    },
-    { headers: { "Cache-Control": "private, max-age=30" } },
-  );
 }

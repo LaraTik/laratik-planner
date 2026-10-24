@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { savedFilters } from "@/lib/db/schema";
 import { currentActor } from "@/lib/auth/current-actor";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
-import { INTERNAL_WORKSPACE_ROLES, hasWorkspaceRole } from "@/lib/auth/policy";
+import { canWriteToWorkspace, INTERNAL_WORKSPACE_ROLES, hasWorkspaceRole } from "@/lib/auth/policy";
 import { captureError } from "@/lib/observability/sentry";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 import { publicProviderError } from "@/lib/security/public-error";
@@ -129,6 +129,18 @@ export async function POST(req: NextRequest) {
       !workspace ||
       !(await hasWorkspaceRole(actor, workspace.id, [...INTERNAL_WORKSPACE_ROLES]))
     ) {
+      return NextResponse.json(
+        { error: "workspace_not_accessible" },
+        { status: 403, headers: mutatingApiHeaders() },
+      );
+    }
+    // Creating a saved view is a write to the workspace, so it needs a
+    // write-capable role — the read scope above admits `viewer`. A
+    // saved view is a shared convenience, not a workspace SETTING (it
+    // lives in its own table, not `workspace_settings`), so a
+    // write-capable role is the right bar; the share scope itself is
+    // the author's choice.
+    if (!(await canWriteToWorkspace(actor, workspace.id))) {
       return NextResponse.json(
         { error: "workspace_not_accessible" },
         { status: 403, headers: mutatingApiHeaders() },

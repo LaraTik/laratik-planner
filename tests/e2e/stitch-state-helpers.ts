@@ -238,7 +238,10 @@ export async function setupTrendsLiveState(page: Page, seed: SeedResultLike): Pr
     throw new Error(`Trend Radar fixture could not add a signal: ${signalResponse.status()}`);
   }
 
-  await page.goto(`/app/w/${slug}/trends`, { waitUntil: "domcontentloaded" });
+  // Navigate through the canonical tenant-qualified route. The legacy
+  // redirect can fall back to `/app` when the visual fixture's agency context
+  // has not been resolved yet, which leaves the trends readiness wait hanging.
+  await page.goto(`/app/a/test-agency/w/${slug}/trends`, { waitUntil: "domcontentloaded" });
   const wizard = page.locator('[data-testid="trends-onboarding-wizard"]');
   await wizard.waitFor({ state: "hidden" });
   await page.locator('[data-testid="trends-feed"]').waitFor({ state: "visible" });

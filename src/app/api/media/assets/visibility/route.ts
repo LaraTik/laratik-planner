@@ -2,14 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
-import { bulkSetMediaAssetVisibility, MediaPermissionError } from "@/lib/media/service";
+import { bulkSetMediaAssetVisibility, MediaPermissionError } from "@/features/media/server";
 import { BULK_SELECTION_TOO_LARGE, MAX_BULK_SELECTION } from "@/lib/media/bulk-cap";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const Body = z.object({
-  assetIds: z.array(z.string().uuid()).min(1),
+  assetIds: z.array(z.string().guid()).min(1),
   visibility: z.enum(["workspace", "agency"]),
 });
 

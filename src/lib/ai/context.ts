@@ -362,3 +362,43 @@ export function isContextMeaningful(ctx: AiContext): boolean {
     ctx.approvedContentSamples.length > 0
   );
 }
+
+/**
+ * Build the success audit manifest from both the planner's selection and the
+ * resolved context. Selected but empty branches are reported explicitly so
+ * usage records never imply that data reached the prompt when none was found.
+ */
+export function buildAiContextManifestCategories(
+  selection: AiContextSelection,
+  context: AiContext,
+): string[] {
+  const categories = ["title", "brief", "format", "workspace_name"];
+  if (selection.brandKit) {
+    const hasVoiceRules =
+      context.brandVoice.tone.length +
+        context.brandVoice.do.length +
+        context.brandVoice.dont.length >
+      0;
+    categories.push(hasVoiceRules ? "brand_kit:used" : "brand_kit:empty");
+  }
+  if (selection.brandVisuals) {
+    const hasVisualBrand =
+      (context.brandVisuals?.colors.length ?? 0) > 0 ||
+      (context.brandVisuals?.fonts.length ?? 0) > 0 ||
+      (context.brandVisuals?.publishingRules.length ?? 0) > 0;
+    categories.push(hasVisualBrand ? "brand_visuals:used" : "brand_visuals:empty");
+  }
+  if (selection.campaign) categories.push(context.campaign ? "campaign:used" : "campaign:empty");
+  if (selection.pillars)
+    categories.push(context.pillars.length > 0 ? "pillars:used" : "pillars:empty");
+  if (selection.channels)
+    categories.push(context.channels.length > 0 ? "channels:used" : "channels:empty");
+  if (selection.approvedContent) {
+    categories.push(
+      context.approvedContentSamples.length > 0
+        ? "approved_content:used"
+        : "approved_content:empty",
+    );
+  }
+  return categories;
+}

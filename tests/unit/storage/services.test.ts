@@ -46,6 +46,7 @@ const adapterMock = vi.hoisted(() => ({
     requiredHeaders: { "Content-Type": "image/png" },
   })),
   uploadObject: vi.fn(async () => undefined),
+  copyObject: vi.fn(async () => undefined),
   completeUpload: vi.fn<
     () => Promise<{
       objectKey: string;
@@ -88,6 +89,8 @@ const {
   abortStorageUpload,
   completeStorageUpload,
   createStorageUploadIntent,
+  copyStorageObject,
+  discardUnattachedStorageObjectCopy,
   expireStorageUploadIntents,
   purgeSoftDeletedStorageObjects,
   uploadStorageObject,
@@ -143,6 +146,7 @@ beforeEach(() => {
   capacityMock.releaseCapacityAmount.mockClear();
   adapterMock.createUploadIntent.mockClear();
   adapterMock.uploadObject.mockClear();
+  adapterMock.copyObject.mockClear();
   adapterMock.completeUpload.mockClear();
   adapterMock.abortUpload.mockClear();
   adapterMock.createReadUrl.mockClear();
@@ -386,6 +390,92 @@ describe("completeStorageUpload", () => {
       intentId: "intent-1",
     });
     expect(adapterMock.abortUpload).toHaveBeenCalled();
+  });
+});
+
+describe("copyStorageObject", () => {
+  it("reserves quota, copies bytes, and verifies the new object through upload completion", async () => {
+    state.selectResults.push(
+      [
+        {
+          id: "source-object",
+          agencyId: AGENCY_ID,
+          workspaceId: WORKSPACE_ID,
+          status: "active",
+          bucket: "planner-media",
+          objectKey: "agencies/agency-1/source.png",
+          kind: "image",
+          mimeType: "image/png",
+          byteSize: 12,
+          checksumSha256: "checksum",
+          originalName: "source.png",
+          width: 64,
+          height: 48,
+          durationMs: null,
+        },
+      ],
+      [{ agencyId: AGENCY_ID }],
+      [{ objectKey: "agencies/agency-1/copy.png" }],
+      [
+        intent({
+          id: "intent-2",
+          objectId: "object-2",
+          objectKey: "agencies/agency-1/copy.png",
+          status: "uploaded",
+        }),
+      ],
+    );
+    state.returningResults.push([{ id: "object-2" }], [{ id: "intent-2" }]);
+
+    await expect(
+      copyStorageObject({
+        agencyId: AGENCY_ID,
+        workspaceId: WORKSPACE_ID,
+        userId: USER_ID,
+        sourceObjectId: "source-object",
+      }),
+    ).resolves.toMatchObject({ objectId: "object-2", size: 12 });
+
+    expect(adapterMock.copyObject).toHaveBeenCalledWith({
+      sourceObjectKey: "agencies/agency-1/source.png",
+      objectKey: "agencies/agency-1/copy.png",
+    });
+    expect(adapterMock.completeUpload).toHaveBeenCalledWith({
+      objectKey: "agencies/agency-1/copy.png",
+    });
+    expect(capacityMock.reserveCapacity).toHaveBeenCalledWith(dbMock, AGENCY_ID, [
+      { resource: "storage_bytes", increase: 12 },
+    ]);
+  });
+});
+
+describe("discardUnattachedStorageObjectCopy", () => {
+  it("releases the reserved bytes and deletes an unlinked copied object", async () => {
+    state.selectResults.push([
+      {
+        id: "object-copy",
+        objectKey: "agencies/agency-1/copy.png",
+        byteSize: 12,
+      },
+    ]);
+
+    await expect(
+      discardUnattachedStorageObjectCopy({
+        agencyId: AGENCY_ID,
+        workspaceId: WORKSPACE_ID,
+        userId: USER_ID,
+        objectId: "object-copy",
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(capacityMock.releaseCapacityAmount).toHaveBeenCalledWith(dbMock, AGENCY_ID, [
+      { resource: "storage_bytes", increase: 12 },
+    ]);
+    expect(adapterMock.deleteObject).toHaveBeenCalledWith({
+      objectKey: "agencies/agency-1/copy.png",
+    });
+    expect(state.setCalls).toContainEqual(expect.objectContaining({ status: "soft_deleted" }));
+    expect(state.setCalls).toContainEqual(expect.objectContaining({ status: "deleted" }));
   });
 });
 

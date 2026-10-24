@@ -1,11 +1,20 @@
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { MobileNav } from "./mobile-nav";
-import { NotificationsBell, type NotificationsCopy } from "./notifications-bell";
+import {
+  NotificationsBell,
+  type MarkAllReadAction,
+  type MarkReadAction,
+  type NotificationsCopy,
+} from "./notifications-bell";
 import { RouteScrollReset } from "./route-scroll-reset";
 import { SupportSessionBanner } from "./support-session-banner";
 import { UserMenu, type UserMenuCopy } from "./user-menu";
-import { ThemeToggle, type ThemeToggleCopy } from "./theme-toggle";
+import {
+  ThemeToggle,
+  type ThemeToggleCopy,
+  type UpdateThemePreferenceAction,
+} from "./theme-toggle";
 import { MobileContextHeader } from "./mobile-context-header";
 import type { AgencyRow } from "./agency-switcher";
 import type { BuildInfo } from "@/lib/build-info";
@@ -80,6 +89,10 @@ export function AppShell({
   unreadAppErrors = 0,
   sidebarCollapsed = false,
   chrome,
+  markAllReadAction,
+  markReadAction,
+  updateThemePreferenceAction,
+  signOutForm,
   children,
 }: {
   user: {
@@ -124,6 +137,10 @@ export function AppShell({
   unreadAppErrors?: number;
   sidebarCollapsed?: boolean;
   chrome: AppShellChrome;
+  markAllReadAction: MarkAllReadAction;
+  markReadAction: MarkReadAction;
+  updateThemePreferenceAction: UpdateThemePreferenceAction;
+  signOutForm: React.ReactNode;
   children: React.ReactNode;
 }) {
   // The active workspace is the one whose slug is currently in the
@@ -159,6 +176,8 @@ export function AppShell({
         <Sidebar
           user={user}
           workspaces={workspaces}
+          agencySwitcher={agencySwitcher}
+          canCreateWorkspace={canCreateWorkspace}
           workspaceAccess={workspaceAccess}
           workspaceCanCreateContent={workspaceCanCreateContent}
           platformAccess={platformAccess}
@@ -179,16 +198,15 @@ export function AppShell({
         )}
       >
         <Topbar
+          markAllReadAction={markAllReadAction}
+          markReadAction={markReadAction}
+          updateThemePreferenceAction={updateThemePreferenceAction}
+          signOutForm={signOutForm}
           user={user}
           buildInfo={buildInfo}
           notifications={notifications}
           unreadCount={unreadCount}
           themePreference={themePreference}
-          agencySwitcher={agencySwitcher}
-          workspaces={workspaces}
-          canCreateWorkspace={canCreateWorkspace}
-          platformAccess={platformAccess}
-          labels={chrome.sidebar}
           activeAgency={agencySwitcher.active}
           chrome={chrome}
         />
@@ -198,14 +216,21 @@ export function AppShell({
       <header className="bg-surface border-border sticky top-0 z-20 flex h-14 items-center justify-between gap-2 border-b px-3 md:hidden">
         <MobileContextHeader workspaces={workspaces} />
         <div className="flex items-center gap-1">
-          <ThemeToggle preference={themePreference} copy={chrome.theme} />
+          <ThemeToggle
+            preference={themePreference}
+            copy={chrome.theme}
+            updateThemePreferenceAction={updateThemePreferenceAction}
+          />
           <NotificationsBell
+            markAllReadAction={markAllReadAction}
+            markReadAction={markReadAction}
             initial={notifications}
             initialUnread={unreadCount}
             badgeTestId="unread-badge-mobile"
             copy={chrome.notifications}
           />
           <UserMenu
+            signOutForm={signOutForm}
             user={{
               ...user,
               isPlatformAdmin: platformAccess.canEnter || user.isPlatformAdmin || false,

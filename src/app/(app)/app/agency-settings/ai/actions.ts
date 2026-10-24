@@ -28,26 +28,38 @@ import {
 
 async function requireAdmin() {
   const session = await auth();
-  if (!session?.user?.id) throw new Error("Not signed in");
+  if (!session?.user?.id) throw new AiSettingsAuthorizationError();
   const actor = await currentActor();
-  if (!actor) throw new Error("Not signed in");
+  if (!actor) throw new AiSettingsAuthorizationError();
   const ctx = await resolveActiveAgencyContext({ actor });
   const agencyId = ctx?.agencyId ?? null;
-  if (!agencyId) throw new Error("Agency not configured");
-  if (!(await isAgencyAdmin(actor, agencyId))) {
-    throw new Error("Only agency admins can change AI settings");
-  }
+  if (!agencyId || !(await isAgencyAdmin(actor, agencyId)))
+    throw new AiSettingsAuthorizationError();
   return { actor, agencyId };
 }
 
+class AiSettingsAuthorizationError extends Error {
+  constructor() {
+    super("AI settings action is unauthorized");
+    this.name = "AiSettingsAuthorizationError";
+  }
+}
+
+export type AiSettingsActionErrorCode =
+  "unauthorized" | "invalid_input" | "save_failed" | "connection_failed";
+
 export type AiSettingsActionState = {
-  error?: string;
-  saved?: string;
+  errorCode?: AiSettingsActionErrorCode;
+  savedCode?: "saved" | "connection_ok";
+  latencyMs?: number;
 };
+
+export type ManagedSecretActionErrorCode =
+  "unauthorized" | "invalid_input" | "missing_encryption_key" | "save_failed" | "remove_failed";
 
 export type ManagedSecretActionState = {
   ok?: boolean;
-  error?: string;
+  errorCode?: ManagedSecretActionErrorCode;
   lastFour?: string;
 };
 
@@ -59,18 +71,29 @@ export async function saveAiSettingsAction(
     const { actor } = await requireAdmin();
     const enabled = formData.get("enabled") === "on";
     const model = String(formData.get("model") ?? "").trim();
+    const submittedModels = formData
+      .getAll("permittedModels")
+      .map((value) => String(value).trim())
+      .filter(Boolean);
+    const permittedModels = submittedModels.length ? submittedModels : [model];
     const enabledCapabilities = AI_CAPABILITIES.filter((c) => formData.get(`cap_${c}`) === "on");
-    const parsed = UpdateAiSettingsSchema.safeParse({ enabled, model, enabledCapabilities });
+    const parsed = UpdateAiSettingsSchema.safeParse({
+      enabled,
+      model,
+      permittedModels,
+      enabledCapabilities,
+      toolCallingEnabled: formData.get("toolCallingEnabled") === "on",
+    });
     if (!parsed.success) {
-      return {
-        error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
-      };
+      return { errorCode: "invalid_input" };
     }
     await updateAiFeatureSettings(actor, parsed.data);
     revalidatePath("/app/agency-settings/ai");
-    return { saved: "AI settings saved." };
-  } catch (e) {
-    return { error: (e as Error).message };
+    return { savedCode: "saved" };
+  } catch (error) {
+    return {
+      errorCode: error instanceof AiSettingsAuthorizationError ? "unauthorized" : "save_failed",
+    };
   }
 }
 
@@ -79,17 +102,15 @@ export async function testAiConnectionAction(): Promise<AiSettingsActionState> {
     const { actor } = await requireAdmin();
     const result = await testAiConnection(actor);
     revalidatePath("/app/agency-settings/ai");
-    if (result.ok) {
-      return {
-        saved:
-          result.latencyMs != null ? `Connection OK · ${result.latencyMs} ms` : "Connection OK",
-      };
-    }
-    const reason =
-      "Provider did not return a 2xx response — check the configured provider key and base URL.";
-    return { error: reason };
-  } catch (e) {
-    return { error: (e as Error).message };
+    if (!result.ok) return { errorCode: "connection_failed" };
+    return result.latencyMs == null
+      ? { savedCode: "connection_ok" }
+      : { savedCode: "connection_ok", latencyMs: result.latencyMs };
+  } catch (error) {
+    return {
+      errorCode:
+        error instanceof AiSettingsAuthorizationError ? "unauthorized" : "connection_failed",
+    };
   }
 }
 
@@ -102,18 +123,15 @@ export async function setManagedAiSecretAction(
     const parsed = SetManagedAiSecretSchema.safeParse({
       apiKey: formData.get("apiKey"),
     });
-    if (!parsed.success) {
-      return {
-        error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
-      };
-    }
+    if (!parsed.success) return { errorCode: "invalid_input" };
     const result = await setManagedAiSecret(actor, agencyId, parsed.data);
     return { ok: true, lastFour: result.lastFour };
   } catch (e) {
-    if (e instanceof ManagedSecretError) {
-      return { error: e.message };
+    if (e instanceof AiSettingsAuthorizationError) return { errorCode: "unauthorized" };
+    if (e instanceof ManagedSecretError && e.code === "managed_secret.missing-key") {
+      return { errorCode: "missing_encryption_key" };
     }
-    return { error: e instanceof Error ? e.message : "Could not save the API key." };
+    return { errorCode: "save_failed" };
   }
 }
 
@@ -126,14 +144,12 @@ export async function clearManagedAiSecretAction(
     const parsed = ClearManagedAiSecretSchema.safeParse({
       reason: formData.get("reason"),
     });
-    if (!parsed.success) {
-      return {
-        error: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "),
-      };
-    }
+    if (!parsed.success) return { errorCode: "invalid_input" };
     await clearManagedAiSecret(actor, agencyId, parsed.data);
     return { ok: true };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Could not remove the API key." };
+  } catch (error) {
+    return {
+      errorCode: error instanceof AiSettingsAuthorizationError ? "unauthorized" : "remove_failed",
+    };
   }
 }

@@ -8,6 +8,13 @@ describe("migration drill historical repair state", () => {
     expect(source).toContain('const migrationTag = "0025_notification_message_key"');
     expect(source).toContain('DROP COLUMN IF EXISTS "message_key"');
     expect(source).toContain('DROP COLUMN IF EXISTS "message_params"');
+    expect(source).toContain('DROP TABLE IF EXISTS "workspace_assistant_proposal" CASCADE');
+    expect(source).toContain('DROP TABLE IF EXISTS "workspace_assistant_run_event" CASCADE');
+    expect(source).toContain('DROP TABLE IF EXISTS "workspace_assistant_run" CASCADE');
+    expect(source).toContain('DROP TABLE IF EXISTS "workspace_assistant_prompt_revision" CASCADE');
+    expect(source).toContain('DROP TABLE IF EXISTS "workspace_assistant_skill_revision" CASCADE');
+    expect(source).toContain('DROP TABLE IF EXISTS "workspace_assistant_skill" CASCADE');
+    expect(source).toContain('DROP TABLE IF EXISTS "workspace_assistant_conversation" CASCADE');
     expect(source).toContain("real Drizzle migrator completed");
   });
 });

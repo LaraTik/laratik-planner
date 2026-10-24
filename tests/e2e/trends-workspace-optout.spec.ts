@@ -33,7 +33,7 @@ test.describe("Trend Radar — workspace opt-out", () => {
     page: Page;
   }) => {
     // Step 1: settings page.
-    await page.goto(`/app/w/${workspaceSlug}/settings/trends`);
+    await page.goto(`/app/a/trend-optout-agency/w/${workspaceSlug}/settings/trends`);
 
     // Step 2: opt out via the toggle.
     const toggle = page.getByTestId("optout-toggle-tiktok_creative_center");
@@ -52,7 +52,7 @@ test.describe("Trend Radar — workspace opt-out", () => {
     await expect((await optoutResponse).ok()).toBeTruthy();
 
     // Step 3: visit the trends page.
-    await page.goto(`/app/w/${workspaceSlug}/trends`);
+    await page.goto(`/app/a/trend-optout-agency/w/${workspaceSlug}/trends`);
 
     // Step 4: the opt-out badge for TikTok is shown.
     const optoutBadge = page.getByTestId("trends-optout-badge-tiktok_creative_center");

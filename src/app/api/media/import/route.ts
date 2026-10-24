@@ -4,15 +4,15 @@ import { currentActor } from "@/lib/auth/current-actor";
 import { db } from "@/lib/db";
 import { storageObjects, workspaces } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { importPublicMediaAsset, MediaPermissionError } from "@/lib/media/service";
+import { importPublicMediaAsset, MediaPermissionError } from "@/features/media/server";
 import { MediaSourceError } from "@/lib/media/source";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 const Body = z.object({
-  workspaceId: z.string().uuid(),
+  workspaceId: z.string().guid(),
   url: z.string().trim().url().max(2048),
   title: z.string().trim().max(160).optional(),
-  contentItemId: z.string().uuid().optional(),
+  contentItemId: z.string().guid().optional(),
   visibility: z.enum(["workspace", "agency"]).optional(),
 });
 

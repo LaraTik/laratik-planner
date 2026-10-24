@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
-import { exportPublicMediaCollectionZip } from "@/lib/media/collection-service";
+import { exportPublicMediaCollectionZip } from "@/features/media/server";
 import { MediaZipTooLargeError } from "@/lib/exports/media-assets-zip";
 
 export const dynamic = "force-dynamic";

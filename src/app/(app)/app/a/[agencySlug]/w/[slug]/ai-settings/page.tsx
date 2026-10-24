@@ -1,12 +1,8 @@
 import { redirect, notFound } from "next/navigation";
-import { and, count, eq, gte } from "drizzle-orm";
 import Link from "next/link";
 import { ArrowUpRight, Bot, Clock, ShieldCheck, Sparkles } from "lucide-react";
-import { hasWorkspaceRole, isAgencyAdmin } from "@/lib/auth/policy";
-import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
+import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { currentActor } from "@/lib/auth/current-actor";
-import { db } from "@/lib/db";
-import { aiFeatureSettings, aiUsageEvents } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/validation/env";
 import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +10,7 @@ import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
 import { AI_PROVIDER, PLANNER_FACING_CAPABILITIES } from "@/lib/ai/capabilities";
 import { tForActive } from "@/lib/i18n/t-for-active";
-import { getActiveApiKey } from "@/lib/ai";
+import { getWorkspaceAiSettings } from "@/features/ai/server";
 
 export async function generateMetadata() {
   const { t } = await tForActive();
@@ -48,29 +44,9 @@ export default async function AiSettingsPage({
   if (!workspace) notFound();
   if (!(await hasWorkspaceRole(actor, workspace.id, ["workspace_manager"]))) notFound();
 
-  const ctx = await resolveActiveAgencyContext({ actor });
-  const agencyId = ctx?.agencyId ?? null;
-  if (!agencyId) notFound();
-
-  const since = new Date();
-  since.setUTCDate(since.getUTCDate() - 30);
-
-  const [[feature], [usage], admin, activeAiKey] = await Promise.all([
-    db.select().from(aiFeatureSettings).where(eq(aiFeatureSettings.agencyId, agencyId)).limit(1),
-    db
-      .select({ value: count() })
-      .from(aiUsageEvents)
-      .where(and(eq(aiUsageEvents.workspaceId, workspace.id), gte(aiUsageEvents.createdAt, since))),
-    isAgencyAdmin(actor, agencyId),
-    getActiveApiKey(agencyId),
-  ]);
-
-  // Provider key availability and agency enablement are separate concerns.
-  // The database master switch is the product control; the active key only
-  // determines whether the enabled feature can reach its provider.
-  const effectiveEnabled = !!activeAiKey && feature?.enabled === true;
-  const enabledCapabilities = new Set(feature?.enabledCapabilities ?? []);
-  const requestCount = usage?.value ?? 0;
+  const aiSettings = await getWorkspaceAiSettings(actor, workspace);
+  const { feature, requestCount, isAdmin, hasActiveApiKey, effectiveEnabled } = aiSettings;
+  const enabledCapabilities = new Set(aiSettings.enabledCapabilities);
   const { t } = await tForActive();
 
   return (
@@ -88,7 +64,7 @@ export default async function AiSettingsPage({
           </>
         }
         action={
-          admin ? (
+          isAdmin ? (
             <Link
               href="/app/agency-settings/ai"
               className="text-primary focus-visible:ring-focus-ring text-body inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
@@ -133,7 +109,9 @@ export default async function AiSettingsPage({
               value={
                 feature?.keySource === "managed_secret" && feature.maskedKeySuffix
                   ? t("aiSettings.managedSecretEndsIn", { suffix: feature.maskedKeySuffix })
-                  : t("aiSettings.environmentConfigured")
+                  : hasActiveApiKey
+                    ? t("aiSettings.environmentConfigured")
+                    : t("aiSettings.notConfigured")
               }
             />
             <Row label={t("aiSettings.workspaceRequests30Days")} value={String(requestCount)} />

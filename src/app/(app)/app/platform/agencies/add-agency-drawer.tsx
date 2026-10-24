@@ -291,14 +291,14 @@ export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
                   onChange={set("reason")}
                   required
                 />
-                {state.error ? (
+                {state.errorCode ? (
                   <p role="alert" className="text-danger text-body">
-                    {state.error}
+                    {t(`platform.addAgency.errors.${state.errorCode}`)}
                   </p>
                 ) : null}
-                {state.warning ? (
+                {state.warningCode ? (
                   <p role="status" className="text-warning text-body">
-                    {state.warning}
+                    {t(`platform.addAgency.warnings.${state.warningCode}`)}
                   </p>
                 ) : null}
                 {state.success ? (

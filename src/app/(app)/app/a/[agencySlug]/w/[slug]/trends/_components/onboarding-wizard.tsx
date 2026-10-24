@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useLocaleT } from "@/components/i18n/locale-provider";
-import { TREND_SOURCE_CATALOG, type SourceDefinition } from "@/lib/trends/source-catalog";
+import { TREND_SOURCE_CATALOG, type SourceDefinition } from "@/features/trends";
 import { MIN_TREND_SOURCES } from "@/lib/trends/presentation";
 
 /**
@@ -128,7 +128,7 @@ export function OnboardingWizard({
                         {source.tier} · {source.cadence}
                       </p>
                     </div>
-                    {source.tosClass === "grey" ? (
+                    {source.tosClass === "grey" || source.tosClass === "review_required" ? (
                       <ShieldAlert
                         className="text-warning h-4 w-4 shrink-0"
                         aria-hidden="true"
@@ -137,6 +137,12 @@ export function OnboardingWizard({
                     ) : null}
                   </header>
                   <p className="text-body text-fg-secondary text-sm">{source.blurb}</p>
+                  {source.tosClass === "review_required" ? (
+                    <p className="text-label text-warning" data-testid="source-review-required">
+                      {t("trends.onboarding.reviewRequired") ||
+                        "Provider review is required before this source can be enabled."}
+                    </p>
+                  ) : null}
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-label text-fg-muted text-xs">
                       {source.requiresApiKey
@@ -154,7 +160,7 @@ export function OnboardingWizard({
                         }
                         toggle(source);
                       }}
-                      disabled={submitting}
+                      disabled={submitting || source.tosClass === "review_required"}
                       data-testid={`source-toggle-${source.key}`}
                     >
                       {isSelected ? t("common.remove") || "Remove" : t("common.enable") || "Enable"}

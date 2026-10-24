@@ -12,7 +12,7 @@ import {
   restoreMediaAsset,
   setMediaAssetVisibility,
   trashMediaAsset,
-} from "@/lib/media/service";
+} from "@/features/media/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -20,7 +20,7 @@ export const runtime = "nodejs";
 const PatchBody = z.object({
   title: z.string().trim().min(1).max(160).optional(),
   visibility: z.enum(["workspace", "agency"]).optional(),
-  folderId: z.string().uuid().nullable().optional(),
+  folderId: z.string().guid().nullable().optional(),
 });
 
 /** Issues a short-lived preview/download URL only after media authorization. */
@@ -41,22 +41,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   });
   if (!remote) return NextResponse.json({ error: "Media asset not found" }, { status: 404 });
   const download = req.nextUrl.searchParams.get("download") === "1";
-  // Cache long enough that a planner scrolling back through their own
-  // library doesn't re-hit R2 on every nav. ETag is passed through from
-  // the R2 response below so the browser can revalidate cheaply when
-  // the object does change. `Vary: Cookie` keeps per-user caches
-  // correct when roles/visibility change within the 24h window —
-  // `private` already implies user-scoped, but the explicit Vary
-  // makes the browser revalidate on auth state change instead of
-  // serving stale bytes.
-  //
-  // This is the cheap half of the perf fix; the real one lands in
-  // PR 2 (preview-variant / thumbnail pipeline). See AGENTS.md
-  // Changelog "perf(media): …" entries for context.
   const headers = new Headers({
     "Content-Type": row.object.mimeType,
-    "Cache-Control": download ? "private, no-store" : "private, max-age=86400",
-    ...(download ? {} : { Vary: "Cookie" }),
+    // Re-authorize every read. Browser caches key on cookie values, which
+    // do not change when a workspace role or asset visibility is revoked.
+    "Cache-Control": "private, no-store",
     "X-Content-Type-Options": "nosniff",
   });
   if (download) {

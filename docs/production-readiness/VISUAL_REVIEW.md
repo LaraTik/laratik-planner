@@ -57,6 +57,22 @@ contract. This is automated `Tested` evidence; the reference screenshot is
 the supplied product image rather than a live Stitch screen, so independent
 visual review remains required before `Verified`.
 
+### Agency AI capability localization — 2026-10-22
+
+The `advertising_recommendations` agency capability was missing from both
+locale catalogs and rendered raw keys. The EN/AR entries are now present, and
+the agency AI fixture enables the master switch and Trend Radar deterministically.
+The focused strict Chromium run passes **5/5**: the exact desktop reference,
+three English responsive captures, and the five-width Arabic/RTL matrix at 375,
+768, 1024, 1280, and 1440px. The English responsive fixture uses the same
+state as the exact capture. References were refreshed only for this page after
+reviewing the before/after capture; the Arabic matrix also checks its heading,
+translated capability label, no overflow, and critical/serious axe violations.
+
+This is automated application-reference evidence, not Stitch approval. The
+page's current layout still needs review against the active Stitch PNG/HTML,
+and the reviewer tables below remain unapproved.
+
 ### Planning responsive baseline evidence (2026-10-03; `ef0c2754`)
 
 After the planning UI changes were committed, the reviewed planning-list
@@ -85,10 +101,11 @@ For every active `STITCH_CASES` entry:
 3. For the responsive matrix (`tests/e2e/visual-regression.spec.ts`
    → `visual regression (responsive matrix)`), repeat the comparison at
    every viewport selected by `viewportsForSurface()`: 63 non-Research,
-   non-planning surfaces at 360 / 768 / 1440; Research at 375 / 768 / 1024 /
-   1280 / 1440; and seven planning surfaces at 375 / 768 / 1024 / 1440 (222
-   English responsive baselines total). The dedicated Research Arabic/RTL
-   block adds five same-width baselines and asserts no horizontal overflow.
+   non-planning surfaces at 360 / 768 / 1440; seven planning surfaces at 375 /
+   768 / 1024 / 1440; and Research plus Advertising Reporting at 375 / 768 /
+   1024 / 1280 / 1440 (227 English responsive baselines total). The dedicated
+   Research Arabic/RTL block adds five same-width baselines and asserts no
+   horizontal overflow.
 4. Mark each row with a result and a link to the diff / follow-up
    issue / approved-deviation commit.
 5. A baseline may be approved only after every dimension above
@@ -109,7 +126,7 @@ For every historical/superseded entry:
 | --------- | -------------- | ------------- | -------- | -------- | ---- | ------ | ------------------- |
 | _pending_ |                |               |          |          |      |        |                     |
 
-## Reference table (responsive matrix: 71 surfaces, 222 English baselines + 5 Research Arabic/RTL baselines)
+## Reference table (responsive matrix: 72 surfaces, 227 English baselines + 5 Research Arabic/RTL baselines)
 
 | Surface   | Viewport | Reviewer | Date | Result | Issue / commit link |
 | --------- | -------- | -------- | ---- | ------ | ------------------- |
@@ -158,9 +175,9 @@ Baselines are stored under
 `tests/e2e/visual-regression.spec.ts-snapshots/reference/` (one
 capture per active Stitch case) and
 `tests/e2e/visual-regression.spec.ts-snapshots/responsive/`
-(222 English baselines: 63 non-planning/non-Research surfaces × 3 viewports,
-seven planning surfaces × 4 viewports, and one Research surface × 5 viewports;
-the dedicated Arabic/RTL block adds five baselines). The CI pipeline uploads visual diffs on failure
+(227 English baselines: 63 non-planning/non-Research surfaces × 3 viewports,
+seven planning surfaces × 4 viewports, and Research plus Advertising Reporting ×
+5 viewports; the dedicated Arabic/RTL block adds five baselines). The CI pipeline uploads visual diffs on failure
 (artifact `visual-diffs`).
 
 ## How to add a new Stitch case

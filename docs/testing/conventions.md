@@ -40,6 +40,12 @@ surface where the manifest provides a grep selector. Shared shell, auth,
 database, migration, i18n, dependency, config, fixture, and unknown changes
 escalate to the broadest relevant suites.
 
+Feature-specific message catalogs are owned by their feature area in the same
+manifest; do not mark every catalog as global. Keep locale resolution and
+shared internationalization infrastructure global. A catalog without an
+explicit owner still escalates conservatively until its route and tests are
+mapped.
+
 The affected command does not run coverage unless `--coverage` is supplied.
 The full coverage run remains the threshold-enforced nightly/release audit;
 `pnpm test:coverage:advisory` is the non-blocking per-push signal. A

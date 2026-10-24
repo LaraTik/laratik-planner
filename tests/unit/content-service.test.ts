@@ -14,6 +14,7 @@ type DrizzleState = {
   insertCalls: { table: unknown; values: unknown }[];
   insertReturningIds: { id: string; [k: string]: unknown }[];
   updateCalls: { table: unknown; set: unknown; where: unknown }[];
+  updateReturnEmpty: boolean;
   deleteCalls: { table: unknown; where: unknown }[];
   transactionCalls: number;
 };
@@ -84,7 +85,13 @@ function makeDrizzleMock(state: DrizzleState) {
   updateChain.where = vi.fn((where: unknown) => {
     state.updateCalls.push({ table: "update", set: lastSet, where });
     lastSet = undefined;
-    return Promise.resolve();
+    const returningChain: Record<string, unknown> = {
+      returning: vi.fn(() =>
+        Promise.resolve(state.updateReturnEmpty ? [] : [{ id: "updated-id" }]),
+      ),
+      then: (resolve: (value: undefined) => void) => resolve(undefined),
+    };
+    return returningChain;
   });
   updateChain.returning = vi.fn(() => Promise.resolve([{ revision: 1 }]));
   const update = vi.fn(() => updateChain);
@@ -121,6 +128,7 @@ const dbMock = vi.hoisted(() => {
     insertCalls: [],
     insertReturningIds: [],
     updateCalls: [],
+    updateReturnEmpty: false,
     deleteCalls: [],
     transactionCalls: 0,
   };
@@ -140,6 +148,8 @@ vi.mock("@/lib/publishing/materiality", () => ({
 const policyMock = vi.hoisted(() => ({
   hasWorkspaceRole: vi.fn(async () => true as boolean),
   canAccessInternalWorkspace: vi.fn(async () => true as boolean),
+  isAgencyAdminForWorkspace: vi.fn(async () => false as boolean),
+  canDecideClientCreative: vi.fn(async () => true as boolean),
   requirePolicy: vi.fn(async (predicate: Promise<boolean>, action: string) => {
     if (!(await predicate)) {
       const err = new Error(`Permission denied: ${action}`);
@@ -154,26 +164,30 @@ vi.mock("@/lib/auth/policy", async () => {
   return { ...actual, ...policyMock };
 });
 
+const { UpdateContentSchema, updateContentItem, batchCreateContentItems, UPDATEABLE_STATUSES } =
+  await import("@/features/content/server");
+const { QuickCreateSchema, quickCreateContentItem } = await import("@/features/content/server");
 const {
-  QuickCreateSchema,
-  UpdateContentSchema,
-  quickCreateContentItem,
-  updateContentItem,
-  updateFormatPayload,
-  batchCreateContentItems,
   getContentItem,
-  listWorkspaceContent,
   listUnassignedDesignWork,
-  bulkArchiveContentItems,
-  BulkArchiveSchema,
+  listWorkspaceContent,
+  listWorkspaceDesigners,
   transitionContent,
+  updateFormatPayload,
   claimAsDesigner,
+  ClaimAsDesignerError,
   assignDesigner,
   assignContentOwner,
+  releaseDesignTask,
   AssignDesignerSchema,
-  listWorkspaceDesigners,
-  UPDATEABLE_STATUSES,
-} = await import("@/lib/content/service");
+  bulkArchiveContentItems,
+  BulkArchiveSchema,
+  ArchiveContentItemSchema,
+  archiveContentItem,
+  restoreContentItem,
+  RescheduleContentItemSchema,
+  rescheduleContentItem,
+} = await import("@/features/content/server");
 
 const actor = { id: "user-1" };
 const workspaceId = "95e9ea6d-8d71-4f7f-8fc8-7eef95c7a6fa";
@@ -184,6 +198,7 @@ beforeEach(() => {
   dbMock.state.insertCalls = [];
   dbMock.state.insertReturningIds = [];
   dbMock.state.updateCalls = [];
+  dbMock.state.updateReturnEmpty = false;
   dbMock.state.deleteCalls = [];
   dbMock.state.transactionCalls = 0;
   policyMock.hasWorkspaceRole.mockReset();
@@ -296,6 +311,7 @@ describe("quickCreateContentItem", () => {
         defaultClientReviewerId: "cr-1",
       },
     ]);
+    dbMock.state.selectResults.push([{ id: "ch-1" }]);
     dbMock.state.insertReturningIds.push({ id: contentItemId });
 
     const id = await quickCreateContentItem(actor, { ...input, channelIds: ["ch-1"] });
@@ -309,6 +325,16 @@ describe("quickCreateContentItem", () => {
     expect(values["contentReviewerId"]).toBe("rev-1");
   });
 
+  it("rejects provided channels outside the active workspace channel set", async () => {
+    dbMock.state.selectResults.push([{ defaultDesignerId: null }]);
+    dbMock.state.selectResults.push([]);
+
+    await expect(
+      quickCreateContentItem(actor, { ...input, channelIds: ["foreign-channel"] }),
+    ).rejects.toThrow(/channel selection for this workspace/i);
+    expect(dbMock.state.insertCalls).toHaveLength(0);
+  });
+
   it("preserves a workspace-scoped research post when creating a draft", async () => {
     dbMock.state.selectResults.push([{ defaultDesignerId: null }]);
     dbMock.state.selectResults.push([
@@ -318,6 +344,7 @@ describe("quickCreateContentItem", () => {
         researchAccount: null,
       },
     ]);
+    dbMock.state.selectResults.push([{ id: "ch-1" }]);
     dbMock.state.insertReturningIds.push({ id: contentItemId });
 
     const id = await quickCreateContentItem(actor, {
@@ -341,6 +368,7 @@ describe("quickCreateContentItem", () => {
   it("preserves a workspace-scoped teardown when creating a draft", async () => {
     dbMock.state.selectResults.push([{ defaultDesignerId: null }]);
     dbMock.state.selectResults.push([{ id: "teardown-1" }]);
+    dbMock.state.selectResults.push([{ id: "ch-1" }]);
     dbMock.state.insertReturningIds.push({ id: contentItemId });
 
     const id = await quickCreateContentItem(actor, {
@@ -392,8 +420,17 @@ describe("updateContentItem", () => {
   });
 
   it("updates the item and replaces the channel set when channelIds is provided", async () => {
-    dbMock.state.selectResults.push([{ id: contentItemId, workspaceId, status: "draft" }]);
-    dbMock.state.selectResults.push([{ id: contentItemId, workspaceId }]);
+    dbMock.state.selectResults.push([
+      {
+        id: contentItemId,
+        workspaceId,
+        status: "draft",
+        agencyId: "agency-1",
+        prevFormat: "static_post",
+        prevPlannedPublishAt: new Date("2026-08-31T00:00:00Z"),
+      },
+    ]);
+    dbMock.state.selectResults.push([{ id: "ch-1" }]);
     await updateContentItem(actor, {
       contentItemId,
       title: "Updated",
@@ -754,7 +791,129 @@ describe("bulkArchiveContentItems (FEAT-14)", () => {
   });
 });
 
+describe("archive lifecycle feature boundary", () => {
+  it("validates the single-item archive and restore input", () => {
+    expect(ArchiveContentItemSchema.safeParse({ workspaceId, contentItemId }).success).toBe(true);
+    expect(
+      ArchiveContentItemSchema.safeParse({ workspaceId, contentItemId: "bad-id" }).success,
+    ).toBe(false);
+  });
+
+  it("keeps archive and restore restricted to planners and workspace managers", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    const input = { workspaceId, contentItemId };
+
+    await expect(archiveContentItem(actor, input)).rejects.toThrow(/permission denied/i);
+    await expect(restoreContentItem(actor, input)).rejects.toThrow(/permission denied/i);
+
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledTimes(2);
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(
+      actor,
+      workspaceId,
+      expect.arrayContaining(["workspace_manager", "content_planner"]),
+    );
+  });
+});
+
 describe("transitionContent", () => {
+  it("applies the workspace's workflow scenario on the SERVER, not only in the UI", async () => {
+    // The scenario used to be a UI-only guard: the rail hid the stages
+    // a scenario omits, but the server action and the MCP tool
+    // accepted the transition anyway. Now the service reads the
+    // workspace's scenario and hands it to the engine, so a
+    // `lightweight` workspace cannot be pushed into a content-review
+    // gate its own spine omits.
+    dbMock.state.selectResults.push([
+      {
+        id: contentItemId,
+        workspaceId,
+        status: "draft",
+        designerId: null,
+        statusReturnTarget: null,
+      },
+    ]);
+    // the workspace's active scenario
+    dbMock.state.selectResults.push([{ workflowScenario: "lightweight", approvalMode: "simple" }]);
+
+    const result = await transitionContent(actor, {
+      contentItemId,
+      action: "submit_content_review",
+    });
+    // Lightweight omits the content-review stage, so the item is handed
+    // to design directly instead of being parked in a gate the
+    // scenario does not have.
+    expect(result.to).toBe("approved_for_design");
+    // …and no content approval request is created, because there is no
+    // content gate left for anyone to decide. A request nobody can
+    // decide is a permanently pending approval.
+    const approvalReq = dbMock.state.insertCalls.find(
+      (c) => (c.values as Record<string, unknown>)["gate"] === "content",
+    );
+    expect(approvalReq).toBeUndefined();
+  });
+
+  it("keeps the standard scenario's behaviour byte-for-byte", async () => {
+    dbMock.state.selectResults.push([
+      {
+        id: contentItemId,
+        workspaceId,
+        status: "draft",
+        designerId: null,
+        statusReturnTarget: null,
+      },
+    ]);
+    dbMock.state.selectResults.push([{ workflowScenario: "standard", approvalMode: "simple" }]);
+
+    const result = await transitionContent(actor, {
+      contentItemId,
+      action: "submit_content_review",
+    });
+    expect(result.to).toBe("content_review");
+    const approvalReq = dbMock.state.insertCalls.find(
+      (c) => (c.values as Record<string, unknown>)["gate"] === "content",
+    );
+    expect(approvalReq).toBeDefined();
+  });
+
+  it("finishes an in-flight content_review item under lightweight instead of trapping it", async () => {
+    // A workspace can switch to `lightweight` while an item sits in
+    // `content_review` — a stage the new scenario omits. ADR 0014 requires
+    // that "a scenario switch can never trap an in-flight item", so the
+    // item must still be FINISHABLE.
+    //
+    // This test used to assert a REJECTION ("rejects a content-review
+    // transition the workspace's scenario omits"). That expectation encoded
+    // the source-stage filter, which is the trap itself: rejecting every
+    // action out of an omitted stage also rejects `cancel` and `block`, so
+    // the item would be stranded with no way forward and no way out. The
+    // engine now applies the scenario filter to the TARGET only, and the
+    // item lands on the next included stage.
+    dbMock.state.selectResults.push([
+      {
+        id: contentItemId,
+        workspaceId,
+        status: "content_review",
+        designerId: null,
+        statusReturnTarget: null,
+      },
+    ]);
+    dbMock.state.selectResults.push([{ workflowScenario: "lightweight", approvalMode: "simple" }]);
+    // the pending content approval request the item entered the gate with
+    dbMock.state.selectResults.push([{ id: "apr-1" }]);
+
+    const result = await transitionContent(actor, {
+      contentItemId,
+      action: "approve_content",
+      reason: "LGTM",
+    });
+    expect(result.to).toBe("approved_for_design");
+    // the gate is still DECIDED, not left pending forever
+    const decision = dbMock.state.insertCalls.find(
+      (c) => (c.values as Record<string, unknown>)["decision"] === "approved",
+    );
+    expect(decision).toBeDefined();
+  });
+
   it("throws when the content item is missing", async () => {
     dbMock.state.selectResults.push([]);
     await expect(
@@ -772,6 +931,9 @@ describe("transitionContent", () => {
         statusReturnTarget: null,
       },
     ]);
+    // the workspace's active workflow scenario (read by the service so the
+    // scenario filter is enforced server-side, not only in the UI)
+    dbMock.state.selectResults.push([{ workflowScenario: "standard", approvalMode: "simple" }]);
     // hasWorkspaceRole for workspace_manager check
     dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
     dbMock.state.selectResults.push([{ isAdmin: true }]);
@@ -790,6 +952,9 @@ describe("transitionContent", () => {
         statusReturnTarget: null,
       },
     ]);
+    // the workspace's active workflow scenario (read by the service so the
+    // scenario filter is enforced server-side, not only in the UI)
+    dbMock.state.selectResults.push([{ workflowScenario: "standard", approvalMode: "simple" }]);
     // hasWorkspaceRole is mocked; no more selects needed
 
     const result = await transitionContent(actor, {
@@ -813,6 +978,9 @@ describe("transitionContent", () => {
         statusReturnTarget: null,
       },
     ]);
+    // the workspace's active workflow scenario (read by the service so the
+    // scenario filter is enforced server-side, not only in the UI)
+    dbMock.state.selectResults.push([{ workflowScenario: "standard", approvalMode: "simple" }]);
     // pending approval request lookup (hasWorkspaceRole is mocked)
     dbMock.state.selectResults.push([{ id: "apr-1" }]);
 
@@ -838,6 +1006,9 @@ describe("transitionContent", () => {
         statusReturnTarget: null,
       },
     ]);
+    // the workspace's active workflow scenario (read by the service so the
+    // scenario filter is enforced server-side, not only in the UI)
+    dbMock.state.selectResults.push([{ workflowScenario: "standard", approvalMode: "simple" }]);
     // pending request (only other select — hasWorkspaceRole is mocked)
     dbMock.state.selectResults.push([{ id: "apr-1" }]);
 
@@ -863,6 +1034,9 @@ describe("transitionContent", () => {
         statusReturnTarget: null,
       },
     ]);
+    // the workspace's active workflow scenario (read by the service so the
+    // scenario filter is enforced server-side, not only in the UI)
+    dbMock.state.selectResults.push([{ workflowScenario: "standard", approvalMode: "simple" }]);
     // No pending request — empty result row triggers the throw.
     dbMock.state.selectResults.push([]);
 
@@ -885,6 +1059,9 @@ describe("transitionContent", () => {
         statusReturnTarget: null,
       },
     ]);
+    // the workspace's active workflow scenario (read by the service so the
+    // scenario filter is enforced server-side, not only in the UI)
+    dbMock.state.selectResults.push([{ workflowScenario: "standard", approvalMode: "simple" }]);
     // hasWorkspaceRole is mocked; no more selects needed
 
     const result = await transitionContent(actor, {
@@ -922,19 +1099,26 @@ describe("transitionContent", () => {
 describe("claimAsDesigner", () => {
   it("throws when the content item is missing", async () => {
     dbMock.state.selectResults.push([]);
-    await expect(claimAsDesigner(actor, contentItemId)).rejects.toThrow(/not found/i);
+    await expect(claimAsDesigner(actor, contentItemId)).rejects.toMatchObject({
+      code: "not_found",
+      name: ClaimAsDesignerError.name,
+    });
   });
 
   it("throws when already assigned to a designer", async () => {
     dbMock.state.selectResults.push([{ workspaceId, designerId: "other", status: "in_design" }]);
-    await expect(claimAsDesigner(actor, contentItemId)).rejects.toThrow(/already assigned/i);
+    await expect(claimAsDesigner(actor, contentItemId)).rejects.toMatchObject({
+      code: "already_assigned",
+      name: ClaimAsDesignerError.name,
+    });
   });
 
   it("throws when the status is not approvable for claim", async () => {
     dbMock.state.selectResults.push([{ workspaceId, designerId: null, status: "draft" }]);
-    await expect(claimAsDesigner(actor, contentItemId)).rejects.toThrow(
-      /cannot claim when status/i,
-    );
+    await expect(claimAsDesigner(actor, contentItemId)).rejects.toMatchObject({
+      code: "invalid_status",
+      name: ClaimAsDesignerError.name,
+    });
   });
 
   it("claims the item and writes the assignment", async () => {
@@ -946,6 +1130,75 @@ describe("claimAsDesigner", () => {
       (c) => (c.set as Record<string, unknown>)["designerId"] === actor.id,
     );
     expect(update).toBeDefined();
+  });
+
+  it("atomically refuses a claim if another designer wins the race", async () => {
+    dbMock.state.selectResults.push([
+      { workspaceId, designerId: null, status: "approved_for_design" },
+    ]);
+    dbMock.state.updateReturnEmpty = true;
+
+    await expect(claimAsDesigner(actor, contentItemId)).rejects.toMatchObject({
+      code: "claim_conflict",
+      name: ClaimAsDesignerError.name,
+    });
+    expect(dbMock.state.insertCalls).toHaveLength(0);
+  });
+});
+
+describe("rescheduleContentItem", () => {
+  const plannedPublishAt = new Date("2026-10-21T12:00:00.000Z");
+
+  it("coerces a valid date and rejects invalid dates", () => {
+    expect(
+      RescheduleContentItemSchema.safeParse({
+        contentItemId,
+        plannedPublishAt: plannedPublishAt.toISOString(),
+      }).success,
+    ).toBe(true);
+    expect(
+      RescheduleContentItemSchema.safeParse({ contentItemId, plannedPublishAt: "not-a-date" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("requires a workspace manager or content planner", async () => {
+    dbMock.state.selectResults.push([
+      {
+        workspaceId,
+        plannedPublishAt: new Date("2026-10-20T12:00:00.000Z"),
+        designerId: null,
+        contentOwnerId: actor.id,
+        title: "Post",
+        format: "static_post",
+        agencyId: "agency-1",
+      },
+    ]);
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+
+    await expect(rescheduleContentItem(actor, { contentItemId, plannedPublishAt })).rejects.toThrow(
+      /permission denied/i,
+    );
+    expect(dbMock.state.transactionCalls).toBe(0);
+  });
+
+  it("does not create a transaction when the scheduled date is unchanged", async () => {
+    dbMock.state.selectResults.push([
+      {
+        workspaceId,
+        plannedPublishAt,
+        designerId: null,
+        contentOwnerId: actor.id,
+        title: "Post",
+        format: "static_post",
+        agencyId: "agency-1",
+      },
+    ]);
+
+    await rescheduleContentItem(actor, { contentItemId, plannedPublishAt });
+
+    expect(dbMock.state.transactionCalls).toBe(0);
+    expect(dbMock.state.insertCalls).toHaveLength(0);
   });
 });
 
@@ -1014,6 +1267,70 @@ describe("assignDesigner (FEAT-FULL-REVIEW-2026-08-26)", () => {
       (c) => (c.values as Record<string, unknown>)["kind"] === "assignment",
     );
     expect(activityInsert).toBeDefined();
+  });
+
+  it("refuses to assign a user who is not a designer in the workspace", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    dbMock.state.selectResults.push([
+      { workspaceId, designerId: otherDesignerId, title: "Spring teaser" },
+    ]);
+
+    await expect(assignDesigner(actor, { contentItemId, designerId })).rejects.toThrow(
+      /permission denied/i,
+    );
+    expect(dbMock.state.transactionCalls).toBe(0);
+    expect(dbMock.state.insertCalls).toHaveLength(0);
+  });
+});
+
+describe("designer assignment authority (master prompt §9)", () => {
+  const designerId = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+
+  it("assignDesigner authorises the workspace manager only — not the planner", async () => {
+    // §9 "Assign/reassign designer": Agency Admin F, Workspace Manager
+    // M, Planner -. A planner who could assign a designer would set
+    // the designer, then be rejected by the `assign_designer`
+    // TRANSITION (manager-only), leaving the item in
+    // `approved_for_design` with a designer attached that nobody can
+    // claim.
+    dbMock.state.selectResults.push([
+      { workspaceId, designerId: "cccccccc-cccc-cccc-cccc-cccccccccccc", title: "Spring teaser" },
+    ]);
+    await assignDesigner(actor, { contentItemId, designerId });
+    const roleCall = policyMock.hasWorkspaceRole.mock.calls[0] as unknown as [
+      unknown,
+      unknown,
+      string[],
+    ];
+    expect(roleCall[2]).toEqual(["workspace_manager"]);
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith({ id: designerId }, workspaceId, [
+      "designer",
+    ]);
+  });
+
+  it("assignDesigner refuses an actor who holds no manager role", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    dbMock.state.selectResults.push([{ workspaceId, designerId, title: "Spring teaser" }]);
+    await expect(assignDesigner(actor, { contentItemId, designerId })).rejects.toThrow(
+      /permission denied/i,
+    );
+  });
+
+  it("releaseDesignTask authorises the workspace manager only — not the planner", async () => {
+    // Releasing a designer's hold puts the item back in the
+    // unassigned queue, which only a manager may fill — so a planner
+    // who could release would push work nobody but a manager can
+    // complete.
+    dbMock.state.selectResults.push([
+      { workspaceId, designerId, status: "in_design", title: "Spring teaser" },
+    ]);
+    await releaseDesignTask(actor, { contentItemId });
+    const roleCall = policyMock.hasWorkspaceRole.mock.calls.at(-1) as unknown as [
+      unknown,
+      unknown,
+      string[],
+    ];
+    expect(roleCall[2]).toEqual(["workspace_manager"]);
   });
 });
 

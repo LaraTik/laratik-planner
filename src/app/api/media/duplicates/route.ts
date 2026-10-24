@@ -2,11 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { currentActor } from "@/lib/auth/current-actor";
 import { MEDIA_KINDS } from "@/lib/media/contract";
-import { findDuplicateMediaAssets, MediaPermissionError } from "@/lib/media/service";
+import { findDuplicateMediaAssets, MediaPermissionError } from "@/features/media/server";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 const Body = z.object({
-  workspaceId: z.string().uuid(),
+  workspaceId: z.string().guid(),
   checksumSha256: z
     .string()
     .trim()

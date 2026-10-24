@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isCronAuthorized } from "@/lib/cron/auth";
+import { authorizeCronRequest } from "@/lib/cron/route-auth";
 import { pruneAppErrorRetention } from "@/lib/observability/app-errors";
 import { logError } from "@/lib/observability/logger";
 import { mutatingApiHeaders } from "@/lib/security/headers";
@@ -41,9 +41,8 @@ const EVENT_RETENTION_DAYS = 30;
 const GROUP_RETENTION_DAYS = 90;
 
 async function handle(req: NextRequest) {
-  if (!isCronAuthorized(req.headers)) {
-    return new NextResponse("Unauthorized", { status: 401, headers: mutatingApiHeaders() });
-  }
+  const authResponse = authorizeCronRequest(req.headers);
+  if (authResponse) return authResponse;
   const startedAt = Date.now();
   try {
     const result = await pruneAppErrorRetention({

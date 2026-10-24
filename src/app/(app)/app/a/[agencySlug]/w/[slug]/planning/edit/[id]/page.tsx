@@ -6,7 +6,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { socialChannels } from "@/lib/db/schema";
-import { getContentItem } from "@/lib/content/service";
+import { getContentItem } from "@/features/content/server";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/workspace/page-header";
@@ -14,6 +14,7 @@ import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { EditIdeaForm } from "./edit-form";
 import { workspaceBasePath } from "@/lib/urls";
+import { logWarn } from "@/lib/observability/logger";
 
 export async function generateMetadata({
   params,
@@ -108,9 +109,10 @@ export default async function EditIdeaPage({
       platform: c.platform,
     }));
   if (missingSelected.length > 0) {
-    console.warn(
-      `[planning/edit] ${missingSelected.length} channel(s) on item ${id} are not in the active list; showing them as a read-only row so the user can deselect them.`,
-    );
+    logWarn("content.edit.selected_channel_not_active", {
+      contentItemId: id,
+      missingSelectedCount: missingSelected.length,
+    });
   }
   void selectedChannelIds; // kept for clarity; consumed via `initial.channelIds`.
 

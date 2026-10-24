@@ -5,12 +5,8 @@ import { randomUUID } from "node:crypto";
 import type { Readable } from "node:stream";
 import { db } from "@/lib/db";
 import { agencyTasks, taskAttachments } from "@/lib/db/schema";
-import {
-  isAgencyAdmin,
-  isAgencyMember,
-  type Actor,
-  PermissionDeniedError,
-} from "@/lib/auth/policy";
+import { isAgencyMember, type Actor, PermissionDeniedError } from "@/lib/auth/policy";
+import { getTaskAccess } from "@/lib/tasks/access";
 import { getAgencyStorageContext } from "@/lib/storage/config";
 import { StorageConfigurationError } from "@/lib/storage/r2-adapter";
 import { captureError } from "@/lib/observability/sentry";
@@ -51,14 +47,9 @@ function externalName(value: string) {
 
 async function taskForActor(actor: Actor, taskId: string) {
   const [task] = await db.select().from(agencyTasks).where(eq(agencyTasks.id, taskId)).limit(1);
-  if (!task || !(await isAgencyMember(actor, task.agencyId))) {
+  if (!task || !(await getTaskAccess(actor, task)).canManage) {
     throw new PermissionDeniedError("task.attachment");
   }
-  const canManage =
-    (await isAgencyAdmin(actor, task.agencyId)) ||
-    task.createdBy === actor.id ||
-    task.assigneeId === actor.id;
-  if (!canManage) throw new PermissionDeniedError("task.attachment");
   return task;
 }
 

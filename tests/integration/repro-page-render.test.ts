@@ -44,7 +44,7 @@ vi.mock("next/headers", () => ({
 }));
 
 describe("REPRO: render the planning page after a delivery submit", () => {
-  let content: typeof import("@/lib/content/service");
+  let content: typeof import("@/features/content/server");
   let deliveries: typeof import("@/lib/deliveries/service");
   let db: Awaited<typeof import("@/lib/db")>["db"];
 
@@ -59,7 +59,7 @@ describe("REPRO: render the planning page after a delivery submit", () => {
   let admin: { id: string };
 
   beforeAll(async () => {
-    content = await import("@/lib/content/service");
+    content = await import("@/features/content/server");
     deliveries = await import("@/lib/deliveries/service");
     ({ db } = await import("@/lib/db"));
   });

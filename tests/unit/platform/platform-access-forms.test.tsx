@@ -5,10 +5,18 @@ import { GrantPlatformAccessForm } from "@/app/(app)/app/platform/access/grant-f
 import { ChangePlatformRoleDialog } from "@/app/(app)/app/platform/access/change-role-dialog";
 import { RevokePlatformAccessDialog } from "@/app/(app)/app/platform/access/revoke-dialog";
 
+const actionMocks = vi.hoisted(() => ({
+  grant: vi.fn(async (): Promise<{ ok?: boolean; errorCode?: "unexpected_failure" }> => ({
+    ok: true,
+  })),
+  change: vi.fn(async () => ({ ok: true })),
+  revoke: vi.fn(async () => ({ ok: true })),
+}));
+
 vi.mock("@/app/(app)/app/platform/access/actions", () => ({
-  grantPlatformAccessAction: vi.fn(async () => ({ ok: true })),
-  changePlatformRoleAction: vi.fn(async () => ({ ok: true })),
-  revokePlatformAccessAction: vi.fn(async () => ({ ok: true })),
+  grantPlatformAccessAction: actionMocks.grant,
+  changePlatformRoleAction: actionMocks.change,
+  revokePlatformAccessAction: actionMocks.revoke,
 }));
 
 const TARGET_ID = "00000000-0000-4000-8000-00000000c002";
@@ -25,6 +33,7 @@ const stubT = (key: string, params?: Record<string, string | number>) => {
     "platform.grantReasonLabel": "Reason",
     "platform.grantReasonPlaceholder": "On-call rotation or responsibility",
     "platform.accessAddMember": "Add platform member",
+    "platform.accessUnexpectedFailure": "The platform access change failed. Please try again.",
     "platform.grantSubmitPending": "Adding…",
     "platform.roleLabels.platform_owner.label": "Platform Owner",
     "platform.roleLabels.agency_operator.label": "Agency Operator",
@@ -71,6 +80,21 @@ const stubT = (key: string, params?: Record<string, string | number>) => {
 };
 
 describe("platform access forms", () => {
+  it("shows localized feedback for unexpected grant failures", async () => {
+    actionMocks.grant.mockResolvedValueOnce({ errorCode: "unexpected_failure" });
+    const user = userEvent.setup();
+    render(<GrantPlatformAccessForm t={stubT} />);
+
+    await user.type(screen.getByLabelText("Email"), "person@example.com");
+    await user.selectOptions(screen.getByLabelText("Platform role"), "support_operator");
+    await user.type(screen.getByLabelText("Reason"), "Support rotation");
+    await user.click(screen.getByRole("button", { name: "Add platform member" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The platform access change failed. Please try again.",
+    );
+  });
+
   it("offers the four documented roles with descriptions", () => {
     render(<GrantPlatformAccessForm t={stubT} />);
     const select = screen.getByRole("combobox", { name: /Platform role/i });

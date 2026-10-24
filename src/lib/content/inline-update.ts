@@ -11,6 +11,7 @@ import { currentActor } from "@/lib/auth/current-actor";
 import { auth } from "@/lib/auth/config";
 import { recordMaterialityEvent } from "@/lib/publishing/materiality";
 import { parseFormatPayload } from "@/lib/format-payload/schemas";
+import { logError } from "@/lib/observability/logger";
 
 /**
  * Inline-update server actions for the planning detail page.
@@ -162,8 +163,9 @@ export async function inlineUpdateBriefAction(
         afterData: { brief: parsed.data.brief },
       });
     });
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Could not save the brief." };
+  } catch (err) {
+    logError("content.inline_update.brief_write_failed", { err });
+    return { error: "Could not save the brief." };
   }
   // Materiality: any change to the creative direction invalidates
   // the existing approval set (master prompt §4). Errors are
@@ -179,12 +181,10 @@ export async function inlineUpdateBriefAction(
       afterValue: parsed.data.brief,
       reasonCode: "audience_copy.update",
     });
-  } catch (e) {
+  } catch (err) {
+    logError("content.inline_update.brief_materiality_failed", { err });
     return {
-      error:
-        e instanceof Error
-          ? `${e.message} Brief was saved and approval history remains unchanged.`
-          : "Brief saved and approval history remains unchanged.",
+      error: "Brief saved and approval history remains unchanged.",
     };
   }
   return { ok: true };
@@ -229,8 +229,9 @@ export async function inlineUpdateTitleAction(
         afterData: { title: parsed.data.title },
       });
     });
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Could not save the title." };
+  } catch (err) {
+    logError("content.inline_update.title_write_failed", { err });
+    return { error: "Could not save the title." };
   }
   // Title is a co-equal creative-direction change (master prompt
   // §4: "any material change to the brief or creative direction
@@ -246,12 +247,10 @@ export async function inlineUpdateTitleAction(
       afterValue: parsed.data.title,
       reasonCode: "audience_copy.update",
     });
-  } catch (e) {
+  } catch (err) {
+    logError("content.inline_update.title_materiality_failed", { err });
     return {
-      error:
-        e instanceof Error
-          ? `${e.message} Title was saved and approval history remains unchanged.`
-          : "Title saved and approval history remains unchanged.",
+      error: "Title saved and approval history remains unchanged.",
     };
   }
   return { ok: true };
@@ -302,8 +301,9 @@ export async function inlineUpdateDateAction(
         afterData: { plannedPublishAt: parsed.data.plannedPublishAt.toISOString() },
       });
     });
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Could not save the date." };
+  } catch (err) {
+    logError("content.inline_update.date_write_failed", { err });
+    return { error: "Could not save the date." };
   }
   // Schedule is the canonical `MATERIAL_RESOURCES` member that
   // maps to a date change. Funnel through the materiality service
@@ -318,12 +318,10 @@ export async function inlineUpdateDateAction(
       afterValue: parsed.data.plannedPublishAt.toISOString(),
       reasonCode: "schedule.update",
     });
-  } catch (e) {
+  } catch (err) {
+    logError("content.inline_update.date_materiality_failed", { err });
     return {
-      error:
-        e instanceof Error
-          ? `${e.message} Date was saved and approval history remains unchanged.`
-          : "Date saved and approval history remains unchanged.",
+      error: "Date saved and approval history remains unchanged.",
     };
   }
   return { ok: true };
@@ -391,8 +389,9 @@ export async function inlineUpdateProductionNotesAction(
         afterData: { additionalNotes: parsed.data.productionNotes.trim() || null },
       });
     });
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Could not save production notes." };
+  } catch (err) {
+    logError("content.inline_update.production_notes_write_failed", { err });
+    return { error: "Could not save production notes." };
   }
   return { ok: true };
 }

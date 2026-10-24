@@ -14,7 +14,7 @@ import {
   type UserWorkload,
   type WorkloadPlan,
   type WorkloadTask,
-} from "@/lib/planning/calendar";
+} from "@/features/calendar/server";
 import { workspaceMonthRange } from "@/lib/i18n/workspace-month";
 import { formatDate } from "@/lib/i18n/format-locale";
 import { tForActive } from "@/lib/i18n/t-for-active";
@@ -756,10 +756,10 @@ export default async function GlobalCalendarPage({
   const requestedParams = await searchParams;
   const requested = requestedParams.month;
   const valid = requested?.match(/^(\d{4})-(\d{2})$/);
-  const workspaceId = z.string().uuid().safeParse(requestedParams.workspaceId).success
+  const workspaceId = z.string().guid().safeParse(requestedParams.workspaceId).success
     ? requestedParams.workspaceId
     : undefined;
-  const assigneeId = z.string().uuid().safeParse(requestedParams.assigneeId).success
+  const assigneeId = z.string().guid().safeParse(requestedParams.assigneeId).success
     ? requestedParams.assigneeId
     : undefined;
   const taskStatus = TASK_STATUSES.includes(requestedParams.taskStatus as TaskStatus)
@@ -892,6 +892,9 @@ export default async function GlobalCalendarPage({
     params.set("view", "workload");
     if (assigneeId) params.set("assigneeId", assigneeId);
     if (workspaceId) params.set("workspaceId", workspaceId);
+    if (taskStatus) params.set("taskStatus", taskStatus);
+    if (!showPlans) params.set("showPlans", "false");
+    if (!showTasks) params.set("showTasks", "false");
     return `?${params.toString()}`;
   })();
   const calendarHref = (() => {

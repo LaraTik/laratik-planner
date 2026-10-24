@@ -31,7 +31,7 @@ test.describe("Trend Radar — first-run onboarding", () => {
   });
 
   test("wizard → 4 sources → trends page", async ({ page }: { page: Page }) => {
-    await page.goto(`/app/w/${workspaceSlug}/trends`);
+    await page.goto(`/app/a/trend-onboarding-agency/w/${workspaceSlug}/trends`);
 
     // 1. Wizard surface — data-testid pinned here so the test survives
     //    copy changes.

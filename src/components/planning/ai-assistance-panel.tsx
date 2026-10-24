@@ -11,7 +11,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { AiAssistanceSection } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/ai-assistance-section";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
@@ -38,39 +37,19 @@ import { useLocaleT } from "@/components/i18n/locale-provider";
  * variant preview.
  */
 export interface AiAssistancePanelProps {
-  /** Canonical agency segment. */
-  agencySlug: string;
-  workspaceSlug: string;
-  contentItemId: string;
-  contentStatus: string;
-  isManager: boolean;
-  isPlanner: boolean;
-  enabledCapabilities: string[];
-  agencyEnabled: boolean;
-  hasKey: boolean;
-  currentBrief: string;
+  /** Route-owned AI surface, supplied by the page that owns its actions. */
+  content: React.ReactNode;
   /** Optional class on the launcher button (e.g. to size it). */
   className?: string;
   /** Label for the launcher button. */
   triggerLabel?: string;
-  trendContext?: { id: string; label: string };
   researchContext?: { accountName: string; platform: string };
 }
 
 export function AiAssistancePanel({
-  agencySlug,
-  workspaceSlug,
-  contentItemId,
-  contentStatus,
-  isManager,
-  isPlanner,
-  enabledCapabilities,
-  agencyEnabled,
-  hasKey,
-  currentBrief,
+  content,
   className,
   triggerLabel,
-  trendContext,
   researchContext,
 }: AiAssistancePanelProps) {
   const t = useLocaleT();
@@ -123,19 +102,7 @@ export function AiAssistancePanel({
           </div>
         </DialogHeader>
         <div className="h-[calc(100dvh-4.5rem)] overflow-y-auto px-4 py-4 sm:h-auto sm:max-h-[calc(85vh-4.5rem)]">
-          <AiAssistanceSection
-            agencySlug={agencySlug}
-            workspaceSlug={workspaceSlug}
-            contentItemId={contentItemId}
-            contentStatus={contentStatus}
-            isManager={isManager}
-            isPlanner={isPlanner}
-            enabledCapabilities={enabledCapabilities}
-            agencyEnabled={agencyEnabled}
-            hasKey={hasKey}
-            currentBrief={currentBrief}
-            {...(trendContext ? { trendContext } : {})}
-          />
+          {content}
         </div>
       </DialogContent>
     </Dialog>

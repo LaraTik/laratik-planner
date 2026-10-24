@@ -20,6 +20,7 @@ import contentDetail from "./contentDetail.json";
 import emails from "./emails.json";
 import errors from "./errors.json";
 import formatEditor from "./formatEditor.json";
+import forms from "./forms.json";
 import languageSwitcher from "./languageSwitcher.json";
 import myWork from "./myWork.json";
 import media from "./media.json";
@@ -45,6 +46,7 @@ import users from "./users.json";
 import workspaceNew from "./workspaceNew.json";
 import workspaceOverview from "./workspaceOverview.json";
 import workspaceOverviewDashboard from "./workspaceOverviewDashboard.json";
+import workspaceAssistant from "./workspaceAssistant.json";
 import workspaces from "./workspaces.json";
 
 export default {
@@ -70,6 +72,7 @@ export default {
   emails,
   errors,
   formatEditor,
+  forms,
   languageSwitcher,
   myWork,
   media,
@@ -95,5 +98,6 @@ export default {
   workspaceNew,
   workspaceOverview,
   workspaceOverviewDashboard,
+  workspaceAssistant,
   workspaces,
 } as const;

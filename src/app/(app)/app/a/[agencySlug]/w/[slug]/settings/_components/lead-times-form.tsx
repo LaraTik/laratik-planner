@@ -48,6 +48,7 @@ export function LeadTimesForm({
   values,
   approvalMode,
   timezone,
+  today,
   t: tProp,
 }: {
   slug: string;
@@ -55,18 +56,14 @@ export function LeadTimesForm({
   values: LeadTimeValues;
   approvalMode: "simple" | "internal_then_client";
   timezone: string;
+  today: Date;
   t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const localeT = useLocaleT();
   const t = tProp ?? localeT;
   const locale = useLocaleCode();
-  // `today` is captured once at component mount so the AI
-  // preview's deadline-impact line is stable while the user
-  // is interacting (and matches the page-level "What this
-  // drives" card). For long-running pages the date could
-  // drift past midnight; the planning surface re-renders
-  // with the live "today" at action time.
-  const today = React.useMemo(() => new Date(), []);
+  // The server passes one render-time value so the page-level forecast,
+  // client preview, and hydration all use the same calendar day.
 
   const action = updateLeadTimesSettingsAction.bind(null, agencySlug, slug);
   const [state, formAction] = useActionState<SettingsActionState, FormData>(action, {});
@@ -85,7 +82,7 @@ export function LeadTimesForm({
     const res = await suggestLeadTimesAction(agencySlug, slug, { approvalMode });
     if (!res.ok) {
       setSuggestStatus("error");
-      setSuggestError(res.error ?? t("settings.leadTimes.suggestError"));
+      setSuggestError(t(`settings.suggestionErrors.${res.errorCode ?? "failed"}`));
       return;
     }
     if (res.suggestion) {
@@ -122,7 +119,7 @@ export function LeadTimesForm({
           {t("settings.leadTimes.total", { count: total })}
         </p>
         <LeadTimeTimeline values={draft} />
-        <LeadTimeDeadline totalDays={total} today={new Date()} timezone={timezone} live />
+        <LeadTimeDeadline totalDays={total} today={today} timezone={timezone} live />
 
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -175,7 +172,7 @@ export function LeadTimesForm({
           >
             <div className="flex flex-wrap items-center gap-2">
               <Sparkles className="text-primary h-4 w-4" aria-hidden="true" />
-              <h3 className="text-section-title text-fg-primary font-semibold">
+              <h3 className="text-title-section text-fg-primary font-semibold">
                 {t("settings.leadTimes.previewHeading")}
               </h3>
               <span

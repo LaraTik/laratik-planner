@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
-import { OverviewCommandCenter } from "@/components/planning/overview-command-center";
+import { OverviewCommandCenter } from "@/features/content";
 import { tFor } from "@/messages";
 
 vi.mock("@/lib/content/inline-update", () => ({

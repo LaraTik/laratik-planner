@@ -9,7 +9,7 @@ import { MediaBulkMoveDialog } from "./media-bulk-move-dialog";
 import { MediaBulkTrashDialog } from "./media-bulk-trash-dialog";
 import { MediaBulkTagPopover } from "./media-bulk-tag-popover";
 import { MediaBulkVisibilityPopover } from "./media-bulk-visibility-popover";
-import type { MediaFolderTreeRow } from "@/lib/media/service";
+import type { MediaFolderTreeRow } from "@/lib/media/folder-tree";
 import { FolderInput, Trash2, X } from "lucide-react";
 
 /**

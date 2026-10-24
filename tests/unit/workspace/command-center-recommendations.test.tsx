@@ -111,6 +111,7 @@ function renderPanel(
       planningHref="/planning"
       workspaceSlug="food-game"
       canRefresh={false}
+      refreshAction={async () => ({ synced: 0, failed: 0 })}
       savedResearchObservationIds={new Set<string>()}
       canSaveResearch={false}
       watchlist={[]}

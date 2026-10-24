@@ -47,7 +47,7 @@ const logoCommand = z.object({
     .refine((value) => value.startsWith("https://"), "Use HTTPS")
     .optional(),
   storagePath: z.string().trim().min(1).max(255).optional(),
-  storageObjectId: z.string().uuid().optional(),
+  storageObjectId: z.string().guid().optional(),
 });
 
 const colorCommand = z.object({
@@ -88,7 +88,7 @@ const genericAssetCommand = z.object({
   value: z.record(z.string(), z.unknown()).optional(),
   externalUrl: z.string().trim().url().optional(),
   storagePath: z.string().trim().min(1).max(255).optional(),
-  storageObjectId: z.string().uuid().optional(),
+  storageObjectId: z.string().guid().optional(),
 });
 
 export const BrandAssetCommandSchema = z

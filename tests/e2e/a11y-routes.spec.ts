@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { bootstrapTestSession, type SeedResult } from "./_helpers";
+import { bootstrapTestSession, devSeed, devSignIn, type SeedResult } from "./_helpers";
 
 /**
  * Per-route axe-core scan for the authenticated app shell.
@@ -53,6 +53,23 @@ async function createDraft(
 
 async function expectClean(route: string, page: import("@playwright/test").Page) {
   await page.waitForLoadState("domcontentloaded");
+  // App Router metadata can stream after the body, especially on dynamic
+  // workspace routes. Wait for the document contract before scanning it.
+  await expect(page).toHaveTitle(/.+/);
+  // Theme changes animate semantic foreground/background tokens. Axe can
+  // observe an intermediate low-contrast frame if it starts before the finite
+  // transitions settle; ignore infinite spinners and wait for the rest.
+  await page.evaluate(async () => {
+    const finiteRunningAnimations = document.getAnimations().filter((animation) => {
+      const endTime = animation.effect?.getComputedTiming().endTime;
+      return (
+        animation.playState === "running" && typeof endTime === "number" && Number.isFinite(endTime)
+      );
+    });
+    await Promise.all(
+      finiteRunningAnimations.map((animation) => animation.finished.catch(() => {})),
+    );
+  });
 
   let results: Awaited<ReturnType<AxeBuilder["analyze"]>> | undefined;
   for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -88,6 +105,32 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     await expectClean("/app/workspaces", page);
   });
 
+  test("platform-only context does not render tenant home or workspace list", async ({ page }) => {
+    const stamp = Date.now();
+    const email = `e2e-workspace-index-platform-${stamp}@laratik.local`;
+    await devSeed(page.request, {
+      email,
+      agencyAdmin: false,
+      platformRole: "platform_owner",
+      agencySlug: `workspace-index-one-${stamp}`,
+      workspaceSlug: `workspace-index-one-${stamp}`,
+    });
+    await devSeed(page.request, {
+      email,
+      agencyAdmin: false,
+      platformRole: "platform_owner",
+      agencySlug: `workspace-index-two-${stamp}`,
+      workspaceSlug: `workspace-index-two-${stamp}`,
+    });
+    await devSignIn(page.request, { email, role: "user" });
+    await page.context().clearCookies({ name: "laratik_active_agency" });
+
+    await page.goto("/app");
+    await expect(page).toHaveURL(/\/app\/platform\/overview(?:$|\?)/);
+    await page.goto("/app/workspaces");
+    await expect(page).toHaveURL(/\/app\/platform\/overview(?:$|\?)/);
+  });
+
   test("@a11y /app/media has no critical violations", async ({ page }) => {
     await bootstrapTestSession(page);
     await page.goto("/app/media");
@@ -118,11 +161,56 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     await expectClean(route, page);
   });
 
+  test("@a11y /app/a/[agencySlug]/w/[slug]/ai-settings has no critical violations", async ({
+    page,
+  }) => {
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "ai-settings");
+    await page.goto(route);
+    await expect(page.getByTestId("workspace-ai-settings")).toBeVisible();
+    await expectClean(route, page);
+  });
+
+  test("@a11y workspace AI assistant has no critical violations", async ({ page }) => {
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "ai-assistant");
+    await page.goto(route);
+    await expect(page.getByRole("heading", { name: "Workspace AI assistant" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Summarize plan" })).toBeVisible();
+    await expectClean(route, page);
+  });
+
+  test("@a11y workspace AI assistant renders Arabic RTL", async ({ page }) => {
+    const seeded = await bootstrapTestSession(page, { locale: "ar" });
+    const route = workspaceRoute(seeded, "ai-assistant");
+    await page.goto(route);
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await expect(
+      page.getByRole("heading", { name: "مساعد الذكاء الاصطناعي لمساحة العمل" }),
+    ).toBeVisible();
+    await expectClean(`${route} [ar]`, page);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(overflow).toBe(false);
+  });
+
   test("@a11y /app/w/[slug]/media has no critical violations", async ({ page }) => {
+    const invalidNestingWarnings: string[] = [];
+    page.on("console", (message) => {
+      if (
+        message.type() === "error" &&
+        message.text().includes("<nav> cannot be a descendant of <p>")
+      ) {
+        invalidNestingWarnings.push(message.text());
+      }
+    });
     const seeded = await bootstrapTestSession(page);
     const route = workspaceRoute(seeded, "media");
     await page.goto(route);
     await expectClean(route, page);
+    await expect(page.getByRole("navigation", { name: "Folder path" })).toBeVisible();
+    expect(invalidNestingWarnings).toEqual([]);
   });
 
   test("@a11y /app/w/[slug]/planning (planning list) has no critical violations", async ({
@@ -208,6 +296,13 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     await bootstrapTestSession(page);
     await page.goto("/app/agency-settings/plan");
     await expectClean("/app/agency-settings/plan", page);
+  });
+
+  test("@a11y agency support request review has no critical violations", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.goto("/app/agency-settings/plan/support");
+    await expect(page.getByTestId("agency-support-no-pending")).toBeVisible();
+    await expectClean("/app/agency-settings/plan/support", page);
   });
 
   test("@a11y agency social settings has no critical violations", async ({ page }) => {
@@ -300,6 +395,33 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     const route = workspaceRoute(seeded, "settings");
     await page.goto(route);
     await expectClean(route, page);
+  });
+
+  test("@a11y workspace settings uses one date during server render and hydration", async ({
+    page,
+  }) => {
+    const seeded = await bootstrapTestSession(page);
+    const hydrationErrors: string[] = [];
+    page.on("console", (message) => {
+      if (
+        message.type() === "error" &&
+        /hydration failed|didn't match the client/i.test(message.text())
+      ) {
+        hydrationErrors.push(message.text());
+      }
+    });
+    // The server keeps its real clock. A deliberately different browser clock
+    // reproduces a midnight/client-time mismatch if the client calculates its
+    // own date instead of using the serialized render-time value.
+    await page.clock.setFixedTime(new Date("2020-01-01T12:00:00.000Z"));
+    const route = workspaceRoute(seeded, "settings");
+    await page.goto(route);
+    await expectClean(route, page);
+
+    const dates = await page.getByTestId("lead-times-deadline-date").allTextContents();
+    expect(dates).toHaveLength(2);
+    expect(dates[0]).toBe(dates[1]);
+    expect(hydrationErrors).toEqual([]);
   });
 
   test("@a11y /app/w/[slug]/calendar has no critical violations", async ({ page }) => {

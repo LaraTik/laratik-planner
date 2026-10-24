@@ -1,0 +1,250 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { MoreHorizontal, Edit3, Copy, UserCog, Send, Archive, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { duplicateContentItemAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/library/actions";
+import {
+  archiveContentItemAction,
+  restoreContentItemAction,
+} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import type { ContentStatus } from "@/lib/content/status";
+import { useLocaleT } from "@/components/i18n/locale-provider";
+import { getErrorMessage } from "@/lib/utils/error";
+import { ChangeOwnerDialog, type PlanningOwnerOption } from "./change-owner-dialog";
+
+/**
+ * PlanningListActions — three-dot quick actions menu for a
+ * planning-list row. Per Goal 33 #13: the primary interaction is
+ * clicking the row title (which navigates to the detail page);
+ * secondary actions live in this menu and are permission-gated.
+ *
+ * Rendered as a client component (DropdownMenu needs Radix) but
+ * receives ZERO function props from the server. The page reads the
+ * current user's role set and passes a `can*` boolean per action;
+ * the menu only shows the actions the user can actually do.
+ *
+ * Navigation remains link-based. Mutating actions use Radix-managed
+ * menu items and call the same server actions as the detail view, so
+ * the list is a complete starting point for the common lifecycle moves.
+ */
+export interface PlanningListActionsProps {
+  agencySlug: string;
+  /** Canonical agency segment. */
+  workspaceSlug: string;
+  itemId: string;
+  itemTitle: string;
+  status: ContentStatus;
+  /** Permission flags derived server-side from the actor's role set. */
+  canEdit: boolean;
+  canSubmit: boolean;
+  canDuplicate: boolean;
+  canArchive: boolean;
+  canChangeOwner: boolean;
+  currentOwnerId: string | null;
+  ownerOptions: PlanningOwnerOption[];
+  /** Tailwind class additions. */
+  className?: string;
+  /**
+   * Optional translator. When provided, every action label and
+   * the trigger's aria-label render from the `common.rowAction*`
+   * catalog; when omitted, the stored English copy is used.
+   */
+  t?: (key: string, params?: Record<string, string | number>) => string;
+}
+
+export function PlanningListActions({
+  workspaceSlug,
+  agencySlug,
+  itemId,
+  itemTitle,
+  status,
+  canEdit,
+  canSubmit,
+  canDuplicate,
+  canArchive,
+  canChangeOwner,
+  currentOwnerId,
+  ownerOptions,
+  className,
+}: PlanningListActionsProps) {
+  const t = useLocaleT();
+  const router = useRouter();
+  const [archivePending, startArchiveTransition] = React.useTransition();
+  const [duplicatePending, startDuplicateTransition] = React.useTransition();
+  const [ownerDialogOpen, setOwnerDialogOpen] = React.useState(false);
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
+    const value = t(key, params);
+    return isMissingTranslation(value, key) ? fallback : value;
+  };
+  const detailHref = `${workspaceBasePath(agencySlug, workspaceSlug)}/planning/${itemId}`;
+  const isDraft = status === "draft";
+  const isChangesRequested = status === "changes_requested";
+  const isSubmittable = isDraft || isChangesRequested;
+
+  function archive() {
+    if (archivePending) return;
+    startArchiveTransition(async () => {
+      try {
+        await archiveContentItemAction(workspaceSlug, itemId);
+        toast.success(t("contentDetail.navigation.archiveArchived", { name: itemTitle }), {
+          description: t("contentDetail.navigation.archiveDescription"),
+          duration: 5000,
+          action: {
+            label: t("contentDetail.navigation.archiveUndo"),
+            onClick: () => {
+              startArchiveTransition(async () => {
+                try {
+                  await restoreContentItemAction(workspaceSlug, itemId);
+                  toast.success(t("contentDetail.navigation.archiveRestored", { name: itemTitle }));
+                  router.refresh();
+                } catch (error) {
+                  toast.error(t("contentDetail.navigation.archiveCouldNotRestore"), {
+                    description: getErrorMessage(error),
+                  });
+                }
+              });
+            },
+          },
+        });
+        router.refresh();
+      } catch (error) {
+        toast.error(t("contentDetail.navigation.archiveCouldNotArchive"), {
+          description: getErrorMessage(error),
+        });
+      }
+    });
+  }
+
+  function duplicate() {
+    if (duplicatePending) return;
+    startDuplicateTransition(async () => {
+      const result = await duplicateContentItemAction(workspaceSlug, itemId);
+      if (result.newId) {
+        router.push(
+          `${workspaceBasePath(agencySlug, workspaceSlug)}/planning/${result.newId}#overview`,
+        );
+        return;
+      }
+      toast.error(tr("common.rowActionDuplicateFailed", "Could not duplicate this item"), {
+        description: result.errorCode
+          ? tr(`users.library.errors.${result.errorCode}`, "Could not duplicate this item")
+          : result.error,
+      });
+    });
+  }
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label={tr("common.rowActionsAria", `Actions for ${itemTitle}`, {
+              title: itemTitle,
+            })}
+            data-testid="row-actions-trigger"
+            className={cn(
+              "border-border bg-surface text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] border transition-colors focus:outline-none focus-visible:ring-2",
+              className,
+            )}
+          >
+            <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuLabel>{itemTitle}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <Link href={detailHref} data-testid="row-action-open">
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+              {tr("common.rowActionOpen", "Open")}
+            </Link>
+          </DropdownMenuItem>
+          {canEdit ? (
+            <DropdownMenuItem asChild>
+              <Link
+                href={`${workspaceBasePath(agencySlug, workspaceSlug)}/planning/edit/${itemId}`}
+                data-testid="row-action-edit"
+              >
+                <Edit3 className="h-3.5 w-3.5" aria-hidden="true" />
+                {tr("common.rowActionEdit", "Edit")}
+              </Link>
+            </DropdownMenuItem>
+          ) : null}
+          {canDuplicate ? (
+            <DropdownMenuItem
+              disabled={duplicatePending}
+              onSelect={duplicate}
+              data-testid="row-action-duplicate"
+            >
+              <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+              {duplicatePending
+                ? tr("common.rowActionDuplicating", "Duplicating…")
+                : tr("common.rowActionDuplicate", "Duplicate")}
+            </DropdownMenuItem>
+          ) : null}
+          {canChangeOwner ? (
+            <DropdownMenuItem
+              onSelect={() => setOwnerDialogOpen(true)}
+              data-testid="row-action-change-owner"
+            >
+              <UserCog className="h-3.5 w-3.5" aria-hidden="true" />
+              {tr("common.rowActionChangeOwner", "Change owner")}
+            </DropdownMenuItem>
+          ) : null}
+          {canSubmit && isSubmittable ? (
+            <DropdownMenuItem asChild>
+              <Link
+                href={`${detailHref}#workflow`}
+                data-testid="row-action-submit"
+                data-action="submit-for-review"
+              >
+                <Send className="h-3.5 w-3.5" aria-hidden="true" />
+                {isChangesRequested
+                  ? tr("common.rowActionResubmit", "Resubmit for review")
+                  : tr("common.rowActionSubmit", "Submit for review")}
+              </Link>
+            </DropdownMenuItem>
+          ) : null}
+          {canArchive ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                disabled={archivePending}
+                onSelect={archive}
+                data-testid="row-action-archive"
+              >
+                <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+                {tr("common.rowActionArchive", "Archive")}
+              </DropdownMenuItem>
+            </>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <ChangeOwnerDialog
+        workspaceSlug={workspaceSlug}
+        itemId={itemId}
+        itemTitle={itemTitle}
+        currentOwnerId={currentOwnerId}
+        ownerOptions={ownerOptions}
+        open={ownerDialogOpen}
+        onOpenChange={setOwnerDialogOpen}
+      />
+    </>
+  );
+}
+
+import { workspaceBasePath } from "@/lib/urls";
+import { isMissingTranslation } from "@/messages";

@@ -92,6 +92,13 @@
   "library": {
     "title": "Planning library",
     "description": "Reusable campaigns, content pillars, and templates for this workspace.",
+    "errors": {
+      "forbidden": "You don't have permission to change the planning library.",
+      "not_found": "The planning item could not be found. Refresh and try again.",
+      "duplicate_pillar": "A pillar with that name already exists in this workspace.",
+      "duplicate_template": "A template with that name already exists in this workspace.",
+      "save_failed": "We couldn't save that change. Please try again."
+    },
     "campaigns": "Campaigns",
     "campaignsEmpty": "No campaigns yet",
     "campaignsEmptyDescription": "Create a campaign below to bundle related ideas and keep the planning list focused.",
@@ -288,6 +295,11 @@
     "revoke": "Revoke",
     "revoking": "Revoking…",
     "revoked": "Invitation revoked.",
+    "errors": {
+      "stale": "This invitation is no longer pending. Refresh the list and try again.",
+      "resend_failed": "We couldn't resend this invitation. Please try again.",
+      "revoke_failed": "We couldn't revoke this invitation. Please try again."
+    },
     "revokeAria": "Revoke invitation for {email}",
     "agencyAdmin": "Agency admin",
     "role": "Role",
@@ -320,6 +332,7 @@
     "deactivateAria": "Deactivate {name}",
     "reactivate": "Reactivate",
     "reactivateAria": "Reactivate {name}",
+    "reactivateFailed": "The member could not be reactivated. Please try again.",
     "role": "Role",
     "member": "Member",
     "empty": "No members match the current filters."
@@ -366,7 +379,10 @@
     "saving": "Saving…",
     "filterWorkspaces": "Filter {count} workspaces",
     "filterWorkspacesAria": "Filter workspaces by name",
-    "noWorkspaceMatches": "No workspace matches “{filter}”."
+    "noWorkspaceMatches": "No workspace matches “{filter}”.",
+    "auditTitle": "Recent changes",
+    "auditEmpty": "No prior access changes on file. The first change you make will appear here for the team to audit later.",
+    "auditBy": "by {name}"
   },
   "colorForm": {
     "nameLabel": "Color name",

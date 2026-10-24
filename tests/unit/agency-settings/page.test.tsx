@@ -40,8 +40,8 @@ describe("agency-settings page structure", () => {
     expect(source).toMatch(/data-testid="agency-settings"/);
     expect(source).toMatch(/data-testid="agency-settings-footprint"/);
     expect(source).toMatch(/data-testid="agency-settings-services"/);
-    // M3.4 — the identity card is now an EditAgencyForm component.
-    expect(source).toMatch(/EditAgencyForm/);
+    // The identity form action is owned by the agency-settings route wrapper.
+    expect(source).toMatch(/AgencySettingsEditForm/);
     // The footprint row is a link to /app/users (M3.4 polish).
     expect(source).toMatch(/agency-settings-members-link/);
     // The plan card links to /app/agency-settings/plan.
@@ -54,6 +54,11 @@ describe("agency-settings page structure", () => {
     expect(source).toMatch(/testId="agency-service-magic-link"/);
     expect(source).toMatch(/testId="agency-service-minimax-ai"/);
     expect(source).toMatch(/testId="agency-service-sentry"/);
+  });
+
+  it("treats a missing entitlement as unavailable but lets operational failures reach the route boundary", () => {
+    expect(source).toContain("isCommunityInboxPlanIncluded(agencyId)");
+    expect(source).not.toContain("getEffectiveEntitlement({ agencyId }).catch");
   });
 
   it("renders a forbidden fallback with a back link for non-admin actors", () => {

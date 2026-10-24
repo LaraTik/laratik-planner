@@ -29,6 +29,7 @@ describe("advertising reporting metrics", () => {
     expect(metrics.cpm).toBe(10);
     expect(metrics.reach).toBe(500);
     expect(metrics.frequency).toBe(6);
+    expect(metrics.resultType).toBe("link_click");
   });
 
   it("keeps objective-aware results and action metrics explainable", () => {
@@ -50,6 +51,22 @@ describe("advertising reporting metrics", () => {
     ]);
     expect(metrics.results).toBeNull();
     expect(metrics.costPerResult).toBeNull();
+  });
+
+  it("does not combine typed results with rows that have no result definition", () => {
+    const metrics = aggregateAdvertisingMetrics([
+      row({ resultType: "link_click" }),
+      row({ adId: "ad-2", resultType: null }),
+    ]);
+    expect(metrics.results).toBeNull();
+    expect(metrics.costPerResult).toBeNull();
+  });
+
+  it("marks metrics partial when the report health is partial", () => {
+    const metrics = aggregateAdvertisingMetrics([row()]);
+    expect(
+      metricStatuses(metrics, { healthState: "partial" }).find((status) => status.key === "spend"),
+    ).toMatchObject({ availability: "partial", label: "Spend" });
   });
 
   it("returns matching previous period boundaries", () => {

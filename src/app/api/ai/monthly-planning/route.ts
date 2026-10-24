@@ -1,21 +1,26 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
+import { aiFeatureSettings, planningProposals, workspaces } from "@/lib/db/schema";
 import {
-  aiFeatureSettings,
-  monthlyPlanningSessions,
-  planningProposals,
-  workspaces,
-} from "@/lib/db/schema";
-import { getActiveApiKey } from "@/lib/ai";
-import { loadEnabledCapabilities, enforceAiBudget, reconcileAiBudget } from "@/lib/ai/governance";
+  getActiveApiKey,
+  loadEnabledCapabilities,
+  enforceAiBudget,
+  reconcileAiBudget,
+  releaseAiBudgetReservation,
+  recordAiUsageEvent,
+} from "@/lib/ai";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { mutatingApiHeaders } from "@/lib/security/headers";
+import { publicProviderError } from "@/lib/security/public-error";
+import { captureError } from "@/lib/observability/sentry";
+import { LimitExceededError } from "@/lib/entitlements";
+import { serverEnv } from "@/lib/validation/env";
 import { getBrandProfile } from "@/lib/brand/profile";
 import {
   MonthlyPlanProposalSchema,
@@ -26,17 +31,17 @@ import {
   getMonthlyPlanningSession,
   saveMonthlyProposal,
 } from "@/lib/ai/monthly-planning";
-import { batchCreateContentItems } from "@/lib/content/service";
+import { applyMonthlyProposalAtomically } from "@/features/ai/server";
 import { BatchCreateSchema } from "@/lib/content/batch";
 import { parseBatchDateTime } from "@/lib/content/batch";
 import { randomUUID } from "node:crypto";
 
 const Body = z.object({
-  workspaceId: z.string().uuid(),
-  sessionId: z.string().uuid(),
+  workspaceId: z.string().guid(),
+  sessionId: z.string().guid(),
   action: z.enum(["message", "generateProposal", "approve", "apply"]),
   message: z.string().trim().max(8000).optional(),
-  proposalId: z.string().uuid().optional(),
+  proposalId: z.string().guid().optional(),
 });
 
 function streamText(text: string, payload: Record<string, unknown> = {}) {
@@ -154,14 +159,14 @@ export async function POST(req: NextRequest) {
         { error: "The proposal contains invalid dates or content." },
         { status: 422, headers: mutatingApiHeaders() },
       );
-    const [claimed] = await db
-      .update(planningProposals)
-      .set({ status: "applying", updatedAt: new Date() })
-      .where(
-        and(eq(planningProposals.id, proposalRow.id), eq(planningProposals.status, "approved")),
-      )
-      .returning({ id: planningProposals.id });
-    if (!claimed) {
+    const createdIds = await applyMonthlyProposalAtomically({
+      actor,
+      workspaceId: workspace.id,
+      sessionId: current.session.id,
+      proposalId: proposalRow.id,
+      content: validated.data,
+    });
+    if (!createdIds) {
       const [latest] = await db
         .select({
           status: planningProposals.status,
@@ -180,34 +185,8 @@ export async function POST(req: NextRequest) {
         { status: 409, headers: mutatingApiHeaders() },
       );
     }
-    let createdIds: string[];
-    try {
-      createdIds = await batchCreateContentItems(actor, validated.data);
-    } catch (error) {
-      await db
-        .update(planningProposals)
-        .set({ status: "approved", updatedAt: new Date() })
-        .where(eq(planningProposals.id, proposalRow.id));
-      throw error;
-    }
-    await db.transaction(async (tx) => {
-      await tx
-        .update(planningProposals)
-        .set({
-          status: "applied",
-          appliedContentIds: createdIds,
-          appliedAt: new Date(),
-          appliedBy: actor.id,
-          updatedAt: new Date(),
-        })
-        .where(eq(planningProposals.id, proposalRow.id));
-      await tx
-        .update(monthlyPlanningSessions)
-        .set({ status: "applied", updatedAt: new Date() })
-        .where(eq(monthlyPlanningSessions.id, current.session.id));
-    });
     return NextResponse.json(
-      { ok: true, created: items.length },
+      { ok: true, created: createdIds.length },
       { headers: mutatingApiHeaders() },
     );
   }
@@ -262,39 +241,94 @@ export async function POST(req: NextRequest) {
       { status: 503, headers: mutatingApiHeaders() },
     );
 
+  const message = parsed.data.action === "message" ? parsed.data.message?.trim() : undefined;
+  if (parsed.data.action === "message" && !message)
+    return NextResponse.json(
+      { error: "Message is required" },
+      { status: 400, headers: mutatingApiHeaders() },
+    );
+
   const requestId = req.headers.get("x-request-id") ?? randomUUID();
   const estimatedInput = parsed.data.action === "generateProposal" ? 5000 : 1800;
   const estimatedOutput = parsed.data.action === "generateProposal" ? 6000 : 1600;
-  const reservation = await db.transaction((tx) =>
-    enforceAiBudget({
-      tx,
-      agencyId: workspace.agencyId,
-      userId: actor.id,
-      capability: "monthly_planning_copilot",
-      estimatedInputTokens: estimatedInput,
-      estimatedOutputTokens: estimatedOutput,
-      requestId,
-    }),
-  );
+  let reservationHeld = false;
+  let providerCompleted = false;
+  let providerUsage: { inputTokens: number; outputTokens: number } | null = null;
+  const recordUsageEvent = async (succeeded: boolean) => {
+    try {
+      await recordAiUsageEvent({
+        agencyId: workspace.agencyId,
+        workspaceId: workspace.id,
+        userId: actor.id,
+        capability: "monthly_planning_copilot",
+        model: serverEnv.MINIMAX_MODEL,
+        inputTokens: providerUsage?.inputTokens ?? 0,
+        outputTokens: providerUsage?.outputTokens ?? 0,
+        requestId,
+        succeeded,
+        contextCategories: [
+          "monthly_planning_session",
+          "brand_profile",
+          "brand_kit",
+          "brand_visuals",
+          "campaign",
+          "content_pillars",
+          "active_channels",
+          "approved_content",
+          "planning_instruction_packs",
+          "conversation_history",
+        ],
+      });
+    } catch (usageError) {
+      captureError("ai.monthly_planning_usage_event_failed", usageError, {
+        requestId,
+        userId: actor.id,
+        workspaceId: workspace.id,
+      });
+    }
+  };
 
   try {
+    const reservation = await db.transaction((tx) =>
+      enforceAiBudget({
+        tx,
+        agencyId: workspace.agencyId,
+        userId: actor.id,
+        capability: "monthly_planning_copilot",
+        estimatedInputTokens: estimatedInput,
+        estimatedOutputTokens: estimatedOutput,
+        requestId,
+      }),
+    );
+    reservationHeld = true;
+
     if (parsed.data.action === "message") {
-      const message = parsed.data.message?.trim();
-      if (!message)
-        return NextResponse.json(
-          { error: "Message is required" },
-          { status: 400, headers: mutatingApiHeaders() },
-        );
-      await appendMonthlyMessage(actor, workspace.id, current.session.id, "user", message);
+      // The request was validated before reserving budget.
+      const validMessage = message!;
+      await appendMonthlyMessage(actor, workspace.id, current.session.id, "user", validMessage);
       const result = await askMonthlyPlanningCopilot({
         apiKey,
         actor,
         workspaceId: workspace.id,
         sessionId: current.session.id,
-        userMessage: message,
+        userMessage: validMessage,
         signal: req.signal,
       });
       if (!result) throw new Error("AI returned no response");
+      providerCompleted = true;
+      providerUsage = {
+        inputTokens: result.inputTokens ?? estimatedInput,
+        outputTokens: result.outputTokens ?? estimatedOutput,
+      };
+      await reconcileAiBudget({
+        agencyId: workspace.agencyId,
+        userId: actor.id,
+        estimatedInputTokens: reservation.estimatedInputTokens,
+        estimatedOutputTokens: reservation.estimatedOutputTokens,
+        actualInputTokens: providerUsage.inputTokens,
+        actualOutputTokens: providerUsage.outputTokens,
+      });
+      reservationHeld = false;
       await appendMonthlyMessage(
         actor,
         workspace.id,
@@ -302,14 +336,7 @@ export async function POST(req: NextRequest) {
         "assistant",
         result.content,
       );
-      await reconcileAiBudget({
-        agencyId: workspace.agencyId,
-        userId: actor.id,
-        estimatedInputTokens: reservation.estimatedInputTokens,
-        estimatedOutputTokens: reservation.estimatedOutputTokens,
-        actualInputTokens: result.inputTokens ?? estimatedInput,
-        actualOutputTokens: result.outputTokens ?? estimatedOutput,
-      });
+      await recordUsageEvent(true);
       return streamText(result.content);
     }
     const generated = await generateMonthlyProposal({
@@ -319,27 +346,76 @@ export async function POST(req: NextRequest) {
       sessionId: current.session.id,
       signal: req.signal,
     });
+    providerCompleted = true;
+    providerUsage = {
+      inputTokens: generated.result?.inputTokens ?? estimatedInput,
+      outputTokens: generated.result?.outputTokens ?? estimatedOutput,
+    };
+    await reconcileAiBudget({
+      agencyId: workspace.agencyId,
+      userId: actor.id,
+      estimatedInputTokens: reservation.estimatedInputTokens,
+      estimatedOutputTokens: reservation.estimatedOutputTokens,
+      actualInputTokens: providerUsage.inputTokens,
+      actualOutputTokens: providerUsage.outputTokens,
+    });
+    reservationHeld = false;
     const saved = await saveMonthlyProposal(
       actor,
       workspace.id,
       current.session.id,
       generated.proposal,
     );
-    await reconcileAiBudget({
-      agencyId: workspace.agencyId,
-      userId: actor.id,
-      estimatedInputTokens: reservation.estimatedInputTokens,
-      estimatedOutputTokens: reservation.estimatedOutputTokens,
-      actualInputTokens: generated.result?.inputTokens ?? estimatedInput,
-      actualOutputTokens: generated.result?.outputTokens ?? estimatedOutput,
-    });
+    await recordUsageEvent(true);
     return NextResponse.json(
       { ok: true, proposal: generated.proposal, proposalId: saved.id, revision: saved.revision },
       { headers: mutatingApiHeaders() },
     );
   } catch (error) {
+    if (error instanceof LimitExceededError) {
+      // Keep the original estimate reserved if a completed provider request
+      // exceeds the monthly cap while reconciling actual usage.
+      if (reservationHeld && providerCompleted) reservationHeld = false;
+      if (reservationHeld) {
+        const released = await releaseAiBudgetReservation({
+          agencyId: workspace.agencyId,
+          inputTokens: estimatedInput,
+          outputTokens: estimatedOutput,
+        });
+        if (!released)
+          captureError(
+            "ai.budget_release_failed",
+            new Error("Failed to release AI token reservation"),
+            { requestId, userId: actor.id, workspaceId: workspace.id },
+          );
+      }
+      if (providerCompleted) await recordUsageEvent(true);
+      return NextResponse.json(
+        { error: error.message, quota: error.details },
+        { status: 429, headers: mutatingApiHeaders() },
+      );
+    }
+    if (reservationHeld) {
+      const released = await releaseAiBudgetReservation({
+        agencyId: workspace.agencyId,
+        inputTokens: estimatedInput,
+        outputTokens: estimatedOutput,
+      });
+      if (!released)
+        captureError(
+          "ai.budget_release_failed",
+          new Error("Failed to release AI token reservation"),
+          { requestId, userId: actor.id, workspaceId: workspace.id },
+        );
+    }
+    captureError("ai.monthly_planning_failed", error, {
+      requestId,
+      userId: actor.id,
+      workspaceId: workspace.id,
+    });
+    await recordUsageEvent(providerCompleted);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "The AI planning request failed." },
+      { error: publicProviderError("ai", error).message },
       { status: 502, headers: mutatingApiHeaders() },
     );
   }

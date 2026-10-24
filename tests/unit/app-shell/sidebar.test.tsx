@@ -40,6 +40,11 @@ const baseProps = {
     { id: "ws-1", name: "Northstar Coffee", slug: "northstar", agencySlug: "acme" },
     { id: "ws-2", name: "Autumn Blend", slug: "autumn", agencySlug: "acme" },
   ],
+  agencySwitcher: {
+    active: { id: "agency-1", name: "Acme Studio", slug: "acme", isAdmin: true },
+    options: [{ id: "agency-1", name: "Acme Studio", slug: "acme", isAdmin: true }],
+  },
+  canCreateWorkspace: true,
   workspaceCanCreateContent: { "ws-1": true, "ws-2": true },
   platformAccess: {
     canEnter: false,
@@ -76,12 +81,17 @@ describe("Sidebar (workspace-aware)", () => {
     expect(screen.queryByTestId("sidebar-create-content")).toBeNull();
   });
 
-  it("keeps workspace context out of the sidebar", () => {
+  it("keeps agency and workspace context in the persistent sidebar", () => {
     usePathnameMock.mockReturnValue("/app/workspaces");
     render(<Sidebar {...baseProps} />);
 
-    expect(screen.queryByTestId("sidebar-workspace-context")).toBeNull();
-    expect(screen.queryByTestId("sidebar-workspace-switcher-trigger")).toBeNull();
+    expect(screen.getByTestId("sidebar-workspace-context")).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-agency-switcher-trigger")).toHaveAccessibleName(
+      "Active agency: Acme Studio. Click to switch.",
+    );
+    expect(screen.getByTestId("sidebar-workspace-switcher-trigger")).toHaveAccessibleName(
+      "Select a workspace. Click to open.",
+    );
   });
 
   it("keeps the tablet rail visually icon-only even when desktop sidebar is expanded", () => {
@@ -214,7 +224,7 @@ describe("Sidebar (workspace-aware)", () => {
     expect(cta).toHaveAttribute("href", "/app/a/acme/w/northstar/planning/new");
   });
 
-  it("keeps product branding compact and leaves workspace identity to the topbar", () => {
+  it("keeps product branding compact and shows workspace identity in the context stack", () => {
     usePathnameMock.mockReturnValue("/app/a/acme/w/autumn");
     render(<Sidebar {...baseProps} />);
     // Brand block: the parent <div class="min-w-0"> holds both the
@@ -223,7 +233,9 @@ describe("Sidebar (workspace-aware)", () => {
     const brandRow = productName.parentElement as HTMLElement | null;
     expect(brandRow).not.toBeNull();
     expect(brandRow!.textContent).toBe("StudioFlow");
-    expect(screen.queryByTestId("sidebar-workspace-switcher-trigger")).toBeNull();
+    expect(screen.getByTestId("sidebar-workspace-switcher-trigger")).toHaveAccessibleName(
+      "Active workspace: Autumn Blend. Click to switch.",
+    );
   });
 
   it("shows client reviewers only the client review navigation", () => {
@@ -261,8 +273,8 @@ describe("Sidebar (workspace-aware)", () => {
   it("does not show the workspace name in the brand block in global mode", () => {
     usePathnameMock.mockReturnValue("/app");
     render(<Sidebar {...baseProps} />);
-    // Brand block: the parent <div class="min-w-0"> only holds the
-    // product name; workspace identity is owned by the topbar.
+    // Brand block contains only the product name; workspace identity is
+    // rendered in the context stack below it.
     const productName = screen.getByText("StudioFlow");
     const brandRow = productName.parentElement as HTMLElement | null;
     expect(brandRow).not.toBeNull();
@@ -394,13 +406,15 @@ describe("Sidebar (/ui-ux-pro-max refinement)", () => {
     expect(screen.queryByTestId("sidebar-badge-design-queue")).toBeNull();
   });
 
-  it("collapses to icon-rail without duplicating workspace context", () => {
+  it("keeps both context switchers accessible in the collapsed icon rail", () => {
     usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning");
     render(<Sidebar {...baseProps} collapsed={true} />);
     // Brand block: the logo (icon) is still discoverable via the link's
     // accessible name; the text label is hidden in icon-rail mode.
     expect(screen.getByLabelText("StudioFlow home")).toBeInTheDocument();
-    expect(screen.queryByTestId("sidebar-workspace-context")).toBeNull();
+    expect(screen.getByTestId("sidebar-workspace-context")).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-agency-switcher-trigger")).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-workspace-switcher-trigger")).toBeInTheDocument();
     // Create content CTA still rendered (per spec §18)
     expect(screen.getByTestId("sidebar-create-content")).toBeInTheDocument();
     // Footer collapse toggle is visible so the user can expand again
@@ -449,12 +463,12 @@ describe("Sidebar (/ui-ux-pro-max refinement)", () => {
     expect(screen.queryByText("Manage")).toBeNull();
   });
 
-  it("does not render a duplicate workspace switcher in workspace mode", () => {
+  it("renders one workspace switcher inside primary navigation", () => {
     usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning");
     render(<Sidebar {...baseProps} />);
     const nav = screen.getByRole("navigation", { name: "Primary" });
-    expect(nav).not.toContainElement(screen.queryByTestId("topbar-workspace-switcher-trigger"));
-    expect(screen.queryByTestId("sidebar-workspace-switcher-trigger")).toBeNull();
+    expect(nav).toContainElement(screen.getByTestId("sidebar-workspace-switcher-trigger"));
+    expect(screen.queryByTestId("topbar-workspace-switcher-trigger")).toBeNull();
   });
 
   it("renames Reviews → Approvals and Social Channels → Channels per spec §5/§6", () => {
@@ -535,6 +549,7 @@ describe("Sidebar (round-4 /ui-ux-pro-max refinement)", () => {
     // ("globalGroup"). If the layout threads the wrong key the
     // heading silently falls back to the hardcoded English
     // `group.label` and Arabic users see untranslated chrome.
+    expect(screen.getByText("المؤسسة")).toBeInTheDocument();
     expect(screen.getByTestId("sidebar-group-label-plan")).toHaveTextContent("التخطيط");
     expect(screen.getByTestId("sidebar-group-label-understand")).toHaveTextContent(
       "الفهم والتحليل",
@@ -549,11 +564,11 @@ describe("Sidebar (round-4 /ui-ux-pro-max refinement)", () => {
     expect(screen.getByTestId("sidebar-group-label-global")).toHaveTextContent("عام");
   });
 
-  it("keeps workspace context out of the sidebar", () => {
+  it("keeps workspace context available in the sidebar on workspace routes", () => {
     usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning");
     render(<Sidebar {...baseProps} />);
-    expect(screen.queryByTestId("sidebar-workspace-context")).toBeNull();
-    expect(screen.queryByTestId("sidebar-workspace-switcher-trigger")).toBeNull();
+    expect(screen.getByTestId("sidebar-workspace-context")).toBeInTheDocument();
+    expect(screen.getByTestId("sidebar-workspace-switcher-trigger")).toBeInTheDocument();
   });
 
   it("renders the Global group (All tasks + Global calendar) on global routes", () => {

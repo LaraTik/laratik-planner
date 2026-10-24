@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import type { CommentRecord, CommentRoleFlags } from "@/components/comments/comment-item";
 import { CommentItem } from "@/components/comments/comment-item";
 import { CommentForm } from "@/components/comments/comment-form";
+import type { CreateCommentAction } from "@/components/comments/comment-composer";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
@@ -34,6 +35,12 @@ import { useLocaleT } from "@/components/i18n/locale-provider";
  * cache of its own.
  */
 export interface DiscussionDrawerProps {
+  createCommentAction: CreateCommentAction;
+  resolveCommentAction: (input: {
+    workspaceSlug: string;
+    commentId: string;
+    resolved: boolean;
+  }) => Promise<{ error?: string; ok?: true }>;
   workspaceSlug: string;
   contentItemId: string;
   comments: CommentRecord[];
@@ -56,6 +63,8 @@ export interface DiscussionDrawerProps {
 }
 
 export function DiscussionDrawer({
+  createCommentAction,
+  resolveCommentAction,
   workspaceSlug,
   contentItemId,
   comments,
@@ -168,6 +177,7 @@ export function DiscussionDrawer({
                 {topLevel.map((c) => (
                   <React.Fragment key={c.id}>
                     <CommentItem
+                      onResolve={resolveCommentAction}
                       comment={c}
                       workspaceSlug={workspaceSlug}
                       currentUserId={currentUserId}
@@ -178,6 +188,7 @@ export function DiscussionDrawer({
                     />
                     {repliesByParent.get(c.id)?.map((reply) => (
                       <CommentItem
+                        onResolve={resolveCommentAction}
                         key={reply.id}
                         comment={reply}
                         workspaceSlug={workspaceSlug}
@@ -191,6 +202,7 @@ export function DiscussionDrawer({
                     {replyingTo === c.id ? (
                       <div className="mt-2 sm:ms-6">
                         <CommentForm
+                          createCommentAction={createCommentAction}
                           workspaceSlug={workspaceSlug}
                           contentItemId={contentItemId}
                           parentCommentId={c.id}
@@ -209,6 +221,7 @@ export function DiscussionDrawer({
           <footer className="border-border bg-canvas border-t p-3">
             {showForm ? (
               <CommentForm
+                createCommentAction={createCommentAction}
                 workspaceSlug={workspaceSlug}
                 contentItemId={contentItemId}
                 canPostClientVisible={canPostClientVisible}

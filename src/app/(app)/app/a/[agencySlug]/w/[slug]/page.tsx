@@ -20,8 +20,8 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { PlanCoverageCard } from "@/components/workspace/plan-coverage-card";
 import { DeliveryHealthCard } from "@/components/workspace/delivery-health-card";
 import { WorkflowPipeline } from "@/components/workspace/workflow-pipeline";
-import { NeedsAttentionList } from "@/components/workspace/needs-attention-list";
-import { RecentlyUpdatedList } from "@/components/workspace/recently-updated-list";
+import { NeedsAttentionList } from "@/features/content";
+import { RecentlyUpdatedList } from "@/features/content";
 import { AttentionBanner } from "@/components/workspace/attention-banner";
 import { OverviewKpiStrip, OVERVIEW_KPI_ICONS } from "@/components/workspace/overview-kpi-strip";
 import { CommandCenterPanel } from "@/components/workspace/command-center-panel";
@@ -31,6 +31,7 @@ import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { formatDate } from "@/lib/i18n/format-locale";
 import { getCommandCenterSnapshot } from "@/lib/social/command-center-snapshot";
+import { refreshWorkspaceSocialDataAction } from "./channels/actions";
 import { workspaceBasePath } from "@/lib/urls";
 
 /**
@@ -445,6 +446,7 @@ export default async function WorkspaceOverviewPage({
         planningHref={`${workspaceBasePath(agencySlug, slug)}/planning`}
         workspaceSlug={slug}
         canRefresh={canRefreshSocial}
+        refreshAction={refreshWorkspaceSocialDataAction}
         savedResearchObservationIds={new Set(researchBookmarkRows.map((row) => row.observationId))}
         canSaveResearch={canSaveResearch}
         watchlist={watchlistRows.map((row) => ({

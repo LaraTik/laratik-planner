@@ -23,7 +23,9 @@ test.describe("Publish package", () => {
     // Land on the planning detail page directly so the test
     // doesn't depend on the redirect resolving before the
     // first assertion.
-    await page.goto(`/app/w/${seeded.workspaceSlug}/planning/${seeded.contentItemId}#publishing`);
+    await page.goto(
+      `/app/a/test-agency/w/${seeded.workspaceSlug}/planning/${seeded.contentItemId}#publish`,
+    );
     // Wait for the form to mount (the WorkspaceShell listens
     // to hashchange and switches panels asynchronously).
     await expect(page.getByTestId("publish-package-form")).toBeVisible({ timeout: 10_000 });
@@ -65,7 +67,9 @@ test.describe("Publish package", () => {
 
   test("content planner can save but cannot self-approve final copy", async ({ page }) => {
     const seeded = await bootstrapRoleSession(page, "content_planner", "publish-planner");
-    await page.goto(`/app/w/${seeded.workspaceSlug}/planning/${seeded.contentItemId}#publishing`);
+    await page.goto(
+      `/app/a/test-agency/w/${seeded.workspaceSlug}/planning/${seeded.contentItemId}#publish`,
+    );
     await expect(page.getByTestId("publish-package-form")).toBeVisible({ timeout: 10_000 });
 
     await expect(page.getByTestId("publish-save-draft")).toBeEnabled();

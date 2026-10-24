@@ -1,5 +1,23 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { bootstrapRoleSession, devSeed } from "./_helpers";
+
+async function openWorkspaceSwitcher(page: Page) {
+  if ((page.viewportSize()?.width ?? 1280) < 768) {
+    const mobileTrigger = page.getByTestId("mobile-workspace-switcher-trigger");
+    if (!(await mobileTrigger.isVisible())) {
+      await page.waitForLoadState("networkidle");
+      await page.getByTestId("mobile-navigation-more").click();
+      await expect(mobileTrigger).toBeVisible();
+    }
+  }
+  const trigger = page.getByTestId(
+    (page.viewportSize()?.width ?? 1280) < 768
+      ? "mobile-workspace-switcher-trigger"
+      : "sidebar-workspace-switcher-trigger",
+  );
+  await expect(trigger).toBeVisible();
+  return trigger;
+}
 
 /**
  * M4 — social analytics dashboard E2E.
@@ -18,7 +36,7 @@ import { bootstrapRoleSession, devSeed } from "./_helpers";
 test.describe("M4 — social analytics dashboard", () => {
   test("surfaces the Command Center on the workspace overview", async ({ page }) => {
     await bootstrapRoleSession(page, "workspace_manager", "command-center-overview");
-    await page.goto("/app/w/command-center-overview");
+    await page.goto("/app/a/test-agency/w/command-center-overview");
 
     await expect(page.getByTestId("workspace-overview")).toBeVisible();
     await expect(page.getByTestId("command-center-panel")).toBeVisible();
@@ -34,7 +52,7 @@ test.describe("M4 — social analytics dashboard", () => {
     await bootstrapRoleSession(page, "workspace_manager", "command-center-data", {
       socialAnalyticsFixture: true,
     });
-    await page.goto("/app/w/command-center-data");
+    await page.goto("/app/a/test-agency/w/command-center-data");
 
     await expect(page.getByTestId("command-center-panel")).toBeVisible();
     await expect(page.getByTestId("command-center-sections")).toBeVisible();
@@ -54,7 +72,7 @@ test.describe("M4 — social analytics dashboard", () => {
       socialAnalyticsFixture: true,
       locale: "ar",
     });
-    await page.goto("/app/w/command-center-arabic");
+    await page.goto("/app/a/test-agency/w/command-center-arabic");
     await page.setViewportSize({ width: 375, height: 812 });
 
     await expect(page.getByTestId("command-center-panel")).toBeVisible();
@@ -69,7 +87,7 @@ test.describe("M4 — social analytics dashboard", () => {
     await bootstrapRoleSession(page, "workspace_manager", "analytics-platform-aware", {
       socialAnalyticsFixture: true,
     });
-    await page.goto("/app/w/analytics-platform-aware/analytics/social");
+    await page.goto("/app/a/test-agency/w/analytics-platform-aware/analytics/social");
 
     await expect(page.getByTestId("social-analytics-page")).toBeVisible();
     await expect(page.getByTestId("metric-engagedAccounts")).toHaveCount(0);
@@ -100,7 +118,7 @@ test.describe("M4 — social analytics dashboard", () => {
     await bootstrapRoleSession(page, "workspace_manager", "analytics-filtering", {
       socialAnalyticsFixture: true,
     });
-    await page.goto("/app/w/analytics-filtering/analytics/social");
+    await page.goto("/app/a/test-agency/w/analytics-filtering/analytics/social");
     let loadEvents = 0;
     page.on("load", () => {
       loadEvents += 1;
@@ -158,14 +176,16 @@ test.describe("M4 — social analytics dashboard", () => {
       workspaceRoles: ["workspace_manager"],
     });
 
-    await page.goto(`/app/w/${source.workspaceSlug}/analytics/social`);
-    await page.getByTestId("topbar-workspace-switcher-trigger").click();
+    await page.goto(`/app/a/test-agency/w/${source.workspaceSlug}/analytics/social`);
+    await (await openWorkspaceSwitcher(page)).click();
     await page
       .getByRole("listbox", { name: "Workspaces" })
       .getByRole("option", { name: "Analytics Switch Target" })
       .click();
 
-    await expect(page).toHaveURL(/\/app\/w\/analytics-switch-target\/analytics\/social$/);
+    await expect(page).toHaveURL(
+      /\/app\/a\/test-agency\/w\/analytics-switch-target\/analytics\/social$/,
+    );
     await expect(page.getByTestId("app-not-found")).toHaveCount(0);
     await expect(page.getByTestId("social-analytics-page")).toBeVisible();
   });
@@ -177,7 +197,7 @@ test.describe("M4 — social analytics dashboard", () => {
       socialAnalyticsFixture: true,
       locale: "ar",
     });
-    await page.goto("/app/w/analytics-arabic/analytics/social");
+    await page.goto("/app/a/test-agency/w/analytics-arabic/analytics/social");
     await page.setViewportSize({ width: 375, height: 812 });
     await expect(page.getByTestId("social-analytics-page")).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
@@ -189,7 +209,7 @@ test.describe("M4 — social analytics dashboard", () => {
 
   test("renders the empty state when no channels are connected", async ({ page }) => {
     await bootstrapRoleSession(page, "workspace_manager");
-    await page.goto("/app/w/acme/analytics/social");
+    await page.goto("/app/a/test-agency/w/acme/analytics/social");
     await expect(page.getByTestId("social-analytics-page")).toBeVisible();
     await expect(page.getByTestId("social-analytics-empty")).toBeVisible();
   });
@@ -200,7 +220,7 @@ test.describe("M4 — social analytics dashboard", () => {
     await bootstrapRoleSession(page, "workspace_manager", "analytics-window", {
       socialAnalyticsFixture: true,
     });
-    await page.goto("/app/w/analytics-window/analytics/social");
+    await page.goto("/app/a/test-agency/w/analytics-window/analytics/social");
     await expect(page.getByTestId("window-7")).toHaveAttribute("aria-current", "page");
     await expect(page.getByTestId("window-30")).not.toHaveAttribute("aria-current", "page");
     await expect(page.getByTestId("window-90")).not.toHaveAttribute("aria-current", "page");
@@ -210,13 +230,13 @@ test.describe("M4 — social analytics dashboard", () => {
     await bootstrapRoleSession(page, "workspace_manager", "analytics-window-query", {
       socialAnalyticsFixture: true,
     });
-    await page.goto("/app/w/analytics-window-query/analytics/social?window=30");
+    await page.goto("/app/a/test-agency/w/analytics-window-query/analytics/social?window=30");
     await expect(page.getByTestId("window-30")).toHaveAttribute("aria-current", "page");
   });
 
   test("client_reviewer gets 404 (not redirect)", async ({ page }) => {
     await bootstrapRoleSession(page, "client_reviewer");
-    await page.goto("/app/w/acme/analytics/social");
+    await page.goto("/app/a/test-agency/w/acme/analytics/social");
     // The page calls `notFound()`, which renders the stable in-app denial
     // surface. Next's development server may return the shell status while
     // rendering this route-level not-found boundary, so assert the user-facing

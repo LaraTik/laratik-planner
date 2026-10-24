@@ -67,12 +67,17 @@ const txChain = {
   update: vi.fn(() => updateChain),
 };
 
+const dbFault = vi.hoisted(() => ({ transactionError: null as unknown }));
+const loggerMock = vi.hoisted(() => ({ logError: vi.fn() }));
+vi.mock("@/lib/observability/logger", () => loggerMock);
+
 vi.mock("@/lib/db", () => ({
   db: {
     select: vi.fn(() => makeSelectChain()),
     insert: vi.fn(() => insertChain),
     update: vi.fn(() => updateChain),
     transaction: vi.fn(async (fn: (tx: typeof txChain) => Promise<void>) => {
+      if (dbFault.transactionError) throw dbFault.transactionError;
       dbState.transactionCalls++;
       await fn(txChain);
       return Promise.resolve();
@@ -197,6 +202,8 @@ const {
 const { INLINE_EDITABLE_STATUSES } = await import("@/lib/content/inline-update-actions");
 
 beforeEach(() => {
+  dbFault.transactionError = null;
+  loggerMock.logError.mockClear();
   dbState = {
     selectResults: [
       // First SELECT (in transaction) — the `before` snapshot.
@@ -354,5 +361,28 @@ describe("inline-update — materiality contract (idea edit publish data or time
         after: "Use the approved logo and keep the headline clear.",
       },
     });
+  });
+
+  it("returns safe copy and logs unexpected production-note write failures", async () => {
+    dbState.selectResults = [
+      [
+        {
+          workspaceId,
+          status: "in_design",
+          format: "static_post",
+          formatPayload: { schemaVersion: 1, additionalNotes: "Old note" },
+        },
+      ],
+    ];
+    const failure = new Error("postgres://planner:private-password@db.internal/planner");
+    dbFault.transactionError = failure;
+
+    const result = await inlineUpdateProductionNotesAction("food-game", contentItemId, "New note");
+
+    expect(result).toEqual({ error: "Could not save production notes." });
+    expect(loggerMock.logError).toHaveBeenCalledWith(
+      "content.inline_update.production_notes_write_failed",
+      { err: failure },
+    );
   });
 });

@@ -9,7 +9,10 @@ import {
 import { listActorAgencies, resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
 import { AppShell } from "@/components/app-shell/app-shell";
-import { renderNotificationCopy } from "@/lib/notifications/service";
+import { markAllReadAction, markReadAction } from "@/app/(app)/actions";
+import { updateThemePreferenceAction } from "@/app/(app)/app/account/actions";
+import { SignOutForm } from "@/app/(app)/app/account/sign-out-form";
+import { renderNotificationCopy } from "@/lib/notifications/inbox";
 import { getCachedNotificationsForUser, getCachedUnreadCount } from "@/lib/notifications/cache";
 import {
   getAccessibleWorkspaceAtPath,
@@ -359,6 +362,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       "planning-board": t("sidebar.planningBoard"),
       "planning-calendar": t("sidebar.planningCalendar"),
       "planning-monthly": t("sidebar.planningMonthly"),
+      "ai-assistant": t("sidebar.aiAssistant"),
       trends: t("sidebar.trends"),
       approvals: t("sidebar.approvals"),
       "design-queue": t("sidebar.designQueue"),
@@ -452,6 +456,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <AppShell
+      markAllReadAction={markAllReadAction}
+      markReadAction={markReadAction}
+      updateThemePreferenceAction={updateThemePreferenceAction}
+      signOutForm={<SignOutForm variant="menuitem" />}
       buildInfo={buildInfo}
       user={{
         id: session.user.id,

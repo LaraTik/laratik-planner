@@ -1,0 +1,2 @@
+ALTER TABLE "workspace_assistant_proposal" DROP CONSTRAINT "workspace_assistant_proposal_field_valid";--> statement-breakpoint
+ALTER TABLE "workspace_assistant_proposal" ADD CONSTRAINT "workspace_assistant_proposal_field_valid" CHECK ("workspace_assistant_proposal"."field" IN ('title', 'brief', 'plannedPublishAt'));

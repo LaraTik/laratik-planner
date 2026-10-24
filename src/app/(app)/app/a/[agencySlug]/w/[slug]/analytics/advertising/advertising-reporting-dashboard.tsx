@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -11,30 +11,54 @@ import {
   CircleDollarSign,
   Database,
   Eye,
+  Gauge,
   Percent,
   RefreshCw,
   Target,
+  TriangleAlert,
   TrendingUp,
+  UsersRound,
 } from "lucide-react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { ReportingKpiCard } from "@/components/reporting/reporting-kpi-card";
 import type {
   AdvertisingMetricKey,
   AdvertisingMetricSnapshot,
+  MetricAvailability,
   MetricStatus,
 } from "@/lib/advertising/reporting-metrics";
+import type { AdvertisingSupplementaryMetricKey } from "@/lib/advertising/reporting-view-config";
 import type { ComparisonSummary } from "@/lib/advertising/reporting-comparison";
 import type { DataHealthSummary } from "@/lib/advertising/reporting-health";
 import type { AdvertisingCampaignSummary } from "@/lib/advertising/reporting-view";
 import type {
+  BudgetPacingInsight,
   CampaignPerformanceConfidence,
   CampaignPerformanceInsight,
+  CreativeFatigueInsight,
 } from "@/lib/advertising/intelligence";
 import type {
   AdvertisingTrendPoint,
   TrendGranularity,
   TrendMetricKey,
 } from "@/lib/advertising/reporting-trend";
+import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
+import type { LocaleCode } from "@/lib/i18n/locales";
+import {
+  advertisingSignalFeedbackKey,
+  type AdvertisingSignalEntityType,
+  type AdvertisingSignalFeedbackState,
+  type AdvertisingSignalFeedbackView,
+} from "@/lib/advertising/signal-feedback";
 
 export type AdvertisingReportingDashboardLabels = {
   dataHealth: string;
@@ -42,7 +66,43 @@ export type AdvertisingReportingDashboardLabels = {
   timezone: string;
   coverage: string;
   retry: string;
+  details: string;
+  close: string;
+  detailsTitle: string;
+  detailsDescription: string;
+  lastSuccessfulSync: string;
+  currency: string;
+  healthState: string;
+  freshnessLabel: string;
+  syncStatus: string;
+  issues: string;
+  noIssues: string;
+  metricStatus: string;
+  source: string;
+  formula: string;
+  denominator: string;
+  attributionWindow: string;
+  notSet: string;
+  statusEstimated: string;
+  issueNoSuccessfulSync: string;
+  issuePartialCoverage: string;
+  issueSyncRunning: string;
+  issueSyncFailed: string;
+  issueSyncDeadLetter: string;
+  issueStaleData: string;
   primaryMetrics: string;
+  supplementaryMetric: string;
+  supplementaryMetricDescription: string;
+  selectSupplementaryMetric: string;
+  metricImpressions: string;
+  metricAllClicks: string;
+  metricLinkClicks: string;
+  metricOutboundClicks: string;
+  metricLandingPageViews: string;
+  metricCtrAll: string;
+  metricCpcAll: string;
+  metricCpcLink: string;
+  metricCpm: string;
   comparison: string;
   noComparison: string;
   performanceTrend: string;
@@ -53,6 +113,26 @@ export type AdvertisingReportingDashboardLabels = {
   objectiveMixDescription: string;
   actionCenter: string;
   actionCenterDescription: string;
+  budgetPacing: string;
+  creativeHealth: string;
+  audienceOpportunity: string;
+  noBudgetData: string;
+  noFatigueData: string;
+  markReviewed: string;
+  dismiss: string;
+  snooze: string;
+  reopen: string;
+  feedbackReason: string;
+  selectReason: string;
+  reasonNotRelevant: string;
+  reasonAlreadyHandled: string;
+  reasonDataIncomplete: string;
+  saveFeedback: string;
+  feedbackSaved: string;
+  feedbackError: string;
+  reviewed: string;
+  dismissed: string;
+  snoozed: string;
   review: string;
   campaignExplorer: string;
   campaignExplorerDescription: string;
@@ -76,6 +156,7 @@ export type AdvertisingReportingDashboardLabels = {
   reviewEvidence: string;
   metricSpend: string;
   metricResults: string;
+  resultDefinition: string;
   metricCostPerResult: string;
   metricReach: string;
   metricCtr: string;
@@ -99,21 +180,27 @@ export type AdvertisingReportingDashboardLabels = {
   date: string;
 };
 export function AdvertisingReportingDashboard(props: {
+  accountId: string;
+  workspaceSlug: string;
   accountName: string;
   currency: string;
-  locale: string;
+  locale: LocaleCode;
   timezone: string;
   freshness: string;
+  syncStatus: string;
   partial: boolean;
   dataHealth: DataHealthSummary;
   lastSync: string | null;
   since: string;
   until: string;
   metrics: AdvertisingMetricSnapshot;
+  supplementaryMetric: AdvertisingSupplementaryMetricKey;
   comparison: ComparisonSummary | null;
   statuses: readonly MetricStatus[];
   campaigns: readonly AdvertisingCampaignSummary[];
   insights: readonly CampaignPerformanceInsight[];
+  pacing: readonly BudgetPacingInsight[];
+  fatigue: readonly CreativeFatigueInsight[];
   dailyMetrics: readonly AdvertisingTrendPoint[];
   comparisonDailyMetrics: readonly AdvertisingTrendPoint[];
   comparisonComparable: boolean;
@@ -122,6 +209,8 @@ export function AdvertisingReportingDashboard(props: {
   trendMetricB: TrendMetricKey;
   audienceCount: number;
   campaignsHref: string;
+  creativesHref: string;
+  audienceHref: string;
   labels: AdvertisingReportingDashboardLabels;
 }) {
   const { labels } = props;
@@ -129,6 +218,9 @@ export function AdvertisingReportingDashboard(props: {
   const [metricA, setMetricA] = useState<TrendMetricKey>(props.trendMetricA);
   const [metricB, setMetricB] = useState<TrendMetricKey>(props.trendMetricB);
   const [granularity, setGranularity] = useState<TrendGranularity>(props.trendGranularity);
+  const [supplementaryMetric, setSupplementaryMetric] = useState<AdvertisingSupplementaryMetricKey>(
+    props.supplementaryMetric,
+  );
   const [tableOpen, setTableOpen] = useState(false);
   const updateTrendSetting = (name: string, value: string) => {
     const params = new URLSearchParams(window.location.search);
@@ -141,19 +233,22 @@ export function AdvertisingReportingDashboard(props: {
     value: number | null;
     kind: "money" | "number" | "percent";
     icon: ReactNode;
+    status: ReturnType<typeof metricStatus>;
   }[] = [
     {
       key: "spend",
       label: labels.metricSpend,
       value: props.metrics.spend,
       kind: "money",
+      status: metricStatus(props.statuses, "spend", labels),
       icon: <CircleDollarSign className="h-4 w-4" aria-hidden="true" />,
     },
     {
       key: "results",
-      label: labels.metricResults,
+      label: resultLabel(labels.metricResults, labels.resultDefinition, props.metrics.resultType),
       value: props.metrics.results,
       kind: "number",
+      status: metricStatus(props.statuses, "results", labels),
       icon: <Target className="h-4 w-4" aria-hidden="true" />,
     },
     {
@@ -161,6 +256,7 @@ export function AdvertisingReportingDashboard(props: {
       label: labels.metricCostPerResult,
       value: props.metrics.costPerResult,
       kind: "money",
+      status: metricStatus(props.statuses, "costPerResult", labels),
       icon: <CircleDollarSign className="h-4 w-4" aria-hidden="true" />,
     },
     {
@@ -168,6 +264,7 @@ export function AdvertisingReportingDashboard(props: {
       label: labels.metricReach,
       value: props.metrics.reach,
       kind: "number",
+      status: metricStatus(props.statuses, "reach", labels),
       icon: <Eye className="h-4 w-4" aria-hidden="true" />,
     },
     {
@@ -175,6 +272,7 @@ export function AdvertisingReportingDashboard(props: {
       label: labels.metricCtr,
       value: props.metrics.ctrLink,
       kind: "percent",
+      status: metricStatus(props.statuses, "ctrLink", labels),
       icon: <Percent className="h-4 w-4" aria-hidden="true" />,
     },
     {
@@ -182,6 +280,7 @@ export function AdvertisingReportingDashboard(props: {
       label: labels.metricFrequency,
       value: props.metrics.frequency,
       kind: "number",
+      status: metricStatus(props.statuses, "frequency", labels),
       icon: <TrendingUp className="h-4 w-4" aria-hidden="true" />,
     },
   ];
@@ -220,58 +319,54 @@ export function AdvertisingReportingDashboard(props: {
                 labels.unavailable,
               )}
               icon={card.icon}
+              status={card.status}
               delta={formatDelta(props.comparison?.deltas[card.key]?.percent, props.locale)}
               deltaState={deltaState(props.comparison?.deltas[card.key]?.favorable)}
               deltaLabel={deltaLabel(props.comparison?.deltas[card.key]?.favorable, labels)}
             />
           ))}
         </div>
+        <SupplementaryMetricCard
+          metric={supplementaryMetric}
+          metrics={props.metrics}
+          comparison={props.comparison}
+          statuses={props.statuses}
+          locale={props.locale}
+          currency={props.currency}
+          labels={labels}
+          onChange={(value) => {
+            setSupplementaryMetric(value);
+            updateTrendSetting("supplementaryMetric", value);
+          }}
+        />
       </section>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)]">
-        <TrendPanel
-          {...props}
-          metricA={metricA}
-          metricB={metricB}
-          comparisonDailyMetrics={props.comparisonDailyMetrics}
-          comparisonComparable={props.comparisonComparable}
-          granularity={granularity}
-          setMetricA={(value) => {
-            setMetricA(value);
-            updateTrendSetting("trendMetricA", value);
-          }}
-          setMetricB={(value) => {
-            setMetricB(value);
-            updateTrendSetting("trendMetricB", value);
-          }}
-          setGranularity={(value) => {
-            setGranularity(value);
-            updateTrendSetting("trendGranularity", value);
-          }}
-          tableOpen={tableOpen}
-          setTableOpen={setTableOpen}
-        />
-        <ObjectiveMix {...props} />
-      </div>
-      <ActionCenter {...props} />
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.6fr)]">
-        <CampaignExplorer {...props} />
-        <Card className="reporting-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Database className="text-primary h-4 w-4" aria-hidden="true" />
-              {labels.audienceSnapshot}
-            </CardTitle>
-            <CardDescription>{labels.audienceSnapshotDescription}</CardDescription>
-          </CardHeader>
-          <div className="px-5 pb-5">
-            <p className="text-fg-primary text-3xl font-semibold tabular-nums">
-              {new Intl.NumberFormat(props.locale).format(props.audienceCount)}
-            </p>
-            <p className="text-label text-fg-muted mt-1">
-              {props.audienceCount ? labels.available : labels.noAudienceData}
-            </p>
-          </div>
-        </Card>
+        <div className="space-y-4">
+          <TrendPanel
+            {...props}
+            metricA={metricA}
+            metricB={metricB}
+            comparisonDailyMetrics={props.comparisonDailyMetrics}
+            comparisonComparable={props.comparisonComparable}
+            granularity={granularity}
+            setMetricA={(value) => {
+              setMetricA(value);
+              updateTrendSetting("trendMetricA", value);
+            }}
+            setMetricB={(value) => {
+              setMetricB(value);
+              updateTrendSetting("trendMetricB", value);
+            }}
+            setGranularity={(value) => {
+              setGranularity(value);
+              updateTrendSetting("trendGranularity", value);
+            }}
+            tableOpen={tableOpen}
+            setTableOpen={setTableOpen}
+          />
+          <ObjectiveMix {...props} />
+        </div>
+        <ActionCenter {...props} />
       </div>
       <details className="reporting-card border-border bg-surface rounded-[var(--radius-card)] border">
         <summary className="text-body text-fg-primary focus-visible:outline-primary flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 font-semibold focus-visible:outline-2">
@@ -286,11 +381,11 @@ export function AdvertisingReportingDashboard(props: {
               className="border-border-subtle bg-surface-subtle rounded-[var(--radius-control)] border p-3"
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-label text-fg-primary font-semibold">{status.key}</span>
-                <span
-                  className={`text-label font-semibold ${status.availability === "available" ? "text-success" : "text-fg-muted"}`}
-                >
-                  {status.availability === "available" ? labels.available : labels.unavailable}
+                <span className="text-label text-fg-primary font-semibold">
+                  {metricDisplayLabel(status.key, labels)}
+                </span>
+                <span className="text-label text-fg-muted font-semibold">
+                  {metricAvailabilityLabel(status.availability, labels)}
                 </span>
               </div>
               <p className="text-label text-fg-muted mt-2">{status.formula}</p>
@@ -299,6 +394,103 @@ export function AdvertisingReportingDashboard(props: {
           ))}
         </div>
       </details>
+    </div>
+  );
+}
+
+type SupplementaryMetricKind = "money" | "number" | "percent";
+
+type SupplementaryMetricDefinition = {
+  key: AdvertisingSupplementaryMetricKey;
+  label: string;
+  kind: SupplementaryMetricKind;
+};
+
+function supplementaryMetricDefinitions(
+  labels: AdvertisingReportingDashboardLabels,
+): readonly SupplementaryMetricDefinition[] {
+  return [
+    { key: "impressions", label: labels.metricImpressions, kind: "number" },
+    { key: "allClicks", label: labels.metricAllClicks, kind: "number" },
+    { key: "linkClicks", label: labels.metricLinkClicks, kind: "number" },
+    { key: "outboundClicks", label: labels.metricOutboundClicks, kind: "number" },
+    { key: "landingPageViews", label: labels.metricLandingPageViews, kind: "number" },
+    { key: "ctrAll", label: labels.metricCtrAll, kind: "percent" },
+    { key: "cpcAll", label: labels.metricCpcAll, kind: "money" },
+    { key: "cpcLink", label: labels.metricCpcLink, kind: "money" },
+    { key: "cpm", label: labels.metricCpm, kind: "money" },
+  ];
+}
+
+function SupplementaryMetricCard({
+  metric,
+  metrics,
+  comparison,
+  statuses,
+  locale,
+  currency,
+  labels,
+  onChange,
+}: {
+  metric: AdvertisingSupplementaryMetricKey;
+  metrics: AdvertisingMetricSnapshot;
+  comparison: ComparisonSummary | null;
+  statuses: readonly MetricStatus[];
+  locale: LocaleCode;
+  currency: string;
+  labels: AdvertisingReportingDashboardLabels;
+  onChange: (value: AdvertisingSupplementaryMetricKey) => void;
+}) {
+  const options = supplementaryMetricDefinitions(labels);
+  const definition = options.find((option) => option.key === metric) ?? options[0]!;
+  const status = metricStatus(statuses, metric, labels);
+  const delta = comparison?.deltas[metric];
+  return (
+    <div
+      className="border-border-subtle bg-surface-subtle flex flex-col gap-3 rounded-[var(--radius-control)] border p-3 sm:flex-row sm:items-center sm:justify-between"
+      data-testid="advertising-reporting-supplementary-metric"
+    >
+      <div className="min-w-0">
+        <p className="text-label text-fg-primary font-semibold">{labels.supplementaryMetric}</p>
+        <p className="text-label text-fg-muted mt-1">{labels.supplementaryMetricDescription}</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+        <label className="sr-only" htmlFor="advertising-supplementary-metric">
+          {labels.selectSupplementaryMetric}
+        </label>
+        <select
+          id="advertising-supplementary-metric"
+          value={metric}
+          onChange={(event) => onChange(event.target.value as AdvertisingSupplementaryMetricKey)}
+          className="border-border bg-surface text-label text-fg-primary focus-visible:ring-focus-ring min-h-11 min-w-[12rem] rounded-[var(--radius-control)] border px-3 font-semibold focus:outline-none focus-visible:ring-2"
+        >
+          {options.map((option) => (
+            <option key={option.key} value={option.key}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <div className="min-w-[9rem] text-end">
+          <p className="text-label text-fg-muted">{definition.label}</p>
+          <p className="text-title-card text-fg-primary font-semibold tabular-nums">
+            {formatMetricValue(
+              metrics[metric],
+              definition.kind,
+              locale,
+              currency,
+              labels.unavailable,
+            )}
+          </p>
+          <div className="text-label mt-1 flex flex-wrap items-center justify-end gap-2">
+            <span className="text-fg-muted">{status?.label ?? labels.unavailable}</span>
+            {delta ? (
+              <span className={deltaState(delta.favorable)}>
+                {formatDelta(delta.percent, locale)} {deltaLabel(delta.favorable, labels)}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -312,63 +504,186 @@ function DataHealth({
   timezone,
   since,
   until,
+  syncStatus,
+  statuses,
   labels,
 }: {
   freshness: string;
   partial: boolean;
   dataHealth: DataHealthSummary;
   lastSync: string | null;
-  locale: string;
+  locale: LocaleCode;
   timezone: string;
   since: string;
   until: string;
+  syncStatus: string;
+  statuses: readonly MetricStatus[];
   labels: AdvertisingReportingDashboardLabels;
 }) {
   return (
-    <aside
-      className="reporting-card border-border bg-surface-subtle flex flex-wrap items-center gap-3 rounded-[var(--radius-card)] border px-4 py-3"
-      aria-label={labels.dataHealth}
-      data-testid="advertising-reporting-data-health"
-    >
-      <div className="text-fg-primary flex items-center gap-2 font-semibold">
-        <Database className="text-primary h-4 w-4" aria-hidden="true" />
-        {labels.dataHealth}
-      </div>
-      <span className="text-label text-fg-secondary">
-        {labels.synced}: <span data-timestamp>{formatLastSync(lastSync, locale, timezone)}</span>
-      </span>
-      <span className="text-label text-fg-secondary">
-        {labels.timezone}: {timezone}
-      </span>
-      <span className="text-label text-fg-secondary">
-        {labels.coverage}: {since} – {until}
-      </span>
-      <span className="text-label ms-auto inline-flex items-center gap-2 font-medium">
-        {dataHealth.state === "complete" && !partial ? (
-          <CheckCircle2 className="text-success h-4 w-4" aria-hidden="true" />
-        ) : (
-          <AlertTriangle className="text-warning h-4 w-4" aria-hidden="true" />
-        )}
-        <span>
-          {dataHealth.state === "unavailable"
-            ? labels.unavailable
-            : dataHealth.state === "complete" && !partial
-              ? labels.complete
-              : dataHealth.state === "delayed"
-                ? labels.delayed
-                : labels.partial}
-        </span>
-        <span className="text-fg-muted">{freshness}</span>
-      </span>
-      <button
-        type="button"
-        className="text-label text-primary focus-visible:outline-primary inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] px-3 font-semibold underline-offset-4 hover:underline focus-visible:outline-2"
-        onClick={() => window.location.reload()}
+    <div className="space-y-2">
+      <aside
+        className="reporting-card border-border bg-surface-subtle flex flex-wrap items-center gap-3 rounded-[var(--radius-card)] border px-4 py-3"
+        aria-label={labels.dataHealth}
+        data-testid="advertising-reporting-data-health"
       >
-        <RefreshCw className="h-4 w-4" aria-hidden="true" />
-        {labels.retry}
-      </button>
-    </aside>
+        <div className="text-fg-primary flex items-center gap-2 font-semibold">
+          <Database className="text-primary h-4 w-4" aria-hidden="true" />
+          {labels.dataHealth}
+        </div>
+        <span className="text-label text-fg-secondary">
+          {labels.synced}: <span data-timestamp>{formatLastSync(lastSync, locale, timezone)}</span>
+        </span>
+        <span className="text-label text-fg-secondary">
+          {labels.timezone}: {timezone}
+        </span>
+        <span className="text-label text-fg-secondary">
+          {labels.coverage}: {since} – {until}
+        </span>
+        <span className="text-label ms-auto inline-flex items-center gap-2 font-medium">
+          {dataHealth.state === "complete" && !partial ? (
+            <CheckCircle2 className="text-success h-4 w-4" aria-hidden="true" />
+          ) : (
+            <AlertTriangle className="text-warning h-4 w-4" aria-hidden="true" />
+          )}
+          <span>
+            {dataHealth.state === "unavailable"
+              ? labels.unavailable
+              : dataHealth.state === "complete" && !partial
+                ? labels.complete
+                : dataHealth.state === "delayed"
+                  ? labels.delayed
+                  : labels.partial}
+          </span>
+          <span className="text-fg-muted">{freshness}</span>
+        </span>
+        <button
+          type="button"
+          className="text-label text-primary focus-visible:outline-primary inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] px-3 font-semibold underline-offset-4 hover:underline focus-visible:outline-2"
+          onClick={() => window.location.reload()}
+        >
+          <RefreshCw className="h-4 w-4" aria-hidden="true" />
+          {labels.retry}
+        </button>
+        <Dialog>
+          <DialogTrigger asChild>
+            <button
+              type="button"
+              className="text-label text-fg-primary border-border focus-visible:ring-focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3 font-semibold focus:outline-none focus-visible:ring-2"
+              data-testid="advertising-reporting-data-health-details-trigger"
+            >
+              {labels.details}
+            </button>
+          </DialogTrigger>
+          <DialogContent
+            closeAriaLabel={labels.close}
+            className="max-h-[min(90vh,760px)] max-w-2xl overflow-y-auto"
+            data-testid="advertising-reporting-data-health-details"
+          >
+            <DialogHeader>
+              <DialogTitle>{labels.detailsTitle}</DialogTitle>
+              <DialogDescription>{labels.detailsDescription}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-5">
+              <dl className="grid gap-3 sm:grid-cols-2">
+                <HealthDetail
+                  label={labels.healthState}
+                  value={healthStateLabel(dataHealth.state, labels)}
+                />
+                <HealthDetail label={labels.freshnessLabel} value={freshness} />
+                <HealthDetail label={labels.syncStatus} value={syncStatus} />
+                <HealthDetail
+                  label={labels.lastSuccessfulSync}
+                  value={formatLastSync(lastSync, locale, timezone)}
+                />
+                <HealthDetail
+                  label={labels.timezone}
+                  value={dataHealth.timezone ?? labels.unavailable}
+                />
+                <HealthDetail
+                  label={labels.currency}
+                  value={dataHealth.currency ?? labels.unavailable}
+                />
+                <HealthDetail
+                  label={labels.coverage}
+                  value={`${dataHealth.since} – ${dataHealth.until}`}
+                />
+              </dl>
+              <div>
+                <h3 className="text-body text-fg-primary font-semibold">{labels.issues}</h3>
+                {dataHealth.issues.length > 0 ? (
+                  <ul className="text-label text-fg-secondary mt-2 list-disc space-y-1 ps-5">
+                    {dataHealth.issues.map((issue) => (
+                      <li key={issue}>{healthIssueLabel(issue, labels)}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-label text-fg-muted mt-2">{labels.noIssues}</p>
+                )}
+              </div>
+              <div>
+                <h3 className="text-body text-fg-primary font-semibold">{labels.metricStatus}</h3>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {statuses.map((status) => (
+                    <div
+                      key={status.key}
+                      className="border-border-subtle bg-surface-subtle rounded-[var(--radius-control)] border p-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-label text-fg-primary font-semibold">
+                          {metricDisplayLabel(status.key, labels)}
+                        </span>
+                        <span className="text-label text-fg-muted">
+                          {metricAvailabilityLabel(status.availability, labels)}
+                        </span>
+                      </div>
+                      <p className="text-label text-fg-muted mt-2">{status.note}</p>
+                      <dl className="text-label text-fg-secondary mt-2 space-y-1">
+                        <div className="flex justify-between gap-2">
+                          <dt>{labels.source}</dt>
+                          <dd className="text-end" dir="ltr">
+                            {status.sourceField}
+                          </dd>
+                        </div>
+                        <div className="flex justify-between gap-2">
+                          <dt>{labels.formula}</dt>
+                          <dd className="text-end" dir="ltr">
+                            {status.formula}
+                          </dd>
+                        </div>
+                        {status.denominator ? (
+                          <div className="flex justify-between gap-2">
+                            <dt>{labels.denominator}</dt>
+                            <dd className="text-end" dir="ltr">
+                              {status.denominator}
+                            </dd>
+                          </div>
+                        ) : null}
+                        {status.attributionWindow ? (
+                          <div className="flex justify-between gap-2">
+                            <dt>{labels.attributionWindow}</dt>
+                            <dd className="text-end">{status.attributionWindow}</dd>
+                          </div>
+                        ) : null}
+                      </dl>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </aside>
+    </div>
+  );
+}
+
+function HealthDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-border-subtle bg-surface-subtle rounded-[var(--radius-control)] border p-3">
+      <dt className="text-label text-fg-muted">{label}</dt>
+      <dd className="text-body text-fg-primary mt-1 font-medium">{value}</dd>
+    </div>
   );
 }
 function formatMetricValue(
@@ -418,15 +733,100 @@ function deltaLabel(
       : labels.deltaUnchanged;
 }
 
-function formatLastSync(lastSync: string | null, locale: string, timezone: string) {
+function metricStatus(
+  statuses: readonly MetricStatus[],
+  key: AdvertisingMetricKey,
+  labels: AdvertisingReportingDashboardLabels,
+): { label: string; tone: MetricAvailability } | undefined {
+  const status = statuses.find((item) => item.key === key);
+  return status
+    ? { label: metricAvailabilityLabel(status.availability, labels), tone: status.availability }
+    : undefined;
+}
+
+function metricDisplayLabel(
+  key: AdvertisingMetricKey,
+  labels: AdvertisingReportingDashboardLabels,
+): string {
+  switch (key) {
+    case "spend":
+      return labels.metricSpend;
+    case "impressions":
+      return labels.metricImpressions;
+    case "reach":
+      return labels.metricReach;
+    case "frequency":
+      return labels.metricFrequency;
+    case "allClicks":
+      return labels.metricAllClicks;
+    case "linkClicks":
+      return labels.metricLinkClicks;
+    case "outboundClicks":
+      return labels.metricOutboundClicks;
+    case "landingPageViews":
+      return labels.metricLandingPageViews;
+    case "results":
+      return labels.metricResults;
+    case "costPerResult":
+      return labels.metricCostPerResult;
+    case "ctrAll":
+      return labels.metricCtrAll;
+    case "ctrLink":
+      return labels.metricCtr;
+    case "cpcAll":
+      return labels.metricCpcAll;
+    case "cpcLink":
+      return labels.metricCpcLink;
+    case "cpm":
+      return labels.metricCpm;
+  }
+}
+
+function metricAvailabilityLabel(
+  availability: MetricAvailability,
+  labels: AdvertisingReportingDashboardLabels,
+): string {
+  if (availability === "available") return labels.available;
+  if (availability === "partial") return labels.partial;
+  if (availability === "delayed") return labels.delayed;
+  if (availability === "estimated") return labels.statusEstimated;
+  return labels.unavailable;
+}
+
+function healthStateLabel(
+  state: DataHealthSummary["state"],
+  labels: AdvertisingReportingDashboardLabels,
+): string {
+  if (state === "complete") return labels.complete;
+  if (state === "partial") return labels.partial;
+  if (state === "delayed") return labels.delayed;
+  return labels.unavailable;
+}
+
+function healthIssueLabel(issue: string, labels: AdvertisingReportingDashboardLabels): string {
+  switch (issue) {
+    case "no_successful_sync":
+      return labels.issueNoSuccessfulSync;
+    case "partial_coverage":
+      return labels.issuePartialCoverage;
+    case "sync_running":
+      return labels.issueSyncRunning;
+    case "sync_failed":
+      return labels.issueSyncFailed;
+    case "sync_dead_letter":
+      return labels.issueSyncDeadLetter;
+    case "stale_data":
+      return labels.issueStaleData;
+    default:
+      return issue;
+  }
+}
+
+function formatLastSync(lastSync: string | null, locale: LocaleCode, timezone: string) {
   if (!lastSync) return "—";
   const date = new Date(lastSync);
   if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: timezone,
-  }).format(date);
+  return formatDate(date, locale, { ...DateFormat.dateTime, timeZone: timezone });
 }
 function TrendPanel({
   dailyMetrics,
@@ -745,16 +1145,30 @@ function ObjectiveMix({
   currency: string;
 }) {
   const total = campaigns.reduce((sum, campaign) => sum + campaign.spend, 0);
-  const values = new Map<string, { spend: number; results: number | null }>();
+  const values = new Map<
+    string,
+    { spend: number; results: number | null; resultType: string | null }
+  >();
   for (const campaign of campaigns) {
     const key = campaign.objective ?? labels.unknownObjective;
-    const current = values.get(key) ?? { spend: 0, results: 0 };
+    const current = values.get(key);
+    if (!current) {
+      values.set(key, {
+        spend: campaign.spend,
+        results: campaign.results ?? null,
+        resultType: campaign.resultType ?? null,
+      });
+      continue;
+    }
+    const compatibleResultType =
+      current.resultType !== null && current.resultType === (campaign.resultType ?? null);
     values.set(key, {
       spend: current.spend + campaign.spend,
       results:
-        current.results === null || campaign.results === null
-          ? null
-          : current.results + campaign.results,
+        compatibleResultType && current.results !== null && campaign.results !== null
+          ? current.results + campaign.results
+          : null,
+      resultType: compatibleResultType ? current.resultType : null,
     });
   }
   return (
@@ -811,7 +1225,7 @@ function ObjectiveMix({
                         {value.results === null
                           ? labels.unavailable
                           : `${new Intl.NumberFormat(locale).format(value.results)} ${labels.metricResults}`}{" "}
-                        ·{" "}
+                        {value.resultType ? <bdi dir="ltr">· {value.resultType}</bdi> : null} ·{" "}
                         {costPerResult === null
                           ? labels.unavailable
                           : new Intl.NumberFormat(locale, {
@@ -836,7 +1250,7 @@ function ObjectiveDonut({
   values,
   total,
 }: {
-  values: readonly [string, { spend: number; results: number | null }][];
+  values: readonly [string, { spend: number; results: number | null; resultType: string | null }][];
   total: number;
 }) {
   const radius = 34;
@@ -878,21 +1292,131 @@ function ObjectiveDonut({
     </svg>
   );
 }
+
+type ActionRailItem = {
+  key: string;
+  icon: ReactNode;
+  title: string;
+  detail: string;
+  href: string;
+  hrefLabel: string;
+  signalKey: string;
+  entityType: AdvertisingSignalEntityType;
+  entityId: string;
+  feedbackKey: string;
+  insight: CampaignPerformanceInsight | null;
+};
+
 function ActionCenter({
+  accountId,
+  workspaceSlug,
   insights,
+  pacing,
+  fatigue,
+  audienceCount,
   labels,
   locale,
   since,
   until,
   campaignsHref,
+  creativesHref,
+  audienceHref,
 }: {
+  accountId: string;
+  workspaceSlug: string;
   insights: readonly CampaignPerformanceInsight[];
+  pacing: readonly BudgetPacingInsight[];
+  fatigue: readonly CreativeFatigueInsight[];
+  audienceCount: number;
   labels: AdvertisingReportingDashboardLabels;
   locale: string;
   since: string;
   until: string;
   campaignsHref: string;
+  creativesHref: string;
+  audienceHref: string;
 }) {
+  const [feedbackByKey, setFeedbackByKey] = useState<Record<string, AdvertisingSignalFeedbackView>>(
+    {},
+  );
+  const [feedbackBusyKey, setFeedbackBusyKey] = useState<string | null>(null);
+  const [dismissKey, setDismissKey] = useState<string | null>(null);
+  const [dismissReason, setDismissReason] = useState("");
+  const [feedbackError, setFeedbackError] = useState(false);
+  const [now] = useState(() => Date.now());
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch(
+      `/api/advertising/signal-feedback?workspace=${encodeURIComponent(workspaceSlug)}&accountId=${encodeURIComponent(accountId)}&since=${since}&until=${until}`,
+      { headers: { Accept: "application/json" } },
+    )
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return (await response.json()) as { feedback?: AdvertisingSignalFeedbackView[] };
+      })
+      .then((payload) => {
+        if (cancelled || !payload) return;
+        setFeedbackByKey(
+          Object.fromEntries(
+            (payload.feedback ?? []).map((item) => [
+              advertisingSignalFeedbackKey(item.entityType, item.entityId, item.signalKey),
+              item,
+            ]),
+          ),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setFeedbackError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, since, until, workspaceSlug]);
+
+  const saveFeedback = async (args: {
+    item: ActionRailItem;
+    state: AdvertisingSignalFeedbackState;
+    reason?: string;
+    snoozedUntil?: string;
+  }) => {
+    setFeedbackBusyKey(args.item.key);
+    setFeedbackError(false);
+    try {
+      const response = await fetch("/api/advertising/signal-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspace: workspaceSlug,
+          accountId,
+          since,
+          until,
+          mutation: {
+            signalKey: args.item.signalKey,
+            entityType: args.item.entityType,
+            entityId: args.item.entityId,
+            state: args.state,
+            ...(args.reason ? { reason: args.reason } : {}),
+            ...(args.snoozedUntil ? { snoozedUntil: args.snoozedUntil } : {}),
+          },
+        }),
+      });
+      if (!response.ok) throw new Error("feedback_failed");
+      const payload = (await response.json()) as { feedback?: AdvertisingSignalFeedbackView };
+      if (!payload.feedback) throw new Error("feedback_missing");
+      setFeedbackByKey((current) => ({
+        ...current,
+        [args.item.feedbackKey]: payload.feedback!,
+      }));
+      setDismissKey(null);
+      setDismissReason("");
+    } catch {
+      setFeedbackError(true);
+    } finally {
+      setFeedbackBusyKey(null);
+    }
+  };
+
   const items = insights
     .filter((insight) => insight.status === "underperforming" || insight.status === "effective")
     .sort((left, right) => {
@@ -900,8 +1424,88 @@ function ActionCenter({
       return left.status === "underperforming" ? -1 : 1;
     })
     .slice(0, 3);
+  const budgetItem = pacing.find((item) => item.status === "over") ?? null;
+  const fatigueItem = fatigue.find((item) => item.status === "fatiguing") ?? null;
+  const decisionItems = [
+    budgetItem
+      ? {
+          key: `budget-${budgetItem.campaignId}`,
+          icon: <Gauge className="text-warning h-4 w-4" aria-hidden="true" />,
+          title: labels.budgetPacing,
+          detail:
+            budgetItem.paceRatio === null
+              ? labels.noBudgetData
+              : `${budgetItem.name ?? budgetItem.campaignId} · ${Math.round(budgetItem.paceRatio * 100)}%`,
+          href: campaignsHref,
+          hrefLabel: labels.review,
+          signalKey: "budget_overpace",
+          entityType: "budget" as const,
+          entityId: budgetItem.campaignId,
+        }
+      : null,
+    fatigueItem
+      ? {
+          key: `fatigue-${fatigueItem.adId}`,
+          icon: <TriangleAlert className="text-warning h-4 w-4" aria-hidden="true" />,
+          title: labels.creativeHealth,
+          detail: fatigueItem.name ?? fatigueItem.adId,
+          href: creativesHref,
+          hrefLabel: labels.review,
+          signalKey: "creative_fatigue",
+          entityType: "creative" as const,
+          entityId: fatigueItem.adId,
+        }
+      : null,
+    audienceCount > 0
+      ? {
+          key: "audience-opportunity",
+          icon: <UsersRound className="text-primary h-4 w-4" aria-hidden="true" />,
+          title: labels.audienceOpportunity,
+          detail: `${new Intl.NumberFormat(locale).format(audienceCount)} ${labels.audienceSnapshot}`,
+          href: audienceHref,
+          hrefLabel: labels.review,
+          signalKey: "audience_opportunity",
+          entityType: "audience" as const,
+          entityId: "account",
+        }
+      : null,
+  ].filter((item): item is NonNullable<typeof item> => item !== null);
+  const allRailItems = [
+    ...items.map((insight) => ({
+      key: `campaign-${insight.campaignId}`,
+      icon:
+        insight.status === "underperforming" ? (
+          <AlertTriangle className="text-warning h-4 w-4" aria-hidden="true" />
+        ) : (
+          <CheckCircle2 className="text-success h-4 w-4" aria-hidden="true" />
+        ),
+      title: insight.name ?? insight.campaignId,
+      detail: `${labels.evidence}: ${insight.reason.replaceAll("_", " ")} · ${labels.sample}: ${new Intl.NumberFormat(locale).format(insight.sampleImpressions)}`,
+      href: campaignReviewHref(campaignsHref, insight.campaignId),
+      hrefLabel: labels.review,
+      signalKey: `campaign_${insight.status}`,
+      entityType: "campaign" as const,
+      entityId: insight.campaignId,
+      insight,
+    })),
+    ...decisionItems.map((item) => ({ ...item, insight: null })),
+  ].map((item) => ({
+    ...item,
+    feedbackKey: advertisingSignalFeedbackKey(item.entityType, item.entityId, item.signalKey),
+  })) as ActionRailItem[];
+  const railItems = allRailItems
+    .filter((item) => {
+      const feedback = feedbackByKey[item.feedbackKey];
+      if (!feedback || feedback.state === "open" || feedback.state === "reviewed") return true;
+      if (feedback.state === "dismissed") return false;
+      return !feedback.snoozedUntil || Date.parse(feedback.snoozedUntil) <= now;
+    })
+    .slice(0, 4);
   return (
-    <Card className="reporting-card" data-testid="advertising-reporting-action-center">
+    <Card
+      className="reporting-card flex h-full flex-col"
+      data-testid="advertising-reporting-action-center"
+    >
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <BarChart3 className="text-primary h-4 w-4" aria-hidden="true" />
@@ -909,69 +1513,163 @@ function ActionCenter({
         </CardTitle>
         <CardDescription>{labels.actionCenterDescription}</CardDescription>
       </CardHeader>
-      <div className="grid gap-3 px-5 pb-5 md:grid-cols-3">
-        {items.length === 0 ? (
+      <div className="grid flex-1 content-start gap-3 px-5 pb-5 md:grid-cols-3 xl:grid-cols-1">
+        {railItems.length === 0 ? (
           <p className="text-label text-fg-muted md:col-span-3">{labels.noSignals}</p>
         ) : (
-          items.map((insight) => (
-            <div
-              key={insight.campaignId}
-              className="border-border-subtle bg-surface-subtle rounded-[var(--radius-control)] border p-3"
-            >
-              <div className="text-label text-fg-primary flex items-center gap-2 font-semibold">
-                {insight.status === "underperforming" ? (
-                  <AlertTriangle className="text-warning h-4 w-4" aria-hidden="true" />
-                ) : (
-                  <CheckCircle2 className="text-success h-4 w-4" aria-hidden="true" />
-                )}
-                {insight.name ?? insight.campaignId}
-              </div>
-              <p className="text-label text-fg-muted mt-2">
-                {labels.evidence}: {insight.reason.replaceAll("_", " ")} · {labels.sample}:{" "}
-                {new Intl.NumberFormat(locale).format(insight.sampleImpressions)}
-              </p>
-              <details className="mt-2">
-                <summary className="text-label text-primary focus-visible:outline-primary inline-flex min-h-11 cursor-pointer items-center font-semibold underline-offset-4 hover:underline focus-visible:outline-2">
-                  {labels.reviewEvidence}
-                </summary>
-                <dl className="text-label text-fg-secondary mt-2 grid gap-1">
-                  <div className="flex flex-wrap justify-between gap-2">
-                    <dt>{labels.period}</dt>
-                    <dd dir="ltr">{`${since} – ${until}`}</dd>
-                  </div>
-                  <div className="flex flex-wrap justify-between gap-2">
-                    <dt>{labels.sample}</dt>
-                    <dd className="tabular-nums">
-                      {new Intl.NumberFormat(locale).format(insight.sampleImpressions)}
-                    </dd>
-                  </div>
-                  <div className="flex flex-wrap justify-between gap-2">
-                    <dt>{labels.baseline}</dt>
-                    <dd className="text-end tabular-nums">
-                      {insight.baselineCtr === null || insight.baselineCpc === null
-                        ? labels.unavailable
-                        : `${formatPercentValue(insight.baselineCtr, locale)} CTR · ${formatNumberValue(insight.baselineCpc, locale)} CPC`}
-                    </dd>
-                  </div>
-                  <div className="flex flex-wrap justify-between gap-2">
-                    <dt>{labels.confidence}</dt>
-                    <dd>{confidenceLabel(insight.confidence, labels)}</dd>
-                  </div>
-                </dl>
-              </details>
-              <a
-                href={campaignsHref}
-                className="text-label text-primary focus-visible:outline-primary mt-3 inline-flex min-h-11 items-center font-semibold underline-offset-4 hover:underline focus-visible:outline-2"
+          railItems.map((item) => {
+            const insight = item.insight;
+            const feedback = feedbackByKey[item.feedbackKey];
+            return (
+              <div
+                key={item.key}
+                className="border-border-subtle bg-surface-subtle rounded-[var(--radius-control)] border p-3"
               >
-                {labels.review}
-                <ChevronRight className="ms-1 h-4 w-4" aria-hidden="true" />
-              </a>
-            </div>
-          ))
+                <div className="text-label text-fg-primary flex items-center gap-2 font-semibold">
+                  {item.icon}
+                  {item.title}
+                </div>
+                {feedback && feedback.state !== "open" ? (
+                  <span className="text-label text-fg-muted mt-2 inline-flex rounded-full border px-2 py-1">
+                    {feedback.state === "reviewed"
+                      ? labels.reviewed
+                      : feedback.state === "snoozed"
+                        ? labels.snoozed
+                        : labels.dismissed}
+                  </span>
+                ) : null}
+                <p className="text-label text-fg-muted mt-2">{item.detail}</p>
+                {insight ? (
+                  <details className="mt-2">
+                    <summary className="text-label text-primary focus-visible:outline-primary inline-flex min-h-11 cursor-pointer items-center font-semibold underline-offset-4 hover:underline focus-visible:outline-2">
+                      {labels.reviewEvidence}
+                    </summary>
+                    <dl className="text-label text-fg-secondary mt-2 grid gap-1">
+                      <div className="flex flex-wrap justify-between gap-2">
+                        <dt>{labels.period}</dt>
+                        <dd dir="ltr">{`${since} – ${until}`}</dd>
+                      </div>
+                      <div className="flex flex-wrap justify-between gap-2">
+                        <dt>{labels.sample}</dt>
+                        <dd className="tabular-nums">
+                          {new Intl.NumberFormat(locale).format(insight.sampleImpressions)}
+                        </dd>
+                      </div>
+                      <div className="flex flex-wrap justify-between gap-2">
+                        <dt>{labels.baseline}</dt>
+                        <dd className="text-end tabular-nums">
+                          {insight.baselineCtr === null || insight.baselineCpc === null
+                            ? labels.unavailable
+                            : `${formatPercentValue(insight.baselineCtr, locale)} CTR · ${formatNumberValue(insight.baselineCpc, locale)} CPC`}
+                        </dd>
+                      </div>
+                      <div className="flex flex-wrap justify-between gap-2">
+                        <dt>{labels.confidence}</dt>
+                        <dd>{confidenceLabel(insight.confidence, labels)}</dd>
+                      </div>
+                    </dl>
+                  </details>
+                ) : null}
+                <a
+                  href={item.href}
+                  className="text-label text-primary focus-visible:outline-primary mt-3 inline-flex min-h-11 items-center font-semibold underline-offset-4 hover:underline focus-visible:outline-2"
+                >
+                  {item.hrefLabel}
+                  <ChevronRight className="ms-1 h-4 w-4" aria-hidden="true" />
+                </a>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={feedbackBusyKey === item.key}
+                    onClick={() =>
+                      void saveFeedback({
+                        item,
+                        state: feedback?.state === "reviewed" ? "open" : "reviewed",
+                      })
+                    }
+                  >
+                    {feedback?.state === "reviewed" ? labels.reopen : labels.markReviewed}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={feedbackBusyKey === item.key}
+                    onClick={() => {
+                      setDismissKey((current) => (current === item.key ? null : item.key));
+                      setDismissReason("");
+                    }}
+                  >
+                    {labels.dismiss}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={feedbackBusyKey === item.key}
+                    onClick={() =>
+                      void saveFeedback({
+                        item,
+                        state: "snoozed",
+                        snoozedUntil: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+                      })
+                    }
+                  >
+                    {labels.snooze}
+                  </Button>
+                </div>
+                {dismissKey === item.key ? (
+                  <div className="border-border-subtle bg-surface mt-2 space-y-2 rounded-[var(--radius-control)] border p-2">
+                    <label
+                      className="text-label text-fg-primary block font-semibold"
+                      htmlFor={`advertising-dismiss-reason-${item.key}`}
+                    >
+                      {labels.feedbackReason}
+                    </label>
+                    <select
+                      id={`advertising-dismiss-reason-${item.key}`}
+                      value={dismissReason}
+                      onChange={(event) => setDismissReason(event.target.value)}
+                      className="border-border bg-surface text-label text-fg-primary min-h-11 w-full rounded-[var(--radius-control)] border px-2"
+                    >
+                      <option value="">{labels.selectReason}</option>
+                      <option value="not_relevant">{labels.reasonNotRelevant}</option>
+                      <option value="already_handled">{labels.reasonAlreadyHandled}</option>
+                      <option value="data_incomplete">{labels.reasonDataIncomplete}</option>
+                    </select>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={!dismissReason || feedbackBusyKey === item.key}
+                      onClick={() =>
+                        void saveFeedback({ item, state: "dismissed", reason: dismissReason })
+                      }
+                    >
+                      {labels.saveFeedback}
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })
         )}
       </div>
+      {feedbackError ? (
+        <p className="text-label text-danger px-5 pb-5" role="status">
+          {labels.feedbackError}
+        </p>
+      ) : null}
     </Card>
   );
+}
+
+function campaignReviewHref(href: string, campaignId: string): string {
+  const [path, query = ""] = href.split("?");
+  const params = new URLSearchParams(query);
+  params.set("search", campaignId);
+  return `${path}?${params.toString()}`;
 }
 
 function formatPercentValue(value: number, locale: string): string {
@@ -992,63 +1690,6 @@ function confidenceLabel(
   return confidence === "strong" ? labels.confidenceGuarded : labels.confidenceLimited;
 }
 
-function CampaignExplorer({
-  campaigns,
-  labels,
-  locale,
-  currency,
-}: {
-  campaigns: readonly AdvertisingCampaignSummary[];
-  labels: AdvertisingReportingDashboardLabels;
-  locale: string;
-  currency: string;
-}) {
-  return (
-    <Card className="reporting-card" id="advertising-reporting-campaign-explorer">
-      <CardHeader>
-        <CardTitle>{labels.campaignExplorer}</CardTitle>
-        <CardDescription>{labels.campaignExplorerDescription}</CardDescription>
-      </CardHeader>
-      <div className="overflow-x-auto">
-        <table className="text-label w-full min-w-[620px] text-start">
-          <caption className="sr-only">{labels.campaignExplorer}</caption>
-          <thead className="bg-surface-subtle text-fg-muted">
-            <tr>
-              <th className="px-5 py-3 text-start">{labels.campaign}</th>
-              <th className="px-3 py-3 text-end">{labels.objective}</th>
-              <th className="px-3 py-3 text-end">{labels.metricSpend}</th>
-              <th className="px-3 py-3 text-end">{labels.metricResults}</th>
-              <th className="px-5 py-3 text-start">{labels.status}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {campaigns.slice(0, 8).map((campaign) => (
-              <tr key={campaign.campaignId} className="border-border border-t">
-                <th className="text-fg-primary max-w-[220px] px-5 py-3 text-start font-medium">
-                  <span className="block truncate">{campaign.name ?? campaign.campaignId}</span>
-                  <bdi className="text-label text-fg-muted" dir="ltr">
-                    {campaign.campaignId}
-                  </bdi>
-                </th>
-                <td className="px-3 py-3 text-end">{campaign.objective ?? "—"}</td>
-                <td className="px-3 py-3 text-end tabular-nums">
-                  {new Intl.NumberFormat(locale, {
-                    style: "currency",
-                    currency: currency || "EUR",
-                    maximumFractionDigits: 2,
-                  }).format(campaign.spend)}
-                </td>
-                <td className="px-3 py-3 text-end tabular-nums">
-                  {campaign.results === null
-                    ? labels.unavailable
-                    : new Intl.NumberFormat(locale).format(campaign.results)}
-                </td>
-                <td className="px-5 py-3 text-start">{campaign.status ?? labels.unavailable}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Card>
-  );
+function resultLabel(label: string, definitionLabel: string, resultType: string | null): string {
+  return resultType ? `${label} · ${definitionLabel}: ${resultType}` : label;
 }

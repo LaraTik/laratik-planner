@@ -1,21 +1,11 @@
 import { z } from "zod";
+import { ianaTimezoneSchema } from "./timezone";
 
-const nullableUserId = z.string().uuid().nullable();
+const nullableUserId = z.string().guid().nullable();
 
 export const workspaceSettingsCommandSchema = z.object({
-  workspaceId: z.string().uuid(),
-  timezone: z
-    .string()
-    .min(1)
-    .max(100)
-    .refine((value) => {
-      try {
-        new Intl.DateTimeFormat("en", { timeZone: value }).format();
-        return true;
-      } catch {
-        return false;
-      }
-    }, "Unknown timezone"),
+  workspaceId: z.string().guid(),
+  timezone: ianaTimezoneSchema,
   approvalMode: z.enum(["simple", "internal_then_client"]),
   monthlyTarget: z.number().int().min(1).max(10_000).nullable(),
   contentApprovalLeadDays: z.number().int().min(0).max(90),

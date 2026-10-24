@@ -15,6 +15,8 @@ export {
   loadEnabledCapabilities,
   enforceAiBudget,
   reconcileAiBudget,
+  releaseAiBudgetReservation,
+  recordAiUsageEvent,
   getUserDailyBudgetSnapshot,
   AiBudgetReservationSchema,
 } from "./governance";
@@ -269,8 +271,12 @@ export type ChatMessage = { role: "system" | "user" | "assistant"; content: stri
 
 export interface ChatOptions {
   messages: ChatMessage[];
+  /** An agency-configured model from the server-side allowlist. */
+  model?: string | undefined;
   maxTokens?: number;
   temperature?: number;
+  /** M3.1-only reasoning control supported by the Anthropic-compatible API. */
+  reasoningEffort?: "low" | "medium" | "high" | "xhigh" | "max";
   /**
    * The API key to use. The route layer is expected to pass the
    * resolved key (managed secret or env). When omitted, the function
@@ -324,9 +330,12 @@ export async function chat(opts: ChatOptions): Promise<ChatResult | null> {
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: MODEL,
+      model: opts.model ?? MODEL,
       max_tokens: opts.maxTokens ?? 1024,
       temperature: opts.temperature ?? 0.7,
+      ...(opts.model === "MiniMax-M3.1-Flash" && opts.reasoningEffort
+        ? { output_config: { effort: opts.reasoningEffort } }
+        : {}),
       messages: opts.messages.filter((m) => m.role !== "system"),
       system: opts.messages.find((m) => m.role === "system")?.content,
     }),
@@ -352,7 +361,96 @@ export async function chat(opts: ChatOptions): Promise<ChatResult | null> {
     content: text,
     inputTokens: data.usage?.input_tokens ?? null,
     outputTokens: data.usage?.output_tokens ?? null,
-    model: MODEL,
+    model: opts.model ?? MODEL,
+  };
+}
+
+/** Stream visible text blocks from MiniMax's Anthropic-compatible API. Thinking
+ * blocks are deliberately discarded and never sent to clients or logs.
+ */
+export async function chatStream(
+  opts: ChatOptions,
+  onTextDelta: (text: string) => void,
+): Promise<ChatResult | null> {
+  if (!opts.apiKey) return null;
+  const url = `${(opts.baseUrl ?? serverEnv.MINIMAX_BASE_URL).replace(/\/$/, "")}/v1/messages`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": opts.apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: opts.model ?? MODEL,
+      max_tokens: opts.maxTokens ?? 1024,
+      ...(opts.model === "MiniMax-M3.1-Flash" && opts.reasoningEffort
+        ? { output_config: { effort: opts.reasoningEffort } }
+        : {}),
+      stream: true,
+      messages: opts.messages.filter((message) => message.role !== "system"),
+      system: opts.messages.find((message) => message.role === "system")?.content,
+    }),
+    ...(opts.signal ? { signal: opts.signal } : {}),
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`MiniMax API error: ${response.status} ${errorText.slice(0, 200)}`);
+  }
+  if (!response.body) throw new Error("MiniMax stream body unavailable");
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let content = "";
+  let inputTokens: number | null = null;
+  let outputTokens: number | null = null;
+  const consumeEvent = (frame: string) => {
+    const data = frame
+      .split("\n")
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trim())
+      .join("\n");
+    if (!data || data === "[DONE]") return;
+    const event = JSON.parse(data) as {
+      type?: string;
+      delta?: { type?: string; text?: string };
+      message?: { usage?: { input_tokens?: number; output_tokens?: number } };
+      usage?: { input_tokens?: number; output_tokens?: number };
+    };
+    if (event.type === "error") throw new Error("MiniMax streaming response failed");
+    if (typeof event.message?.usage?.input_tokens === "number") {
+      inputTokens = event.message.usage.input_tokens;
+    }
+    if (typeof event.usage?.input_tokens === "number") inputTokens = event.usage.input_tokens;
+    if (typeof event.usage?.output_tokens === "number") outputTokens = event.usage.output_tokens;
+    if (event.delta?.type === "text_delta" && typeof event.delta.text === "string") {
+      content += event.delta.text;
+      onTextDelta(event.delta.text);
+    }
+  };
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      buffer += decoder.decode(value, { stream: !done }).replaceAll("\r\n", "\n");
+      let delimiter = buffer.indexOf("\n\n");
+      while (delimiter >= 0) {
+        consumeEvent(buffer.slice(0, delimiter));
+        buffer = buffer.slice(delimiter + 2);
+        delimiter = buffer.indexOf("\n\n");
+      }
+      if (done) break;
+    }
+    if (buffer.trim()) consumeEvent(buffer);
+  } finally {
+    reader.releaseLock();
+  }
+
+  return {
+    content,
+    inputTokens,
+    outputTokens,
+    model: opts.model ?? MODEL,
   };
 }
 

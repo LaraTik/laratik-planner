@@ -76,8 +76,14 @@ vi.mock("@/lib/security/rate-limit", () => ({
   rateLimitRuleFor: vi.fn(() => ({ windowSeconds: 60 })),
 }));
 
-const { toggleAgencyAdminAction, updateMemberRolesAction } =
-  await import("@/app/(app)/app/users/actions");
+const {
+  toggleAgencyAdminAction,
+  toggleDeactivationAction,
+  updateMemberRolesAction,
+  resendInviteAction,
+  revokeInviteAction,
+} = await import("@/app/(app)/app/users/actions");
+const invitationService = await import("@/lib/auth/invitations");
 
 function formData(entries: Record<string, string>): FormData {
   const data = new FormData();
@@ -102,6 +108,34 @@ beforeEach(() => {
 });
 
 describe("workspace team membership actions", () => {
+  it("keeps reactivation persistence failures inline and logs them", async () => {
+    policyMock.isAgencyAdmin.mockResolvedValue(true);
+    const failure = new Error("postgres://planner:secret@db.test/planner");
+    vi.mocked(invitationService.reactivateUser).mockRejectedValueOnce(failure);
+
+    const result = await toggleDeactivationAction("member-1", false);
+
+    expect(result).toEqual({ errorCode: "reactivate_failed" });
+    expect(JSON.stringify(result)).not.toContain("secret");
+    expect(errorMock.captureError).toHaveBeenCalledWith("users.reactivateUser", failure);
+  });
+
+  it("does not return infrastructure details from invitation actions", async () => {
+    policyMock.isAgencyAdmin.mockResolvedValue(true);
+    const failure = new Error("postgres://planner:secret@db.test/planner");
+    vi.mocked(invitationService.resendInvitation).mockRejectedValueOnce(failure);
+    vi.mocked(invitationService.revokeInvitation).mockRejectedValueOnce(failure);
+
+    const resend = await resendInviteAction("inv-1");
+    const revoke = await revokeInviteAction("inv-1");
+
+    expect(resend).toEqual({ errorCode: "resend_failed" });
+    expect(revoke).toEqual({ errorCode: "revoke_failed" });
+    expect(JSON.stringify([resend, revoke])).not.toContain("secret");
+    expect(errorMock.captureError).toHaveBeenCalledWith("users.resendInvite", failure);
+    expect(errorMock.captureError).toHaveBeenCalledWith("users.revokeInvite", failure);
+  });
+
   it("lets a workspace manager replace roles in only the current workspace", async () => {
     policyMock.hasWorkspaceRole.mockResolvedValue(true);
     state.selectResults.push(

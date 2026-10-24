@@ -22,6 +22,7 @@ vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/actions",
   markPublishingSetupReadyAction: readyMock,
   recordInternalNoteAction: vi.fn(),
   savePublishPackageAction: saveMock,
+  savePublishPackageBatchAction: vi.fn(),
   setFinalCopyApprovalAction: vi.fn(),
 }));
 
@@ -75,6 +76,7 @@ function renderForm({
   return render(
     <LocaleProvider locale="en">
       <PublishPackageForm
+        recordPublicationAction={async () => ({})}
         workspaceId="33333333-3333-4333-8333-333333333333"
         workspaceSlug="demo"
         agencySlug="acme"

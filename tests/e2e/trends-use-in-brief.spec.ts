@@ -35,7 +35,11 @@ test.describe("Trend Radar — Use in brief", () => {
   }: {
     page: Page;
   }) => {
-    await page.goto(`/app/w/${workspaceSlug}/trends`);
+    // In an isolated cold run, Next compiles the destination route on the
+    // first client navigation. Keep the assertion strict while allowing
+    // that one-time development-server compile to finish.
+    test.setTimeout(90_000);
+    await page.goto(`/app/a/trend-brief-agency/w/${workspaceSlug}/trends`);
 
     // Wait for at least one card.
     const card = page.getByTestId("trend-card").first();
@@ -49,7 +53,7 @@ test.describe("Trend Radar — Use in brief", () => {
     await useInBrief.click();
 
     // Quick Create opens with the validated trend signal in the URL.
-    await expect(page).toHaveURL(/\/planning\/new\?trendSignalId=/);
+    await expect(page).toHaveURL(/\/planning\/new\?trendSignalId=/, { timeout: 60_000 });
 
     // The title and brief are pre-filled from the trend label.
     await expect(page.getByTestId("quick-create-form")).toBeVisible();

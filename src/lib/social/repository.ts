@@ -379,6 +379,7 @@ export async function cleanupOauthStates(db: Db, olderThan: Date): Promise<numbe
 
 export type LinkProfileInput = {
   connectionId: string;
+  workspaceId: string;
   agencyId: string;
   profile: ConnectedProfile;
   /**
@@ -407,6 +408,20 @@ export type LinkProfileResult = {
  * profile 3 rolls back profiles 1 and 2).
  */
 export async function linkProfile(tx: DbOrTx, input: LinkProfileInput): Promise<LinkProfileResult> {
+  const [connection] = await tx
+    .select({ id: socialConnections.id })
+    .from(socialConnections)
+    .where(
+      and(
+        eq(socialConnections.id, input.connectionId),
+        eq(socialConnections.workspaceId, input.workspaceId),
+        eq(socialConnections.status, "pending_selection"),
+      ),
+    )
+    .for("update")
+    .limit(1);
+  if (!connection) throw new Error("Pending connection not found in workspace");
+
   if (input.existingChannelId) {
     const [channel] = await tx
       .select()
@@ -414,10 +429,7 @@ export async function linkProfile(tx: DbOrTx, input: LinkProfileInput): Promise<
       .where(
         and(
           eq(socialChannels.id, input.existingChannelId),
-          eq(
-            socialChannels.workspaceId,
-            input.profile.providerAccountId ? sql`workspace_id` : sql`workspace_id`,
-          ),
+          eq(socialChannels.workspaceId, input.workspaceId),
         ),
       )
       .for("update")
@@ -436,7 +448,9 @@ export async function linkProfile(tx: DbOrTx, input: LinkProfileInput): Promise<
         nextSyncAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(socialChannels.id, channel.id))
+      .where(
+        and(eq(socialChannels.id, channel.id), eq(socialChannels.workspaceId, input.workspaceId)),
+      )
       .returning();
     if (!updated) throw new Error("Failed to update existing channel");
     await ensureProfileCapabilities(tx, input.connectionId, updated.id, input.profile.platform);
@@ -459,10 +473,7 @@ export async function linkProfile(tx: DbOrTx, input: LinkProfileInput): Promise<
   const [inserted] = await tx
     .insert(socialChannels)
     .values({
-      // workspaceId is required but the caller's input only provides
-      // a connectionId. The caller is expected to pass the
-      // workspaceId via the connection row; we resolve it here.
-      workspaceId: sql`(SELECT workspace_id FROM social_connection WHERE id = ${input.connectionId})`,
+      workspaceId: input.workspaceId,
       platform:
         input.profile.platform === "instagram"
           ? "instagram"

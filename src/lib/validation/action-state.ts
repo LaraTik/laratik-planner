@@ -88,17 +88,20 @@ export function fieldErrorsFromZod<Field extends string>(
 }
 
 /**
- * Build an `ActionState` from a runtime exception (e.g. a
- * service threw because the user is not allowed to transition
- * the workflow). Runtime errors do not have a Zod `path`, so
- * `fieldErrors` is left empty and the message bubbles up to
- * the form-level summary card.
+ * Build an `ActionState` from a runtime exception. Exception
+ * text is diagnostic by default; pass `publicMessage` only after
+ * the caller has classified an expected, user-facing error.
+ * Runtime errors do not have a Zod `path`, so `fieldErrors` is
+ * left empty and the safe message goes to the form-level summary.
  */
 export function actionFailure<Field extends string = string>(
-  error: unknown,
+  _error: unknown,
   fallback: string,
+  options: { publicMessage?: string } = {},
 ): ActionState<Field> {
   return {
-    error: error instanceof Error ? error.message : fallback,
+    // Exception text is diagnostic. Only a caller that classified a known
+    // public outcome may replace the safe fallback.
+    error: options.publicMessage ?? fallback,
   };
 }

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isCronAuthorized } from "@/lib/cron/auth";
-import { expungeExpiredTrashedMedia, processPendingMediaAssets } from "@/lib/media/service";
+import { authorizeCronRequest } from "@/lib/cron/route-auth";
+import { expungeExpiredTrashedMedia, processPendingMediaAssets } from "@/features/media/server";
 import {
   expireStorageUploadIntents,
   purgeSoftDeletedStorageObjects,
@@ -11,8 +11,8 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 async function handle(req: NextRequest) {
-  if (!isCronAuthorized(req.headers))
-    return new NextResponse("Unauthorized", { status: 401, headers: mutatingApiHeaders() });
+  const authResponse = authorizeCronRequest(req.headers);
+  if (authResponse) return authResponse;
   const startedAt = Date.now();
   const expired = await expireStorageUploadIntents(100);
   const media = await processPendingMediaAssets(50);

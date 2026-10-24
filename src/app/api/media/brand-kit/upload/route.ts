@@ -6,15 +6,15 @@ import {
   ensureBrandMediaFolderPath,
   MediaPermissionError,
   registerUploadedMediaAsset,
-} from "@/lib/media/service";
+} from "@/features/media/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const Body = z.object({
-  agencyId: z.string().uuid(),
-  workspaceId: z.string().uuid(),
-  storageObjectId: z.string().uuid(),
+  agencyId: z.string().guid(),
+  workspaceId: z.string().guid(),
+  storageObjectId: z.string().guid(),
   title: z.string().trim().min(1).max(160),
 });
 

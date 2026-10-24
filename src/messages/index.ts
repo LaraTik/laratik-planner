@@ -94,6 +94,22 @@ function interpolate(template: string, params?: Record<string, string | number>)
 }
 
 /**
+ * True when a translator result means "this key is not in the catalog".
+ *
+ * The translator does NOT return the bare key for a missing entry — it
+ * returns the English fallback wrapped in `[…]` (`[key] value`), or
+ * `[key]` when neither locale has it. A guard that compares the result
+ * to the key with `===` therefore never fires, and the English
+ * fallback literal the caller supplied is dead code: a missing key
+ * renders as `[some.key]` on screen.
+ *
+ * This helper is the single place that knows the wrapper shape.
+ */
+export function isMissingTranslation(value: string, key: string): boolean {
+  return value === key || value.startsWith(`[${key}]`);
+}
+
+/**
  * Build a translator bound to the resolved locale. Server
  * Components call this from their layout / page; Client
  * Components receive the result through props or through

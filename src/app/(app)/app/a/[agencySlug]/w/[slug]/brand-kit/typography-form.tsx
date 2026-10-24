@@ -4,7 +4,6 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Trash2, Type as TypeIcon } from "lucide-react";
 import { createFontAssetAction } from "./actions";
-import { useSuccessReset } from "@/lib/brand/use-success-reset";
 import { Card } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { FormField } from "@/components/forms/form-field";
@@ -14,8 +13,10 @@ import {
   TYPOGRAPHY_OPTIONS,
   fontClassFor,
   KNOWN_FAMILY_NAMES,
-} from "@/lib/brand/typography-families";
+  useSuccessReset,
+} from "@/features/brand-kit";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { isMissingTranslation } from "@/messages";
 
 /**
  * TypographyForm — create form for the brand-kit Typography section.
@@ -27,10 +28,9 @@ import { useLocaleT } from "@/components/i18n/locale-provider";
  * the family name in its actual font so the planner sees a live
  * preview without leaving the dropdown.
  *
- * The 14 families are pre-imported via `next/font/google` at
- * module load (see `lib/brand/typography-families.ts`) so the
- * preview is honest — no FOUT, no `@import` round-trip. Families
- * outside the catalog are accepted as free-text (the form
+ * The 14 families use local preview classes backed by the app's
+ * CSS declarations, avoiding build-time font downloads. Families
+ * outside the catalog are accepted as free text (the form
  * continues to allow custom family names like "Caveat" or a
  * brand-paid license like "Söhne").
  *
@@ -76,7 +76,7 @@ export function TypographyForm({
   const t = tProp ?? localeT;
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
     const value = t(key, params);
-    return value === key ? fallback : value;
+    return isMissingTranslation(value, key) ? fallback : value;
   };
   const [state, action] = useActionState(
     createFontAssetAction.bind(null, slug),

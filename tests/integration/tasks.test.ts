@@ -3,6 +3,7 @@ import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { PermissionDeniedError } from "@/lib/auth/policy";
 import {
   agencies,
   agencyMemberships,
@@ -12,9 +13,9 @@ import {
   users,
   workspaces,
 } from "@/lib/db/schema";
-import { createTask, listTasks, updateTask } from "@/lib/tasks/service";
+import { createTask, getTaskDetail, listTasks, updateTask } from "@/lib/tasks/service";
 import { createTaskAttachmentLink, listTaskAttachmentUrls } from "@/lib/tasks/attachments";
-import { getAgencyCalendarView } from "@/lib/planning/calendar";
+import { getAgencyCalendarView } from "@/features/calendar/server";
 
 const TEST_DB_URL = process.env.TEST_DATABASE_URL;
 if (!TEST_DB_URL) throw new Error("TEST_DATABASE_URL is required for integration tests");
@@ -167,6 +168,17 @@ describe("agency tasks", () => {
         mimeType: "image/*",
       }),
     ]);
+    const detail = await getTaskDetail({ id: other.id }, task.id);
+    expect(detail.canManage).toBe(false);
+    expect(detail.canArchive).toBe(false);
+    await expect(
+      updateTask({ id: other.id }, task.id, { title: "Unauthorized edit" }),
+    ).rejects.toBeInstanceOf(PermissionDeniedError);
+    await expect(
+      createTaskAttachmentLink({ id: other.id }, task.id, {
+        url: "https://example.com/unauthorized.png",
+      }),
+    ).rejects.toBeInstanceOf(PermissionDeniedError);
   });
 
   it("still lists file attachments when agency storage cannot sign a read URL", async () => {

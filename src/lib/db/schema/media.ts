@@ -252,7 +252,7 @@ export type NewMediaShareLink = typeof mediaShareLinks.$inferInsert;
 /**
  * Audit log of media folder moves triggered by content-item drift.
  *
- * Written by `reconcileContentItemMediaFolders` (lib/media/service.ts) when an
+ * Written by `reconcileContentItemMediaFolders` (media/planning-folder-lifecycle.ts) when an
  * idea's `plannedPublishAt` or `format` changes and one or more linked assets
  * are silently moved to the new derived folder path. Every row carries the
  * from/to folder id, the actor who triggered the change, and the content

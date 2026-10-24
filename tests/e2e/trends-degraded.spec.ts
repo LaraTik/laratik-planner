@@ -41,7 +41,7 @@ test.describe("Trend Radar — degraded source UX", () => {
     }
 
     // Step 2: visit the page.
-    await page.goto(`/app/w/${workspaceSlug}/trends`);
+    await page.goto(`/app/a/trend-degraded-agency/w/${workspaceSlug}/trends`);
 
     // Step 3: degraded banner is visible.
     const banner = page.getByTestId("trends-degraded-banner");

@@ -60,4 +60,16 @@ describe("Community & Inbox production contract", () => {
     expect(architecture).toContain("unknown");
     expect(architecture).toContain("reconciliation");
   });
+
+  it("keeps Community & Inbox web actions out of the Planner MCP contract", () => {
+    const mcpDocs = readFileSync(resolve(process.cwd(), "docs/api/mcp.md"), "utf8");
+    const mcpEvaluation = readFileSync(
+      resolve(process.cwd(), "docs/api/mcp-evaluation.xml"),
+      "utf8",
+    );
+    expect(mcpDocs).toContain("Community & Inbox boundary");
+    expect(mcpDocs).toContain("does not expose conversation reads");
+    expect(mcpEvaluation).toContain('id="42"');
+    expect(mcpEvaluation).toContain("not exposed by the Planner MCP tool list");
+  });
 });

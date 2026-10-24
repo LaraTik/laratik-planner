@@ -9,7 +9,7 @@ import { StorageConfigurationError, StorageUnavailableError } from "@/lib/storag
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const Body = z.object({ attachmentId: z.string().uuid() });
+const Body = z.object({ attachmentId: z.string().guid() });
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();

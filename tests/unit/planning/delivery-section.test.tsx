@@ -11,6 +11,9 @@ vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   submitDeliveryAction: vi.fn(),
   setMediaRequiredAction: vi.fn(),
 }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 vi.mock("@/components/media/media-upload-form", () => ({
   MediaUploadForm: () => null,
 }));
@@ -42,6 +45,10 @@ const baseProps = {
   contentStatus: "in_design",
   isDesigner: true,
   isManager: false,
+  // The designer in these tests is the one ASSIGNED to the item, so
+  // the delivery form is available to them. A designer who is not the
+  // assignee is covered separately.
+  isAssignedDesigner: true,
   deliveries: [],
 };
 

@@ -14,8 +14,8 @@ import {
 
 export type PlatformActionState = {
   success?: boolean;
-  error?: string;
-  warning?: string;
+  errorCode?: "sessionExpired" | "invalidInput" | "createFailed";
+  warningCode?: "adminEmailFailed";
   agencyId?: string;
 };
 
@@ -82,7 +82,7 @@ export async function createAgencyAction(
   formData: FormData,
 ): Promise<PlatformActionState> {
   const actor = await currentActor();
-  if (!actor) return { error: "Sign in is required." };
+  if (!actor) return { errorCode: "sessionExpired" };
   try {
     const input = CreateAgencySchema.parse({
       name: formData.get("name"),
@@ -100,20 +100,11 @@ export async function createAgencyAction(
     return {
       success: true,
       agencyId: result.id,
-      ...(result.emailSent
-        ? {}
-        : { warning: "Agency created, but the administrator email could not be sent." }),
+      ...(result.emailSent ? {} : { warningCode: "adminEmailFailed" }),
     };
   } catch (error) {
     captureError("platform.createAgency", error);
-    return {
-      error:
-        error instanceof z.ZodError
-          ? (error.issues[0]?.message ?? "Check the agency details.")
-          : error instanceof Error
-            ? error.message
-            : "The agency could not be created.",
-    };
+    return { errorCode: error instanceof z.ZodError ? "invalidInput" : "createFailed" };
   }
 }
 
@@ -133,10 +124,10 @@ export async function changeLifecycleAction(formData: FormData): Promise<void> {
 export async function changePlanAction(formData: FormData): Promise<void> {
   const actor = await currentActor();
   if (!actor) throw new Error("Sign in is required");
-  const agencyId = z.string().uuid().parse(formData.get("agencyId"));
+  const agencyId = z.string().guid().parse(formData.get("agencyId"));
   await changeAgencyPlanAsPlatform(actor, {
     agencyId,
-    planTemplateId: z.string().uuid().parse(formData.get("planTemplateId")),
+    planTemplateId: z.string().guid().parse(formData.get("planTemplateId")),
     overrides: overridesFromForm(formData),
     reason: z.string().trim().min(3).max(500).parse(formData.get("reason")),
   });

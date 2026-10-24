@@ -29,7 +29,7 @@ process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
  */
 
 describe("primary acceptance journey (§23, service-level)", () => {
-  let content: typeof import("@/lib/content/service");
+  let content: typeof import("@/features/content/server");
   let workflow: typeof import("@/lib/content/workflow");
   let publishing: typeof import("@/lib/publishing/service");
   let deliveries: typeof import("@/lib/deliveries/service");
@@ -50,7 +50,7 @@ describe("primary acceptance journey (§23, service-level)", () => {
   let deliveryMediaAssetId: string;
 
   beforeAll(async () => {
-    content = await import("@/lib/content/service");
+    content = await import("@/features/content/server");
     workflow = await import("@/lib/content/workflow");
     publishing = await import("@/lib/publishing/service");
     deliveries = await import("@/lib/deliveries/service");
@@ -382,6 +382,109 @@ describe("primary acceptance journey (§23, service-level)", () => {
     // optional plumbing, so we assert that the four documented fields
     // are present rather than pinning the total count.
     expect(keys).toEqual(expect.arrayContaining(["title", "format", "brief", "plannedPublishAt"]));
+  });
+
+  it("Quick Create rejects a channel owned by another workspace", async () => {
+    const { contentItems, socialChannels, workspaces } = await import("@/lib/db/schema");
+    const [otherWorkspace] = await db
+      .insert(workspaces)
+      .values({
+        agencyId,
+        name: "Other workspace",
+        slug: "other-workspace",
+        createdBy: maya.id,
+      })
+      .returning({ id: workspaces.id });
+    expect(otherWorkspace).toBeDefined();
+    const [foreignChannel] = await db
+      .insert(socialChannels)
+      .values({
+        workspaceId: otherWorkspace!.id,
+        platform: "instagram",
+        accountName: "Private account",
+      })
+      .returning({ id: socialChannels.id });
+    expect(foreignChannel).toBeDefined();
+
+    await expect(
+      content.quickCreateContentItem(
+        { id: omar.id },
+        {
+          workspaceId,
+          title: "Cross-workspace channel attempt",
+          format: "static_post",
+          brief: "Must not link a foreign account.",
+          plannedPublishAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          channelIds: [foreignChannel!.id],
+        },
+      ),
+    ).rejects.toThrow(/channel selection for this workspace/i);
+
+    const created = await db
+      .select({ id: contentItems.id })
+      .from(contentItems)
+      .where(eq(contentItems.title, "Cross-workspace channel attempt"));
+    expect(created).toHaveLength(0);
+  });
+
+  it("content updates reject a foreign channel without changing existing links", async () => {
+    const { contentItemChannels, contentItems, socialChannels, workspaces } =
+      await import("@/lib/db/schema");
+    const itemId = await content.quickCreateContentItem(
+      { id: omar.id },
+      {
+        workspaceId,
+        title: "Update channel ownership check",
+        format: "static_post",
+        brief: "Keep the original channel if a foreign one is submitted.",
+        plannedPublishAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        channelIds: [channelIds[0]!],
+      },
+    );
+    const [otherWorkspace] = await db
+      .insert(workspaces)
+      .values({
+        agencyId,
+        name: "Update test workspace",
+        slug: `update-test-${crypto.randomUUID()}`,
+        createdBy: maya.id,
+      })
+      .returning({ id: workspaces.id });
+    expect(otherWorkspace).toBeDefined();
+    const [foreignChannel] = await db
+      .insert(socialChannels)
+      .values({
+        workspaceId: otherWorkspace!.id,
+        platform: "instagram",
+        accountName: "Foreign update channel",
+      })
+      .returning({ id: socialChannels.id });
+    expect(foreignChannel).toBeDefined();
+
+    await expect(
+      content.updateContentItem(
+        { id: omar.id },
+        {
+          contentItemId: itemId,
+          title: "Should not update",
+          format: "static_post",
+          brief: "Rejected before any write.",
+          plannedPublishAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          channelIds: [foreignChannel!.id],
+        },
+      ),
+    ).rejects.toThrow(/channel selection for this workspace/i);
+
+    const [savedItem] = await db
+      .select({ title: contentItems.title })
+      .from(contentItems)
+      .where(eq(contentItems.id, itemId));
+    const savedLinks = await db
+      .select({ socialChannelId: contentItemChannels.socialChannelId })
+      .from(contentItemChannels)
+      .where(eq(contentItemChannels.contentItemId, itemId));
+    expect(savedItem?.title).toBe("Update channel ownership check");
+    expect(savedLinks.map((link) => link.socialChannelId)).toEqual([channelIds[0]]);
   });
 
   // ── §23 step 10 + 11: Quick Create applies defaults + all 4 channels ──

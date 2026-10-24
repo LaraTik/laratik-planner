@@ -49,7 +49,8 @@ export function NewCampaignForm({ slug }: { slug: string }) {
         setError(null);
         startTransition(async () => {
           const result = await action({}, formData);
-          if (result.error) setError(result.error);
+          if (result.errorCode) setError(t(`users.library.errors.${result.errorCode}`));
+          else if (result.error) setError(result.error);
         });
       }}
       className="border-border bg-surface-subtle mt-3 space-y-2 rounded-md border p-3"
@@ -116,7 +117,8 @@ export function NewPillarForm({ slug }: { slug: string }) {
         setError(null);
         startTransition(async () => {
           const result = await action({}, formData);
-          if (result.error) setError(result.error);
+          if (result.errorCode) setError(t(`users.library.errors.${result.errorCode}`));
+          else if (result.error) setError(result.error);
         });
       }}
       className="border-border bg-surface-subtle mt-3 space-y-2 rounded-md border p-3"
@@ -172,7 +174,8 @@ export function NewTemplateForm({ slug }: { slug: string }) {
         setError(null);
         startTransition(async () => {
           const result = await action({}, formData);
-          if (result.error) setError(result.error);
+          if (result.errorCode) setError(t(`users.library.errors.${result.errorCode}`));
+          else if (result.error) setError(result.error);
         });
       }}
       className="border-border bg-surface-subtle mt-3 space-y-2 rounded-md border p-3"

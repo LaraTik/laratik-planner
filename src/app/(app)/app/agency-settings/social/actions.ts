@@ -8,7 +8,7 @@ import {
   enableSocial,
   resetSocialRecovery,
   rotateSocialDek,
-  SocialServiceError,
+  toSocialFailureResponse,
 } from "@/lib/social/service";
 
 /**
@@ -61,10 +61,7 @@ export async function enableSocialAction(
       dekKeyVersion: result.dekKeyVersion,
     };
   } catch (err) {
-    if (err instanceof SocialServiceError) {
-      return { error: err.message, code: err.code };
-    }
-    return { error: err instanceof Error ? err.message : "Unexpected error" };
+    return toSocialFailureResponse(err).body;
   }
 }
 
@@ -89,10 +86,7 @@ export async function rotateSocialDekAction(
       dekKeyVersion: result.dekKeyVersion,
     };
   } catch (err) {
-    if (err instanceof SocialServiceError) {
-      return { error: err.message, code: err.code };
-    }
-    return { error: err instanceof Error ? err.message : "Unexpected error" };
+    return toSocialFailureResponse(err).body;
   }
 }
 
@@ -113,10 +107,7 @@ export async function disableSocialAction(
     revalidatePath("/app/agency-settings/social");
     return { ok: true };
   } catch (err) {
-    if (err instanceof SocialServiceError) {
-      return { error: err.message, code: err.code };
-    }
-    return { error: err instanceof Error ? err.message : "Unexpected error" };
+    return toSocialFailureResponse(err).body;
   }
 }
 
@@ -137,9 +128,6 @@ export async function resetSocialRecoveryAction(
     revalidatePath("/app/agency-settings/social");
     return { ok: true };
   } catch (err) {
-    if (err instanceof SocialServiceError) {
-      return { error: err.message, code: err.code };
-    }
-    return { error: err instanceof Error ? err.message : "Unexpected error" };
+    return toSocialFailureResponse(err).body;
   }
 }

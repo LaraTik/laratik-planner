@@ -10,12 +10,12 @@ import { AUTOSAVE_DEBOUNCE_MS } from "@/lib/forms/autosave";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { FormSummary } from "@/components/forms/form-summary";
+import { localizeActionError } from "@/components/forms/action-error-message";
 import { rendererFor } from "@/components/forms/format-payload-field-renderers";
 import { fieldsFor } from "@/components/forms/format-payload-field-set";
 import { focusFirstInvalid } from "@/lib/forms/focus-first-invalid";
 import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
 import { useNavigationDirtyGuard } from "@/lib/forms/use-navigation-dirty-guard";
-import { updateAudienceCopyAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { formatNumber } from "@/lib/i18n/format-locale";
 import { buildAudienceCopyViewModel } from "@/lib/format-payload/mapper";
@@ -38,6 +38,7 @@ type Channel = {
 };
 
 export interface MessagesPanelProps {
+  saveAction: (previous: ActionState, formData: FormData) => Promise<ActionState>;
   agencySlug: string;
   /** Canonical agency segment. */
   workspaceSlug: string;
@@ -64,6 +65,7 @@ export function AudienceCopyPanel({
   channels,
   canEdit,
   canManageChannels = false,
+  saveAction,
 }: MessagesPanelProps) {
   const locale = useLocaleCode();
   const t = useLocaleT();
@@ -81,8 +83,7 @@ export function AudienceCopyPanel({
   const [payload, setPayload] = React.useState<Record<string, unknown>>(initialPayload);
   const initialJson = React.useMemo(() => JSON.stringify(initialPayload), [initialPayload]);
   const [savedJson, setSavedJson] = React.useState(initialJson);
-  const boundAction = updateAudienceCopyAction.bind(null, workspaceSlug);
-  const [state, formAction, pending] = useActionState(boundAction, initial);
+  const [state, formAction, pending] = useActionState(saveAction, initial);
   const formRef = React.useRef<HTMLFormElement | null>(null);
   const dirty = JSON.stringify(payload) !== savedJson;
 
@@ -481,7 +482,17 @@ export function AudienceCopyPanel({
         <input type="hidden" name="format" value={format} />
         <input type="hidden" name="formatPayload" value={JSON.stringify(payload)} />
         <FormSummary
-          {...(state.error ? { error: state.error } : {})}
+          {...(state.error
+            ? {
+                error: localizeActionError(
+                  state.error,
+                  t,
+                  "contentMutationError.",
+                  "contentDetail.contentMutationErrors",
+                  t("contentDetail.contentMutationErrors.failed"),
+                ),
+              }
+            : {})}
           {...(state.fieldErrors ? { fieldErrors: state.fieldErrors } : {})}
           fieldLabels={fieldLabels}
         />

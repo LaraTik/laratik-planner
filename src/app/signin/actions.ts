@@ -6,6 +6,7 @@ import { z } from "zod";
 import { signIn } from "@/lib/auth/config";
 import { precheckPasswordSignIn } from "@/lib/auth/password";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
 import { emailDomain, signInErrorRedirect } from "./auth-error-server";
 
 const SignInEmailSchema = z.object({
@@ -43,6 +44,7 @@ export async function signInWithPasswordAction(
   callbackUrl: string,
   formData: FormData,
 ): Promise<void> {
+  callbackUrl = safeCallbackUrl(callbackUrl);
   const rawEmail = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const remember = String(formData.get("remember") ?? "");
@@ -111,6 +113,7 @@ export async function signInWithPasswordAction(
 }
 
 export async function signInWithGoogleAction(callbackUrl: string): Promise<void> {
+  callbackUrl = safeCallbackUrl(callbackUrl);
   try {
     await signIn("google", { redirectTo: callbackUrl });
   } catch (error) {
@@ -128,6 +131,7 @@ export async function signInWithMagicLinkAction(
   callbackUrl: string,
   formData: FormData,
 ): Promise<void> {
+  callbackUrl = safeCallbackUrl(callbackUrl);
   const rawEmail = String(formData.get("email") ?? "");
   const parsed = SignInEmailSchema.safeParse({ email: rawEmail });
   if (!parsed.success) {

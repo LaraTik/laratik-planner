@@ -125,6 +125,8 @@ vi.mock("@/lib/db", () => ({ db: dbMock }));
 
 const policyMock = vi.hoisted(() => ({
   hasWorkspaceRole: vi.fn(async () => true as boolean),
+  isAgencyAdminForWorkspace: vi.fn(async () => false as boolean),
+  canDecideClientCreative: vi.fn(async () => true as boolean),
   requirePolicy: vi.fn(async (predicate: Promise<boolean>, action: string) => {
     if (!(await predicate)) {
       const err = new Error(`Permission denied: ${action}`);
@@ -163,6 +165,10 @@ beforeEach(() => {
   dbMock.state.transactionCalls = 0;
   policyMock.hasWorkspaceRole.mockReset();
   policyMock.hasWorkspaceRole.mockResolvedValue(true);
+  policyMock.isAgencyAdminForWorkspace.mockReset();
+  policyMock.isAgencyAdminForWorkspace.mockResolvedValue(false);
+  policyMock.canDecideClientCreative.mockReset();
+  policyMock.canDecideClientCreative.mockResolvedValue(true);
   policyMock.requirePolicy.mockReset();
   policyMock.requirePolicy.mockImplementation(
     async (predicate: Promise<boolean>, action: string) => {
@@ -250,6 +256,56 @@ describe("submitDelivery", () => {
       { workspaceId: "ws-1", status: "draft", changeRequestGate: null },
     ]);
     await expect(submitDelivery(actor, input)).rejects.toThrow(/cannot submit a delivery/i);
+  });
+
+  it("refuses a delivery from a designer who is NOT the assigned designer", async () => {
+    // §9 gives the designer "W" on submit delivery and "W on assigned
+    // item" on production details: the role permits the work, the
+    // assignment scopes it. Without the assignment check any designer
+    // in the workspace could submit — and thereby claim — another
+    // designer's delivery.
+    dbMock.state.selectResults.push([
+      {
+        agencyId: "agency-1",
+        workspaceId: "ws-1",
+        status: "in_design",
+        changeRequestGate: null,
+        mediaRequired: true,
+        designerId: "someone-else",
+      },
+    ]);
+    policyMock.hasWorkspaceRole.mockImplementation(async (...args: unknown[]) => {
+      const roles = args[2] as string[] | undefined;
+      return Array.isArray(roles) && roles.includes("designer");
+    });
+    // A typed, code-bearing error: the action turns it into a stable
+    // code the client translates, so the user never reads an English
+    // sentence in an Arabic UI.
+    await expect(submitDelivery(actor, input)).rejects.toThrow(
+      /permission denied: submit_delivery_not_assigned/i,
+    );
+  });
+
+  it("allows the assigned designer to submit their own delivery", async () => {
+    dbMock.state.selectResults.push([
+      {
+        agencyId: "agency-1",
+        workspaceId: "ws-1",
+        status: "in_design",
+        changeRequestGate: null,
+        mediaRequired: true,
+        designerId: actor.id,
+      },
+    ]);
+    policyMock.hasWorkspaceRole.mockImplementation(async (...args: unknown[]) => {
+      const roles = args[2] as string[] | undefined;
+      return Array.isArray(roles) && roles.includes("designer");
+    });
+    // The assignment check PASSES, so the call proceeds to the next
+    // gate (the media-asset lookup) instead of being refused for the
+    // assignment. The asset is refused because the mock returns no
+    // asset rows for it.
+    await expect(submitDelivery(actor, input)).rejects.toThrow(/unavailable for this workspace/i);
   });
 
   // ── Media floor (content_item.media_required) ──────────────────────
@@ -741,7 +797,7 @@ describe("decideApproval", () => {
     ).rejects.toThrow(/permission denied/i);
   });
 
-  it("decideApproval maps creative_client gate to client_reviewer role", async () => {
+  it("decideApproval routes the creative_client gate through the client-gate authority check", async () => {
     dbMock.state.selectResults.push([
       {
         id: contentItemId,
@@ -764,11 +820,29 @@ describe("decideApproval", () => {
     dbMock.state.selectResults.push([{ approvalMode: "simple" }]);
 
     await decideApproval(actor, { approvalRequestId: contentItemId, decision: "approved" });
-    // The role check should have been called with ["client_reviewer"].
-    const calls = policyMock.hasWorkspaceRole.mock.calls;
-    expect(calls.length).toBeGreaterThan(0);
-    const roleCall = calls[calls.length - 1] as unknown as [unknown, unknown, string[]];
-    expect(roleCall[2]).toEqual(["client_reviewer"]);
+    // The client gate is decided by the client-gate authority check —
+    // the assigned client reviewer OR the agency admin (master prompt
+    // §9 gives the admin "F" on client creative review). A plain
+    // workspace manager is NOT authorised.
+    expect(policyMock.canDecideClientCreative).toHaveBeenCalledWith(actor, "ws-1");
+  });
+
+  it("decideApproval refuses the creative_client gate when neither client reviewer nor admin", async () => {
+    policyMock.canDecideClientCreative.mockResolvedValue(false);
+    dbMock.state.selectResults.push([
+      {
+        id: contentItemId,
+        status: "pending",
+        contentItemId,
+        gate: "creative_client",
+        deliveryVersionId: "v-1",
+      },
+    ]);
+    dbMock.state.selectResults.push([{ workspaceId: "ws-1" }]);
+
+    await expect(
+      decideApproval(actor, { approvalRequestId: contentItemId, decision: "approved" }),
+    ).rejects.toThrow(/permission denied/i);
   });
 
   it("decideApproval records changes_requested and invalidates the request", async () => {

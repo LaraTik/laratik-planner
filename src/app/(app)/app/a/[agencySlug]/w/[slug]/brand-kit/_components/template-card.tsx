@@ -108,7 +108,7 @@ export function TemplateCard({
       data-testid={`template-card-${test}`}
     >
       <div className="flex flex-col gap-1">
-        <h4 className="text-section-title text-fg-primary font-semibold">{title}</h4>
+        <h4 className="text-title-section text-fg-primary font-semibold">{title}</h4>
         {blurb ? <p className="text-body text-fg-secondary">{blurb}</p> : null}
       </div>
       {preview ? <div className="flex flex-wrap items-center gap-2">{preview}</div> : null}

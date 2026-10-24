@@ -13,6 +13,25 @@ import { suggestLeadTimes, suggestMonthlyTarget } from "@/lib/ai";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { getActiveApiKey } from "@/lib/ai";
 import { aiFeatureSettings } from "@/lib/db/schema";
+import { logError } from "@/lib/observability/logger";
+import { z } from "zod";
+
+export const SuggestionErrorCodeSchema = z.enum([
+  "invalidInput",
+  "unauthenticated",
+  "workspaceNotFound",
+  "forbidden",
+  "agencyMissing",
+  "disabled",
+  "providerKeyMissing",
+  "noResult",
+  "failed",
+]);
+export type SuggestionErrorCode = z.infer<typeof SuggestionErrorCodeSchema>;
+
+const LeadTimeSuggestionInputSchema = z.object({
+  approvalMode: z.enum(["simple", "internal_then_client"]),
+});
 
 /**
  * Settings AI suggestions (Settings refactor Phase B).
@@ -36,39 +55,38 @@ export interface LeadTimeSuggestion {
 export interface SuggestLeadTimesResult {
   ok: boolean;
   suggestion?: LeadTimeSuggestion;
-  error?: string;
+  errorCode?: SuggestionErrorCode;
 }
 
 export async function suggestLeadTimesAction(
   agencySlug: string,
   slug: string,
-  context: { approvalMode: "simple" | "internal_then_client" },
+  rawContext: unknown,
 ): Promise<SuggestLeadTimesResult> {
+  const context = LeadTimeSuggestionInputSchema.safeParse(rawContext);
+  if (!context.success) return { ok: false, errorCode: "invalidInput" };
   const session = await auth();
-  if (!session?.user?.id) return { ok: false, error: "Sign in again to use AI suggestions." };
+  if (!session?.user?.id) return { ok: false, errorCode: "unauthenticated" };
   const workspace = await getAccessibleWorkspaceAtPath({ id: session.user.id }, agencySlug, slug);
-  if (!workspace) return { ok: false, error: "Workspace not found." };
+  if (!workspace) return { ok: false, errorCode: "workspaceNotFound" };
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"]))) {
-    return { ok: false, error: "Workspace manager access is required." };
+    return { ok: false, errorCode: "forbidden" };
   }
 
   // AI gate — mirror /api/ai/generate's capability check.
   const ctx = await resolveActiveAgencyContext({ actor: { id: session.user.id } });
   const agencyId = ctx?.agencyId ?? null;
-  if (!agencyId) return { ok: false, error: "Agency not configured." };
+  if (!agencyId) return { ok: false, errorCode: "agencyMissing" };
   const [feature] = await db
     .select()
     .from(aiFeatureSettings)
     .where(eq(aiFeatureSettings.agencyId, agencyId))
     .limit(1);
   if (!feature?.enabled || !feature.enabledCapabilities.includes("caption_drafts")) {
-    return {
-      ok: false,
-      error: "AI suggestions are disabled in agency settings. Enable Caption drafts to use this.",
-    };
+    return { ok: false, errorCode: "disabled" };
   }
   const apiKey = await getActiveApiKey(agencyId);
-  if (!apiKey) return { ok: false, error: "AI provider key is not configured." };
+  if (!apiKey) return { ok: false, errorCode: "providerKeyMissing" };
 
   // Pull a few signals the model can lean on (team size, current
   // target, current approval mode, content cadence hints) and
@@ -89,7 +107,7 @@ export async function suggestLeadTimesAction(
 
   try {
     const result = await suggestLeadTimes({
-      approvalMode: context.approvalMode,
+      approvalMode: context.data.approvalMode,
       timezone: ws?.timezone ?? "UTC",
       monthlyTarget: settings?.monthlyTarget ?? null,
       currentLeadTimes: {
@@ -100,20 +118,18 @@ export async function suggestLeadTimesAction(
       },
       ...(apiKey ? { apiKey } : {}),
     });
-    if (!result) return { ok: false, error: "AI returned no result." };
+    if (!result) return { ok: false, errorCode: "noResult" };
     return { ok: true, suggestion: result };
   } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "AI suggestion failed.",
-    };
+    logError("settings.lead_time_suggestion_failed", { err, workspaceId: workspace.id });
+    return { ok: false, errorCode: "failed" };
   }
 }
 
 export interface SuggestMonthlyTargetResult {
   ok: boolean;
   suggestion?: number;
-  error?: string;
+  errorCode?: SuggestionErrorCode;
 }
 
 export async function suggestMonthlyTargetAction(
@@ -121,29 +137,26 @@ export async function suggestMonthlyTargetAction(
   slug: string,
 ): Promise<SuggestMonthlyTargetResult> {
   const session = await auth();
-  if (!session?.user?.id) return { ok: false, error: "Sign in again to use AI suggestions." };
+  if (!session?.user?.id) return { ok: false, errorCode: "unauthenticated" };
   const workspace = await getAccessibleWorkspaceAtPath({ id: session.user.id }, agencySlug, slug);
-  if (!workspace) return { ok: false, error: "Workspace not found." };
+  if (!workspace) return { ok: false, errorCode: "workspaceNotFound" };
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"]))) {
-    return { ok: false, error: "Workspace manager access is required." };
+    return { ok: false, errorCode: "forbidden" };
   }
 
   const ctx = await resolveActiveAgencyContext({ actor: { id: session.user.id } });
   const agencyId = ctx?.agencyId ?? null;
-  if (!agencyId) return { ok: false, error: "Agency not configured." };
+  if (!agencyId) return { ok: false, errorCode: "agencyMissing" };
   const [feature] = await db
     .select()
     .from(aiFeatureSettings)
     .where(eq(aiFeatureSettings.agencyId, agencyId))
     .limit(1);
   if (!feature?.enabled || !feature.enabledCapabilities.includes("caption_drafts")) {
-    return {
-      ok: false,
-      error: "AI suggestions are disabled in agency settings. Enable Caption drafts to use this.",
-    };
+    return { ok: false, errorCode: "disabled" };
   }
   const apiKey = await getActiveApiKey(agencyId);
-  if (!apiKey) return { ok: false, error: "AI provider key is not configured." };
+  if (!apiKey) return { ok: false, errorCode: "providerKeyMissing" };
 
   const [settings] = await db
     .select()
@@ -168,12 +181,10 @@ export async function suggestMonthlyTargetAction(
       approvalMode: (settings?.approvalMode ?? "simple") as "simple" | "internal_then_client",
       ...(apiKey ? { apiKey } : {}),
     });
-    if (result === null) return { ok: false, error: "AI returned no result." };
+    if (result === null) return { ok: false, errorCode: "noResult" };
     return { ok: true, suggestion: result };
   } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "AI suggestion failed.",
-    };
+    logError("settings.monthly_target_suggestion_failed", { err, workspaceId: workspace.id });
+    return { ok: false, errorCode: "failed" };
   }
 }

@@ -8,9 +8,7 @@ vi.mock("@/components/forms/per-field-ai-suggest", () => ({
   PerFieldAiSuggest: () => null,
 }));
 
-vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
-  updateFormatPayloadAction: vi.fn(),
-}));
+const saveAction = vi.fn(async () => ({}));
 
 /**
  * Phase 5b (2026-09-01): the editor now receives a bound
@@ -32,7 +30,7 @@ describe("FormatPayloadEditor", () => {
     render(
       <FormatPayloadEditor
         t={t}
-        workspaceSlug="acme"
+        saveAction={saveAction}
         contentItemId="ci-1"
         format="static_post"
         initial={STATIC_POST_PAYLOAD}
@@ -57,7 +55,7 @@ describe("FormatPayloadEditor", () => {
     render(
       <FormatPayloadEditor
         t={t}
-        workspaceSlug="acme"
+        saveAction={saveAction}
         contentItemId="ci-1"
         format="static_post"
         initial={STATIC_POST_PAYLOAD}
@@ -85,7 +83,7 @@ describe("FormatPayloadEditor", () => {
     render(
       <FormatPayloadEditor
         t={t}
-        workspaceSlug="acme"
+        saveAction={saveAction}
         contentItemId="ci-1"
         format="static_post"
         initial={STATIC_POST_PAYLOAD}
@@ -102,7 +100,7 @@ describe("FormatPayloadEditor", () => {
     render(
       <FormatPayloadEditor
         t={t}
-        workspaceSlug="acme"
+        saveAction={saveAction}
         contentItemId="ci-1"
         format="short_form_video"
         initial={{ schemaVersion: 1 }}
@@ -123,7 +121,7 @@ describe("FormatPayloadEditor", () => {
     render(
       <FormatPayloadEditor
         t={t}
-        workspaceSlug="acme"
+        saveAction={saveAction}
         contentItemId="ci-1"
         format="long_form_video"
         initial={{ schemaVersion: 1 }}
@@ -144,7 +142,7 @@ describe("FormatPayloadEditor", () => {
     render(
       <FormatPayloadEditor
         t={t}
-        workspaceSlug="acme"
+        saveAction={saveAction}
         contentItemId="ci-1"
         format="carousel"
         initial={{ schemaVersion: 1 }}
@@ -165,7 +163,7 @@ describe("FormatPayloadEditor", () => {
     render(
       <FormatPayloadEditor
         t={t}
-        workspaceSlug="acme"
+        saveAction={saveAction}
         contentItemId="ci-1"
         format="static_post"
         initial={STATIC_POST_PAYLOAD}
@@ -183,7 +181,7 @@ describe("FormatPayloadEditor", () => {
     render(
       <FormatPayloadEditor
         t={t}
-        workspaceSlug="acme"
+        saveAction={saveAction}
         contentItemId="ci-1"
         format="static_post"
         initial={STATIC_POST_PAYLOAD}

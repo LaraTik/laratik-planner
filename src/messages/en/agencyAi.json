@@ -11,6 +11,17 @@
   "featureSettingsTitle": "Feature settings",
   "testConnectionTitle": "Test connection",
   "noUsageYet": "No usage yet",
+  "actionErrors": {
+    "unauthorized": "Your session or agency permissions changed. Sign in again and retry.",
+    "invalid_input": "Review the settings and try again.",
+    "save_failed": "Could not save AI settings. Try again.",
+    "connection_failed": "The provider connection failed. Check the configured key and base URL, then retry."
+  },
+  "actionFeedback": {
+    "saved": "AI settings saved.",
+    "connection_ok": "Connection OK",
+    "connection_ok_with_latency": "Connection OK · {latency} ms"
+  },
   "form": {
     "configured": "Configured",
     "notConfigured": "Not configured",
@@ -29,6 +40,11 @@
     "off": "Off",
     "model": "Model",
     "modelDescription": "Limited to the server allowlist.",
+    "permittedModels": "Models members can use",
+    "permittedModelsDescription": "Choose the models available in this agency. The default model must stay selected.",
+    "toolCallingTitle": "Enable assistant read tools",
+    "toolCallingDescription": "Allows the Workspace Assistant to request bounded, read-only Planner context using approved tools. Tool calls cannot write, publish, approve, or change workflow status.",
+    "toolCallingVerificationRequired": "Enable this only after verifying tool use with this MiniMax model and subscription key in a restricted non-production smoke test.",
     "capabilities": "Capabilities",
     "capabilitiesDescription": "Each capability surfaces a button in the planning flow. Disabled capabilities stay hidden in the UI.",
     "save": "Save AI settings",
@@ -86,9 +102,25 @@
     "community_reply_drafts": {
       "adminLabel": "Community reply drafts",
       "description": "Create reviewable community replies in a simulation-only test lab."
+    },
+    "advertising_recommendations": {
+      "adminLabel": "Advertising recommendations",
+      "description": "Generate explainable actions from verified, authorized advertising performance."
     }
   },
   "managedSecret": {
+    "actionErrors": {
+      "unauthorized": "Your session or agency permissions changed. Sign in again and retry.",
+      "invalid_input": "Check the API key or reason and try again.",
+      "missing_encryption_key": "Managed secrets are unavailable because the encryption key is not configured.",
+      "save_failed": "Could not save the managed key. Try again.",
+      "remove_failed": "Could not remove the managed key. Try again."
+    },
+    "encryptionWarnings": {
+      "generate-on-save": "The encryption key will be created when you first save a managed key. Back up the file afterward.",
+      "unreadable": "The encryption-key file could not be read. Check its permissions or the available storage, then retry.",
+      "corrupt": "The encryption-key file is corrupt and will not be regenerated because that would lock out existing keys. Configure AI_SECRET_ENCRYPTION_KEY to recover."
+    },
     "badge": "Managed secret · ends in …{suffix}",
     "providerKey": "Provider key",
     "description": "The active key for this agency. A managed secret in the database takes priority; the environment key is the fallback. Master switch status: {status}.",
@@ -161,5 +193,83 @@
     "runbookSuffix": "in the repo. The docs/ directory is not served by the app, so this is a repo path, not a clickable URL.",
     "blockedTitle": "AI is currently blocked",
     "blockedBody": "The admin toggle in the database reads On, but the runtime is blocked because at least one prerequisite above is not met. Run buttons on the content detail page remain hidden until the block is lifted."
+  },
+  "skills": {
+    "title": "Assistant skills",
+    "description": "Create agency-specific guidance for the Workspace Assistant. New revisions require a second agency admin to review and activate them.",
+    "forbidden": "Only agency admins can manage assistant skills.",
+    "backToAi": "Back to AI configuration",
+    "securityNote": "Skills guide how the assistant handles a task. They cannot grant data access or add tools; every run still uses the signed-in member's workspace permissions.",
+    "editorTitle": "Create or revise a skill",
+    "editorDescription": "Write practical instructions, when to use them, required context, and a quality checklist. Each save creates an immutable revision.",
+    "slug": "Skill ID",
+    "category": "Category",
+    "categories": {
+      "strategy": "Strategy",
+      "planning": "Planning",
+      "creation": "Content creation",
+      "quality": "Quality"
+    },
+    "name": "Name",
+    "description": "Description",
+    "tags": "Tags (one per line)",
+    "triggers": "Intent phrases (one per line)",
+    "examples": "Example requests (one per line)",
+    "requiredInputs": "Required inputs (one per line)",
+    "optionalInputs": "Optional inputs (one per line)",
+    "supportedFormats": "Supported formats (one per line)",
+    "knowledgeSources": "Required knowledge sources (one per line)",
+    "instructions": "Skill instructions",
+    "instructionsHelper": "This text is treated as guidance and never changes system policy, permissions, or available tools.",
+    "workflow": "Workflow steps (one per line)",
+    "outputContract": "Expected output (one per line)",
+    "qualityChecklist": "Quality checklist (one per line)",
+    "relatedSkills": "Related skill IDs (one per line)",
+    "immutableNote": "Saved revisions cannot be edited. Create a new revision to make changes.",
+    "cancelEdit": "Cancel editing",
+    "saveRevision": "Save new revision",
+    "create": "Create draft",
+    "saving": "Saving…",
+    "savedRevision": "Saved revision {revision} as a draft.",
+    "libraryTitle": "Agency skill library",
+    "empty": "No agency-specific skills yet. Curated Planner skills remain available to the assistant.",
+    "status": {
+      "draft": "Draft",
+      "pending_review": "Pending review",
+      "active": "Active",
+      "archived": "Archived"
+    },
+    "revisionState": {
+      "draft": "Draft",
+      "pending_review": "Pending review",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "activeRevision": "Active revision {revision}",
+    "latestRevision": "Latest revision {revision} · {state}",
+    "edit": "Create next revision",
+    "submitReview": "Submit for review",
+    "reviewActivate": "Review revision",
+    "reviewDecision": "Review decision",
+    "approve": "Approve and activate",
+    "reject": "Reject",
+    "reviewNote": "Optional review note",
+    "rollback": "Request rollback to r{revision}",
+    "archive": "Archive skill",
+    "historyRow": "Revision {revision} · {state}",
+    "activeMark": "Currently active revision",
+    "actionComplete": "Done.",
+    "errors": {
+      "invalid_input": "Check the required fields and try again.",
+      "unauthorized": "Your agency admin access changed. Refresh and sign in again.",
+      "slug_conflict": "That skill ID is already used in this agency.",
+      "review_pending": "This revision is awaiting review and cannot be edited.",
+      "self_review_denied": "A different agency admin must review your revision.",
+      "save_failed": "Could not save the skill. Try again.",
+      "submit_failed": "Could not submit this revision for review.",
+      "review_failed": "Could not review this revision.",
+      "rollback_failed": "Could not prepare the rollback revision.",
+      "archive_failed": "Could not archive this skill."
+    }
   }
 }

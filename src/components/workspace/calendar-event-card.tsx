@@ -4,11 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import {
   humanFormat,
   humanStatus,
-  statusBadgeVariant,
   type ContentFormat,
   type ContentStatus,
 } from "@/lib/content/status";
-import { taskBadgeVariant, priorityBadgeVariant } from "@/lib/tasks/status-badge";
+import {
+  contentStatusBadgeVariant,
+  priorityBadgeVariant,
+  taskStatusBadgeVariant,
+} from "@/components/workspace/status-badge-variants";
 import { workspaceSeriesVar } from "@/lib/planning/workspace-color";
 import type { TaskPriority } from "@/lib/tasks/service";
 import type { TaskStatus } from "@/lib/tasks/workflow";
@@ -43,7 +46,7 @@ export type CalendarEventCardProps = {
   title: string;
   /**
    * Event kind. `"plan"` defaults the status / format mapping to
-   * `statusBadgeVariant` / `humanFormat`; `"task"` switches to the
+   * content status / format mapping; `"task"` switches to the
    * task-status / priority variants. Defaults to `"plan"` for
    * back-compat with the workspace calendar.
    */
@@ -97,7 +100,7 @@ const LEFT_BORDER_BY_VARIANT: Record<string, string> = {
  * future status getting the colour in one place but not the other).
  */
 function badgeVariantFor(kind: CalendarEventCardKind, status: string) {
-  return kind === "task" ? taskBadgeVariant(status) : statusBadgeVariant(status);
+  return kind === "task" ? taskStatusBadgeVariant(status) : contentStatusBadgeVariant(status);
 }
 
 function defaultStatusLabel(kind: CalendarEventCardKind, status: string): string {

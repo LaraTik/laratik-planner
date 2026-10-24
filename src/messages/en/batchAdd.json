@@ -1,6 +1,11 @@
 {
   "title": "Batch add",
   "description": "Plan up to 50 draft ideas in a spreadsheet-style grid. Each row can use its own channels and format.",
+  "actionErrors": {
+    "invalidJson": "The pasted rows could not be read. Check the data and try again.",
+    "invalidRows": "Review the rows and fix the highlighted validation issues before saving.",
+    "failed": "The batch could not be saved. Your rows are still here; please try again."
+  },
   "form": {
     "rowsLabel": "Batch rows",
     "placeholder": "Spring collection | static_post | 2026-09-05 09:00 | Single image announcing the pre-order\nStudio behind the scenes | short_form_video | 2026-09-06 18:00 | 20-second vertical Reel showing the roasting process\nHow to brew the autumn blend | long_form_video | 2026-09-07 10:00 | Eight-minute YouTube tutorial with chapters",

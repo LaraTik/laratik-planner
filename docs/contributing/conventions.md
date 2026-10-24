@@ -56,7 +56,38 @@ Format-specific structured fields (Hook, Main message, CTA, scenes, captions, re
 
 The same rule applies to any new jsonb-shaped surface: a new `*_settings` table, a new `*_metadata` jsonb column, a new `*_config` row. The schema is the source of truth; the jsonb is the storage; the service enforces the schema at the boundary.
 
-## 6. Do not / always cheat sheet
+## 6. Feature ownership and extraction
+
+Feature-oriented ownership is the gradual target; it does not require a
+repo-wide file move. Follow
+[`../architecture/module-ownership.md`](../architecture/module-ownership.md)
+for the target layout, shared-code threshold, route responsibilities, test
+seams, and page quality contract. Existing `src/lib/<domain>/` modules remain
+valid until a bounded feature migration moves their canonical implementation.
+Do not create duplicate service or UI implementations to make the directory
+tree appear feature-oriented.
+
+Import direction is route/UI → feature public exports → platform modules →
+persistence/provider adapters. Feature code must not import `src/app/**` or
+another feature's private files. Shared UI may depend on design primitives and
+platform-neutral helpers; it must not own feature policy, database access,
+authorization, or provider behavior. Keep server-only modules out of Client
+Components and pass only serializable, least-privilege values across that seam.
+Routes and Server Actions validate external input and repeat auth/policy checks;
+domain modules own tenant scope and workflow decisions, while persistence owns
+transactions and locking.
+
+Before merging a page or module change, review the checklist in
+`../architecture/module-ownership.md`: the affected loading, empty, error,
+denied, and success states; EN/AR and RTL; keyboard/accessibility; responsive
+layouts; semantic tokens; and focused tests at the module's public interface.
+Record missing evidence as open work rather than treating compilation as proof.
+
+The master prompt's usual file sizes are review triggers, not automatic split
+requirements. Extract code only when the module has a coherent shared behavior
+or responsibility and the extraction improves locality for callers and tests.
+
+## 7. Do not / always cheat sheet
 
 A condensed version of the patterns above, mirroring the `AGENTS.md` Hard Rules but at the code-pattern level. Pair this with the per-migration author checklist in `docs/architecture/migrations.md:6`.
 
@@ -84,4 +115,5 @@ A condensed version of the patterns above, mirroring the `AGENTS.md` Hard Rules 
 - ✅ Reference the goal number in the PR title and the gap audit ID when the work is part of a sweep.
 - ✅ Record material deviations with reason, impact, security / data implications, and approval requirement.
 - ✅ Preserve production identifiers / data. Every migration needs forward, compatibility, backup, and rollback evidence (see `docs/architecture/migrations.md`).
+- ✅ Use `docs/architecture/module-ownership.md` for import direction, shared-code extraction, feature ownership, and touched-page review. Move domain code by bounded feature slices; do not perform repo-wide moves.
 - ✅ Use `<type>(<scope>): <description>` for commit messages. Scopes: `db`, `auth`, `content`, `planning`, `workflow`, `discussions`, `deliveries`, `publishing`, `notifications`, `ai`, `infra`, `ci`, `deps`, `docs`, `architecture`, `operations`, `contributing`, `testing`.

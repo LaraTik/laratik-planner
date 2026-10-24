@@ -2,13 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
-import { bulkRestoreMediaAssets, MediaPermissionError } from "@/lib/media/service";
+import { bulkRestoreMediaAssets } from "@/features/media/server";
+import { MediaPermissionError } from "@/lib/media/errors";
 import { BULK_SELECTION_TOO_LARGE, MAX_BULK_SELECTION } from "@/lib/media/bulk-cap";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const Body = z.object({ assetIds: z.array(z.string().uuid()).min(1) });
+const Body = z.object({ assetIds: z.array(z.string().guid()).min(1) });
 
 export async function POST(req: NextRequest) {
   const session = await auth();

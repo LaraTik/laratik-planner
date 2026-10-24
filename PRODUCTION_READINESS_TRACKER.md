@@ -1,5 +1,154 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-24 exact-code verification — clean application SHA `68a63d5a43773deb43e4e7773b3f543bd51fc923`** — `pnpm verify` passed formatting, lint, typecheck, 617 unit files / 5,301 tests, and the production build. The full local PostgreSQL integration run passed all 50 integration files, including Workspace Assistant 12/12, on the disposable `planner_test` database; no integration files were skipped. No schema or migration changed in this code commit. Release remains **NOT READY TO DEPLOY**: independent GitHub approval is not recorded, full browser release coverage is incomplete, MiniMax model/tool/privacy UAT and separated-account UAT are pending, and production backup/rollback evidence is open. See `docs/production-readiness/TEST_EVIDENCE.md` and `docs/production-readiness/UAT_RELEASE.md`.
+
+> **2026-10-24 Workspace AI Assistant release-candidate verification — exact clean application SHA `3c43f49b6e15bc131b62032536d28d665a340ac0`** — `pnpm verify` passed formatting, lint, typecheck, all 617 unit files / 5,300 tests, and the production build. The local pre-push fallback also ran and passed the full unit suite and full disposable-Postgres integration suite, including Workspace Assistant integration 12/12. A later test-selection-only change (`7e7df4b`) maps the pre-push contract test to the architecture area; its explicit focused run passed 4 files / 51 tests. No application runtime code or migration changed after the full suite. PR #44 still requires independent approval. The release browser matrix, MiniMax provider/privacy UAT, separated-account UAT, and production backup/rollback remain open; do not merge or deploy yet. Evidence: `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-24 Workspace AI Assistant partial provider usage — exact clean code SHA `8d6d92cf754e19ed00cf223a7c3722f7eb3ae1ab`** — The multi-round orchestrator now marks aggregate usage unavailable if any provider round omits token counts; the route conservatively reconciles incomplete reports against the complete reservation. Focused Assistant, orchestrator, and budget tests passed 49/49; targeted ESLint, Prettier, and TypeScript passed. The pushed-range hook passed 30 related unit tests and 38 tests across 7 affected integration files. PR #44 remains open awaiting independent approval. Full release browser matrix, MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback remain open; do not merge or deploy yet. Evidence: `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-24 Workspace AI Assistant usage accounting and local feedback loop — exact clean code SHA `c2ef7c4cb9cfde142b9868b9acf238347c2c53ee`** — The feature branch was pushed after its local pre-push hook passed affected unit checks (27 files / 280 tests), direct AI Assistant and budget checks (47 tests), and affected PostgreSQL integration checks (7 files / 38 tests). The hook now runs only affected core checks for each push; the complete integration suite remains a local release-candidate gate. A staged plan for measuring and safely optimizing the full suite is in `docs/operations/local-test-speed-plan.md`. PR #44 still requires independent approval. The full browser matrix, MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback remain open; do not merge or deploy yet. Full details: `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-24 Workspace AI Assistant migration drill — exact clean SHA `e8d779f2d757628fd309db9b24271b7533456e6c`** — `TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test NODE_ENV=test pnpm migration-drill` passed all five scenarios on the disposable PostgreSQL 16 database: from-zero 103/103, skipped-migration repair, in-place upgrade, backup/restore with 103 ledger rows restored, and failed-migration abort. This closes the local migration-drill gate for the Assistant schema. Independent review, the full cross-browser release matrix, MiniMax account/model/tool and privacy UAT, separated-account UAT, production backup/rollback, main-only CI, and deployment remain open. Evidence: `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-24 Workspace AI Assistant — local release-rule update and focused verification, code SHA `2aa393fa978f5faaceeb3d1b7b65df132b550107`, latest prior documentation SHA `fb5726c9`** — The repository now keeps feature-branch review and required checks local; GitHub workflow jobs are guarded to run only from `main`. Normal changes use affected browser checks plus bilingual accessibility/visual evidence for touched screens; the full matrix remains for release candidates and broad shared-surface changes. On `2aa393fa`, the commit and pre-push hooks passed all 617 unit files / 5,296 tests and the complete local PostgreSQL integration suite. The focused Workspace Assistant and related Arabic settings browser slice passed 8/8, and the Workspace Assistant, workspace AI settings, and agency AI settings visual suites passed across five responsive viewports each (3/3 suites). The subsequent documentation-only commits through `fb5726c9` passed formatting and whitespace checks. The broad browser run is incomplete: it reached 172 passing Chromium cases before the Next.js dev server exhausted its 16 GB heap; 42 planned cases did not run. Some locale assertions made during concurrent use of the disposable database passed when rerun alone. PR #44 remains open without an independent review. MiniMax account/model/tool and data-processing checks, separated-account UAT, production backup/rollback, full release-candidate browser matrix, main-only CI, and deployment remain open. This does not approve merge or deployment. Evidence: `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-24 focused Firefox launch follow-up — code SHA `2aa393fa`** — The focused Assistant run passed all seven Chromium cases. A Firefox launch attempt failed before executing the selected Assistant test: Playwright reported `sandbox_extension_issue_file_to_process: Operation not permitted` and timed out after 180 seconds. Disabling Firefox content, RDD, and GMP sandbox variables did not resolve the host launch failure. Do not treat this as a product assertion failure or as Firefox pass evidence; the full cross-browser release gate remains open. Details: `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-24 local integration validation policy and remote MCP boundary — code SHA `f11f7bcf`** — Full integration tests run locally against disposable `planner_test` on code pushes; the pre-push hook enforces them and offers no skip flag. The complete code-push unit and integration selection passed on exact SHA `f11f7bcf` before push, including the actual remote MCP catalog boundary assertion and all 12 Workspace Assistant integration cases. The prior GitHub deploy-gate run `40075013221` passed on exact SHA `339933a0` for unit, migration drill, audit, Docker app/migrator builds, health smoke, Trend sidecar, SMTP, and workflow linters; it ran no full integration suite. `pnpm verify` passed on `d8d5ecd8` (616 unit files / 5,295 tests and production build); exact-head verification and CI are pending. The in-app Assistant remains distinct from remote Planner MCP. The full browser/visual release matrix, independent review, MiniMax account/model/privacy UAT, separated-account UAT, and production backup/rollback evidence remain open; this does not approve merge or deployment. Evidence: `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-24 local integration validation policy — SHA `d8d5ecd8e8129ec2a3ae4ff0586ba63627748d88`** — Full integration tests now run locally against disposable `planner_test` on code pushes; the pre-push hook enforces them and offers no skip flag. GitHub deploy-gate CI no longer runs that suite and continues to run the migration drill, unit/static checks, audit, build, and smoke gates. On this exact clean SHA, `pnpm verify` passed (616 unit files / 5,295 tests and production build), and the code-push hook completed the full local unit and integration suites before the push succeeded. The updated GitHub workflow run is pending. The full browser/visual release matrix, independent review, MiniMax account/model/privacy UAT, separated-account UAT, and production backup/rollback evidence remain open; this policy change does not approve merge or deployment. Evidence: `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-23 platform landing redirect — deployed, SHA `f8fa15d12ad78922fe4d6aa621837db38c60cd37`** — Fixed the missing-tenant fallback from `/app/platform` (no index route) to `/app/platform/overview` in My Work and Workspaces. `pnpm verify` passed (606 unit files / 5,228 tests and production build); affected core pre-push checks and the focused authenticated Chromium platform overview tests passed. Manual CI run `39962463524` passed all deploy gates and published the images. Manual deployment run `39966255430` succeeded; production `/api/health` reports `f8fa15d`, DB and schema ready. No schema or persistence changes. Full browser matrix, visual review, and independent review remain open. Evidence: `docs/production-readiness/TEST_EVIDENCE.md`.
+> **2026-10-24 Workspace AI Assistant — verified code SHA `149b5d643d18ca617aa7d4e197dfe9ed6c9fc0c4`, not release-approved** — Local `pnpm verify` passed (616 unit files / 5,295 tests and production build), PostgreSQL 16 migration drill passed all five scenarios, the configured integration and affected pre-push suites passed, and focused Assistant Chromium passed 7/7 on the disposable database. Manual CI run `40064207664` passed all jobs at clean commit `82aef037d948a387aebea829962c1b730fff7efc` (docs-only beyond the feature code SHA), including migration/integration/audit, workflow linters, Trend sidecar, SMTP, Docker app/migrator builds, and container health smoke. GHCR publish was skipped on the PR branch. Production audit reports no high or critical findings. The broad 299-case browser/visual release matrix remains incomplete due local dev-server memory exhaustion and unrelated suite failures. Independent review, live MiniMax model/tool verification, legal/privacy approval for the applicable MiniMax API policy, separated-account UAT, and production backup/rollback evidence remain open. **Do not merge or deploy** until the required gates are completed. Evidence: `docs/production-readiness/TEST_EVIDENCE.md`.
+> **2026-10-24 Workspace AI Assistant release-gate follow-up — working-tree evidence only** — Fixed the platform-only redirect assertion and sign-in remember checkbox target-size violation identified in the earlier broad browser run. Both a11y specs passed in focused Chromium (49/49) against the disposable database. `pnpm verify` passed formatting, lint, strict TypeScript, 616 unit files / 5,295 tests, and production build. Exact-head GitHub CI passed for commits `b7698dbb` (run `40067492020`) and `0b3aa71f` (run `40069336694`). The full browser/visual release matrix, independent review, MiniMax account/model/privacy UAT, separated-account UAT, and production backup/rollback evidence remain open. This checkpoint is not approved to merge or deploy. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-24 Workspace AI Assistant continuation — working tree is not release-ready** — Agency admins can manage reviewed, immutable assistant skill revisions at `/app/agency-settings/ai/skills`; a second admin must approve, rollback creates a new reviewable draft, and custom skills cannot grant tools or data permissions. The PostgreSQL 16 migration drill passed 5/5 with 103/103 migrations; the complete integration suite and Assistant integration (12/12) passed. `pnpm verify` passed formatting, lint, typecheck, 616 unit files / 5,294 tests, and the production build. The Assistant Chromium suite passed 7/7, the Arabic RTL visual matrix passed 1/1 across five viewports, and isolated retries of earlier browser failures passed. A serial full-release attempt on 2026-10-24 reached at least eight unrelated browser failures while the Next.js dev server repeatedly crossed its memory threshold and restarted; it was stopped before completion. Full browser/visual coverage, exact-clean-SHA CI, independent verification, MiniMax account/model/privacy UAT, and production backup/rollback remain open. Do not merge or deploy until all required release gates pass. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-23 dependency security gate remediation — in progress** — GitHub
+> CI for the Planning XLSX export SHA passed formatting, lint, typecheck, unit
+> tests, migration drill, integration tests, and the workflow, sidecar, and
+> SMTP checks, but the production audit found three critical and one high
+> advisory. That correctly skipped the image build. Direct dependencies have
+> been updated to Next.js 16.4.2 and Sentry 10.76.2. Local `pnpm verify`
+> passed (606 unit files / 5,226 tests and production build); the production
+> audit now has no high or critical findings (two moderate remain). A fresh
+> exact-clean-SHA local release evidence and local deployment are still
+> required. Per ADR 0021, do not dispatch GitHub Actions for this release.
+
+> **2026-10-23 Planning XLSX export — implementation checkpoint, SHA `dd91e0ef46677ceba75e4f89e4de8fb39ad995ee`** — Planning now offers a localized XLSX export with displayed/current/next/custom date ranges, current-filter or all-item scope, and Summary + Schedule sheets. `pnpm verify` passed (606 unit files / 5,226 tests and production build). The affected browser gate escalated to the full matrix and stopped before launch because `TEST_DATABASE_URL` is unset; the Docker Desktop endpoint did not respond. EN/AR browser, accessibility, responsive/visual checks and independent review remain open. This checkpoint is **Implemented**, not **Tested/Verified**; see `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-23 architecture refinement checkpoint — implementation SHA `c33aa014e58ef4baf949e85af51674eb5a0d3e54`** — Content-owner assignment now returns typed not-found and permission codes, logs unexpected failures safely, and localizes feedback in EN/AR. ESLint and TypeScript passed; the commit hook passed 220 affected files / 1,759 tests and reran 13 direct action/dialog tests. Full `pnpm verify`, database/browser/visual checks, route review, and independent verification remain open. This checkpoint is **Tested**, not **Verified**; see `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-23 architecture refinement checkpoint — implementation SHA `ecd2220faddce5d78da5025b0fa8afae30c22f0a`** — Publication outcome actions now use typed failures, stable safe codes, and EN/AR localized feedback. Existing service error text was preserved after targeted tests caught compatibility assertions. Direct service/action/component tests passed 48/48; the commit hook passed 220 test files / 1,780 tests and reran the 23 changed-file tests. Focused lint and TypeScript passed. Full `pnpm verify`, database/browser/visual checks, route review, and independent verification remain open. This checkpoint is **Tested**, not **Verified**; see `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-23 architecture refinement checkpoint — implementation SHA `ced7c0bce2ab5e8ee953642d13677e28d3a9a79c`** — Approval decision failures now use typed expected-error codes and localized responses; unknown failures are logged safely and hidden from the client. Focused ESLint/TypeScript checks passed; affected tests passed 15 files / 152 tests, followed by the direct 7-test action suite. Full `pnpm verify`, database/browser/visual checks, route review, and independent verification remain open. This checkpoint is **Tested**, not **Verified**; see `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-23 architecture refinement checkpoint — implementation SHA `4ee09b73da096416f155d6715c2b0778bd831135`** — Designer assignment now uses the workflow action error boundary for database, service, policy, and status failures. Known failures map to safe localized workflow codes; unexpected details are logged and withheld from the client. The focused suite passed 5/5, the affected selection passed 27 files / 248 tests, and TypeScript passed in the commit hook. Full `pnpm verify`, database/browser/visual release checks, full route review, and independent verification remain open. This checkpoint is **Tested**, not **Verified**; see `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-23 architecture refinement checkpoint — implementation SHA `6e027c36484e86b5c174da13d3de8d79d50757cc`** — Workflow transition actions now return stable expected-error codes, log unknown failures safely, and localize responses in EN/AR. The service types expected missing-item, missing-approval, and missing-designer failures and rejects unknown transition keys. Focused ESLint and TypeScript checks passed; affected unit validation passed 219 files / 1,748 tests, and the direct action suite passed 4/4. Full `pnpm verify`, browser/visual review, route review, disposable-Postgres checks, and independent verification remain open. No successful workflow, permission, route, or persistence contract changed. This checkpoint is **Tested**, not **Verified**; see `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-22 architecture refinement checkpoint — implementation SHA `03d4a3cd6e255f88d4418d95bd418cab5fad2ddc`** — Shared planning editors now receive server actions from their route owner, and the AI launcher receives its route-owned surface as a slot. The unused edit drawer was removed. Planning detail UI moved into the content feature’s client-safe entry point. The static shared-component-to-route allowlist is empty. `pnpm verify` passed: formatting, lint, TypeScript, 569 unit files / 5,040 tests, and production build. Browser/a11y/visual review is open because `TEST_DATABASE_URL` is unset. No schema or persistence behavior changed. Independent review and the remaining route-by-route quality audit are open. This checkpoint is **Tested**, not **Verified**. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-22 architecture refinement checkpoint — implementation SHA `345eb4f5afcaba4deded63581d6a7e68ad6882ed`** — Shared workspace social refresh and research teardown controls now receive route-owned server actions as props, leaving authorization in the existing actions and presentation in shared UI. The shared-to-route import queue drops from 11 to 9. Focused command-center, research-apply, and ownership tests passed 13/13. `pnpm verify` passed: formatting, lint, TypeScript, 569 unit files / 5,038 tests, and production build. Browser validation escalated to the full matrix and stopped before browsers because `TEST_DATABASE_URL` is unset. Persistence and migration checks are not applicable; bilingual browser/visual review and independent verification remain open. This checkpoint is **Tested**, not **Verified**. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-22 architecture refinement checkpoint — implementation SHA `374304de6b4f0f2d958fafa7ac9b5b2feaad9539`** — The shared agency identity form no longer imports an agency-settings route action. Agency-settings and platform route wrappers own their actions and pass action plus serializable result state into the shared presentation component. The shared-to-route import queue drops from 12 to 11. Focused agency-settings and ownership tests passed 8/8. `pnpm verify` passed: formatting, lint, TypeScript, 568 unit files / 5,037 tests, and production build. Browser validation escalated to the full matrix and stopped before browsers because `TEST_DATABASE_URL` is unset. Persistence and migration checks are not applicable; bilingual browser/visual review and independent verification remain open. This checkpoint is **Tested**, not **Verified**. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-22 architecture refinement checkpoint — implementation SHA `ceaac8f9cce23187133c8182b23a0e5d8ebba0e9`** — The account menu now receives its sign-out form from the authenticated app layout as a presentation slot, removing its direct account-route import. Together, the notification, theme, and sign-out shell refinements reduce the shared-to-route migration queue from 15 to 12 imports. Focused notification, theme-toggle, and ownership tests passed 10/10. `pnpm verify` passed: formatting, lint, TypeScript, 568 unit files / 5,037 tests, and production build. The affected browser run escalated to the full matrix and stopped before browser tests because `TEST_DATABASE_URL` is unset. Postgres, bilingual browser/visual review, full route review, and independent verification remain open. This checkpoint is **Tested**, not **Verified**. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-22 architecture refinement checkpoint — implementation SHA `28c008641845964ffa7ebe38cd5a4dd0789543fe`** — The theme toggle now receives its account preference action through the authenticated app layout and shell, removing another shared UI to route dependency. The static shared-to-route queue is down from 14 to 13 imports. Focused theme-toggle and ownership tests passed 5/5, including save and rollback behavior. `pnpm verify` passed: formatting, lint, TypeScript, 568 unit files / 5,037 tests, and production build. The affected browser run escalated to the full matrix and stopped before browser tests because `TEST_DATABASE_URL` is unset. Postgres, bilingual browser/visual review, full route review, and independent verification remain open. This checkpoint is **Tested**, not **Verified**. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-22 architecture refinement checkpoint — implementation SHA `73e612e0806667385445b707e3fb687c72f0bcdf`** — The app shell now passes mark-read server actions into the notification bell, removing its direct dependency on the app route module. The static shared-to-route migration queue is down from 15 to 14 imports. Focused notification and ownership tests passed 8/8. `pnpm verify` passed: formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build. The affected browser run escalated to the full matrix and stopped before browser tests because `TEST_DATABASE_URL` is unset. Postgres, bilingual browser/visual review, full route review, and independent verification remain open. This checkpoint is **Tested**, not **Verified**. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-22 architecture refinement checkpoint — implementation SHA `bb449b8721e66bf029aa66bed474a2c49e14342b`** — Shared comment presentation now receives create/resolve server actions from the planning detail route instead of importing route modules. The static ownership queue is down from 17 to 15 imports. Focused comment, planning-shell, hook-order, and architecture tests passed 55/55. `pnpm verify` passed: formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build. The affected browser run escalated to the full matrix and stopped before browser tests because `TEST_DATABASE_URL` is unset. Postgres, bilingual route browser/visual review, full route review, and independent verification remain open. This checkpoint is **Tested**, not **Verified**. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-22 architecture refinement checkpoint — implementation SHA `aefe97aa6bedda02d013d52ce79337dce491ea7b`** — `pnpm verify` passed: formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build. Planning list actions and its owner dialog now live beside their only route; the shared-to-route migration list is down from 20 to 17 imports. Focused planning and ownership tests passed 8/8. The affected browser command escalated to the full matrix and stopped before browser tests because `TEST_DATABASE_URL` is unset; the Docker availability check timed out. Postgres, route browser/visual review, full route review, and independent verification remain open. This checkpoint is **Tested**, not **Verified**. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-22 architecture refinement checkpoint — implementation SHA `95bba579bca646db6dd9459e0767033fade8c409`** — `pnpm verify` passed: formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build. The planning detail publishing card and its Meta-link dialog now live beside their only production route; the shared-to-route migration list is down from 22 to 20 imports. Focused planning and ownership tests passed 23/23. Postgres, route browser/visual review, full route review, and independent verification remain open. This checkpoint is **Tested**, not **Verified**. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-22 architecture refinement checkpoint — implementation SHA `cb8f7cf7f2068c9ccd1812860ac4ed057faa30e5`** — `pnpm verify` passed: formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build. Planning detail shell ownership now follows the route; the static guard rejects new shared-component-to-route imports and tracks 22 existing legacy imports. Focused ownership tests passed 3/3. Postgres, route browser/visual review, full route review, and independent verification remain open. This checkpoint is **Tested**, not **Verified**. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-22 architecture refinement checkpoint — implementation SHA `926b833cc1a1a0f49e7836749a8202d1ae2e599f`** — `pnpm verify` passed: formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build. Meta account/media insight reads and bounded Facebook/Instagram post observations now have a dedicated module; snapshot composition remains in the provider adapter. Focused Meta tests passed 70/70. Postgres, full route/browser/visual review, and independent verification remain open. This checkpoint is **Tested**, not **Verified**. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-22 architecture refinement checkpoint — implementation SHA `79f8761d0278bb74939b883bb27df74a83a133a5`** — `pnpm verify` passed: formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build. Meta publication-history reads and pagination now have a dedicated module alongside the existing connection module; `meta.ts` preserves its public exports. Focused Meta tests passed 62/62. Postgres, full route/browser/visual review, and independent verification remain open. This checkpoint is **Tested**, not **Verified**. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-22 architecture refinement checkpoint — implementation SHA `8739e9d7d977ec13d423afdaf0c8d9dee3748e8e`** — `pnpm verify` passed: formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build. Meta OAuth scope selection, token exchange, and managed Page discovery now have a dedicated connection module; existing provider exports remain compatible. Focused Meta provider tests passed 56/56. Postgres, full route/browser/visual review, and independent verification remain open. This checkpoint is **Tested**, not **Verified**. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-22 architecture refinement checkpoint — implementation SHA `292da39ed09f6b0f464c630b62c3283d69c6ab29`** — `pnpm verify` passed: formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build. Task read/manage/admin access now has one server-side owner shared by task detail, updates, and attachments. Focused task unit tests passed 13/13; a Postgres regression was added but could not run (`TEST_DATABASE_URL` unset; Docker engine did not respond). Route browser/visual review and independent verification remain open. This checkpoint is **Tested**, not **Verified**. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-22 architecture refinement checkpoint — implementation SHA `769a531a46fe2f4ef1f108fc01393655ea6ac984`** — `pnpm verify` passed: formatting, lint, TypeScript, 566 unit files / 5,030 tests, and production build. The planning detail route now builds one serializable workflow model for its mobile sheet and desktop rail. Focused workflow tests passed 12/12. Postgres integration/migration, route browser/visual review, and independent verification remain open. This checkpoint is **Tested**, not **Verified**. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-22 architecture review checkpoint — implementation SHA `40a6682b5d322c5e842547b0582c6480b9cb55bd`** — `pnpm verify` passed: formatting, lint, TypeScript, 566 unit files / 5,030 tests, and production build. Research workspace mutation roles and private watchlist visibility now have single server-side owners shared across their routes. Postgres integration remains open (`TEST_DATABASE_URL` unset; Docker engine unresponsive); full route review, touched-route browser/visual checks, and independent verification also remain open. This checkpoint is **Tested**, not **Verified**. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-22 architecture review checkpoint — implementation SHA `2d6aa2a081063360cc9eeba2e69045519f86673c`** — `pnpm verify` passed: formatting, lint, TypeScript, 566 unit files / 5,028 tests, and production build. The route pass fixed private media caching, private research-resource mutations, missing platform permission on global support cleanup, and a false-ready publishing state when readiness evaluation fails. The disposable Postgres gate remains open (`TEST_DATABASE_URL` unset; Docker engine unresponsive); touched-route browser/visual checks and independent verification also remain open. This checkpoint is **Tested**, not **Verified**. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-22 architecture review verification checkpoint — exact clean HEAD `92da4ed981e983374666611db696202ed35dd342`** — `pnpm verify` passed: formatting, lint, TypeScript, 562 unit files / 5,020 tests, and production build. The full E2E database and disposable-Postgres gates remain open because `TEST_DATABASE_URL` is unset and the Docker CLI did not respond during the bounded availability check. Full browser/visual review, route-by-route review, and independent verification also remain open; this checkpoint is **Tested**, not **Verified**. Evidence is in `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-22 Architecture review verification checkpoint — implementation SHA `6b33f42f582ecac15814966a6c2fd5c070c5adf3`** — `pnpm verify` passed with 562 unit files / 5,015 tests and production build; the full disposable-Postgres integration suite and all five migration-drill scenarios passed. This checkpoint includes the authenticated deadline-reminder cron path, content command and utility ownership behind the feature entry point, removal of the legacy content service, and tenant-scoped channel validation in create and update paths. The preceding browser checkpoint on SHA `2bf9854f9f94c0c5ed30ae332280dfe00c638e75` remains partial: Chromium completed 278 cases with 6 timeouts; four focused reruns passed; Firefox could not launch under macOS permissions; visuals passed 208/264, with 56 comparisons requiring reconciliation. Production cron installation on the VPS, manual review of all routes, and independent verification remain open; do not mark this work **Verified** or treat the release matrix as green. Full details are in `docs/production-readiness/TEST_EVIDENCE.md`.
+
+> **2026-10-20 Community & Inbox safety-control checkpoint** — The workspace
+> emergency stop now has an audited, manager-only action on Automations and
+> Settings. Its confirmation flow changes only the existing pause flag; reply
+> capability checks and the default-off auto-send gate remain in force. The
+> focused server-action integration tests passed (5/5), the manager stop/resume
+> flow passed in Chromium, and the focused Community integration tests passed
+> (5/5). `pnpm verify` passed (545 unit files / 4,892 tests and production
+> build). A full 13-route EN/AR five-viewport sweep passed before the final
+> copy and manager-fixture adjustment; the latest manager-role rerun passed
+> all five interaction tests but the local app server refused a connection
+> during the 3.4-minute route sweep, so that rerun is incomplete. Repeat
+> affected gates at the exact clean commit and retain the full evidence bundle
+> and external Meta UAT before calling the feature **Verified**.
+
+> **2026-10-19 Community & Inbox interaction correction checkpoint** — Inbox
+> conversation cards now select a URL-backed thread; Post comments lists the
+> synced public conversations and opens the same thread; Team & routing can
+> assign a conversation to an active workspace member through the existing
+> server-side permission gate and writes an audit event. Priority and send
+> attempt summaries now reflect stored counts, Activity renders stored events,
+> and Analytics no longer presents sample bars as live measurements. The
+> Planner MCP remains read-only with respect to Community & Inbox, documented
+> in the API contract. `pnpm verify` and the full disposable-database
+> `pnpm test:integration` suite passed in this worktree; focused assignment,
+> catalog, and API-boundary unit checks also passed. The focused Community
+> Playwright suite now passes inbox selection, comments deep-linking, audited
+> Team assignment, and all 13 routes at 1440/1280/1024/768/375px in both
+> locales with no serious axe violations or horizontal overflow. This remains
+> **Implemented**, not **Tested/Verified**: current Stitch visual baselines,
+> exact clean-commit evidence, and external Meta UAT are still outstanding.
+
+> **2026-10-19 Advertising Reporting P3 completion checkpoint** — Reporting
+> exports now include a server-generated XLSX alongside CSV, with the selected
+> filters, metric definitions, data-health notes, attribution semantics, and
+> local taxonomy labels preserved in the export. Authenticated tenant-scoped
+> share links resolve only for signed-in workspace members with reporting
+> access. Workspace-owned local labels support brand, platform, objective,
+> topic, language, and month classification without changing Meta objects; the
+> Creatives section provides the first accessible label editor. Migration 0089
+> adds the tag and share persistence with replay-safe DDL. This remains
+> **Implemented**, not **Tested/Verified**, until the exact clean commit has
+> migration, bilingual browser, accessibility, visual, and release evidence.
+
+> **2026-10-19 Advertising Action Center persistence checkpoint** — Action
+> Center decisions are now durable per authenticated workspace member, ad
+> account, signal, entity, and reporting period. Review, dismiss-with-reason,
+> seven-day snooze, and reopen transitions are validated server-side through
+> the tenant-scoped reporting boundary; each write emits a sanitized security
+> audit event. The additive migration is registered as `0088_secret_thing` and
+> the English/Arabic browser contract now verifies the review interaction.
+> This remains **Implemented**, not **Tested/Verified**, until the exact clean
+> commit has complete migration, browser, accessibility, visual, and release
+> evidence.
+
+> **2026-10-19 Advertising decision-rail refinement checkpoint** — The
+> overview now places the evidence-backed Action Center beside the primary
+> performance trend at wide desktop widths, with the objective mix remaining
+> in the main reading column and responsive stacking below the desktop
+> breakpoint. Metric dictionary surfaces now resolve metric names through the
+> active EN/AR catalog instead of exposing raw keys or English-only labels.
+> Focused type, browser, and five-viewport visual checks pass. This remains
+> **Implemented**, not **Tested/Verified**, until the exact clean commit is
+> covered by the full release evidence bundle.
+
 > **2026-10-18 Advertising reporting safety checkpoint** — Objective-aware
 > ingestion and every campaign/ad/report rollup now refuse to manufacture a
 > heterogeneous result total: mixed result types remain unavailable while the
@@ -1422,9 +1571,66 @@ board, channel-form, channel-button, settings-form).
 
 ## P3 architectural debt
 
-| ID     | Status   | Source / gap                                                                                                                                                                                                                           | Required implementation                                                                                                                                                                                                                                                                                                                                                                                              | Acceptance                                                                                                                                                      | Evidence                                                                                                                                                                                                                                                             |
-| ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| AD-001 | Complete | Master prompt §17 expects ~60 named components. Repo has 43 in `src/components/` (was 19 pre-2026-08-21); ~8 inlined forms/sections remain in route-local files (page.tsx + co-located `*-form.tsx` / `*-section.tsx` / `*-list.tsx`). | Continue extracting shared primitives and per-feature compositions. Extracted in 2026-08-21 batch: `FormSubmitButton`, `PlanningFilters`, `DataTable`, `KpiTile`, `CommentItem`, `CommentForm`, `WorkflowBoard`, `RecentItemsCard`, `ReviewRow`, `NotificationItem`. Task 12 pass added: `CalendarEventCard`, `ApprovalTimeline`, `DeliveryVersionList`, plus the new `listDeliveryVersionsForItem` server function. | Each extracted component: typed props, 100% prop-coverage unit tests, no visual diff in the consuming page, at least 2 consumer pages using the same primitive. | `docs/production-readiness/DESIGN_AUDIT.md` (2026-08-19 audit + 2026-08-21 Brand Kit + 2026-08-21 Task 12 cleanup sections) + the 2026-08-21 refinement log above. Not a release blocker: every screen renders, every behavior is tested at integration + E2E level. |
+| ID     | Status      | Source / gap                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Required implementation                                                                                                                                                                                                                                                                                                                                                                                              | Acceptance                                                                                                                                                                       | Evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AD-001 | Complete    | Master prompt §17 expects ~60 named components. Repo has 43 in `src/components/` (was 19 pre-2026-08-21); ~8 inlined forms/sections remain in route-local files (page.tsx + co-located `*-form.tsx` / `*-section.tsx` / `*-list.tsx`).                                                                                                                                                                                                                                                                                                                                                                                          | Continue extracting shared primitives and per-feature compositions. Extracted in 2026-08-21 batch: `FormSubmitButton`, `PlanningFilters`, `DataTable`, `KpiTile`, `CommentItem`, `CommentForm`, `WorkflowBoard`, `RecentItemsCard`, `ReviewRow`, `NotificationItem`. Task 12 pass added: `CalendarEventCard`, `ApprovalTimeline`, `DeliveryVersionList`, plus the new `listDeliveryVersionsForItem` server function. | Each extracted component: typed props, 100% prop-coverage unit tests, no visual diff in the consuming page, at least 2 consumer pages using the same primitive.                  | `docs/production-readiness/DESIGN_AUDIT.md` (2026-08-19 audit + 2026-08-21 Brand Kit + 2026-08-21 Task 12 cleanup sections) + the 2026-08-21 refinement log above. Not a release blocker: every screen renders, every behavior is tested at integration + E2E level.                                                                                                                                                                                                                                                                                                                                                                                            |
+| AD-002 | In Progress | Review 2026-10-20: full tree lacks feature ownership; Trends catalog pilot completed. Confirmed and fixed Trends policy drift/review gate, rich PageHeader markup, Brand Kit stale server-rendered lists, agency-switch navigation race, stale workflow views after assignment, delivery, and publication outcomes, account-theme route mismatch, discussion visibility/refresh defects, deep-link hydration mismatch, and invalid watchlist URL handling. Canonical agency routes and role chips corrected across affected E2E fixtures. Historical findings, forms, cron scaffolding, and route review remain in the backlog. | Complete inventory and reconcile historical findings; adopt `module-ownership.md`; migrate one feature slice at a time; fix only confirmed high-risk defects.                                                                                                                                                                                                                                                        | Evidence-backed backlog; each extraction has one owner and regression coverage; contracts remain stable except separately reviewed bug fixes; required gates pass at clean HEAD. | `docs/audits/ARCHITECTURE_REVIEW_2026-10-20.md`; Trends parity/review-gate tests; PageHeader, Brand Kit, agency-switcher, and workflow refresh regressions; full §23 and account-theme Chromium journeys pass; 76/77 affected Chromium cases passed before A16 fix, then 4/4 research teardown/watchlist tests passed; full integration + migration drill passed before current test-only edits; focused visual suite passed 18/18 on exact implementation SHA `7e4e4b13c590d31f080ff71480903addd33d10ea`; `pnpm verify` passed on that SHA; full five-browser release matrix, manual review of every route, and independent reviewer verification remain open. |
+
+**AD-002 architecture-refinement batch (2026-10-21):** The ownership manifest
+now accounts for the canonical 91-page route tree and its focused browser
+areas. Confirmed fixes include the lead-time setup state, media-folder
+classification, the invalid typography token, workspace AI tenant scope, and
+the missing-key status label. Bounded ownership changes move media sharing,
+folder management, imports, trash lifecycle, and library commands behind
+server-only feature entry points; route adapters now use the media feature
+entry point. The library review fixed cross-workspace folder moves and storage
+object reuse during duplication. AI settings, workspace Settings, and
+workspace Media have bilingual five-width visual and accessibility evidence;
+the media snapshot harness normalizes only the disposable agency UUID while
+component coverage preserves the real value. Exact clean-SHA verification,
+media integration, and migration-drill evidence are recorded in
+`docs/production-readiness/TEST_EVIDENCE.md`. R2 production UAT, broader manual
+route review, the full five-browser release matrix, and independent review
+remain open before `Tested`.
+
+**AD-002 MCP registration splits (2026-10-22):** Ten task and
+task-attachment registrations moved behind `src/features/mcp/task-tools.ts`
+(`d1e6d93`), followed by nine planning content registrations behind
+`src/features/mcp/content-tools.ts` (`251e32a`). The server factory composes
+these with the Brand Kit and diagnostics registrars through shared MCP
+contracts. Tool names, schemas, scopes, and response behavior are unchanged.
+Targeted format, ESLint, typecheck, and 37 focused MCP tests pass; catalog
+coverage asserts all 19 extracted tools and the total remains 34. No database
+or external MCP contract changed. Full `pnpm verify`, database gates where
+required, route/browser review, and independent verification remain open;
+AD-002 is still **In Progress**.
+
+**AD-002 MCP workspace-tool split (2026-10-22):** Workspace discovery,
+membership and agency listing, workflow settings, and workflow-scenario tools
+now live in `src/features/mcp/workspace-tools.ts` (`0bb1fc5`). The two
+registrars stay at the same positions in the factory so the tool-list order is
+preserved. Targeted format, ESLint, typecheck, and 37 MCP tests pass; catalog
+coverage asserts the five workspace tools and stable 34-tool count. No role,
+scope, API, or data contract changed. Full repository and release verification
+remain open.
+
+**AD-002 MCP research/social splits (2026-10-22):** The research reader moved
+to `src/features/mcp/research-tools.ts` and Command Center plus thumbnail
+maintenance moved to `src/features/mcp/social-tools.ts` (`9f5fdc5`). Their
+factory registration order, workspace authorization, scopes, and response
+contracts are preserved. Targeted format, ESLint, typecheck, and 37 MCP tests
+pass; the catalog assertions retain these tools and the stable count of 34.
+The combined MCP batch passes `pnpm verify` on exact clean HEAD
+`d383413bdb256e17a505c34b0d3db2389110ad58` (562 unit files / 5,018 tests and
+production build). Page/browser/visual review and independent verification
+remain open.
+
+Visual triage found two invalid prior comparisons: the platform agency-detail
+case expects a forbidden-state image while its fixture grants `platform_owner`,
+and the Trend Sources responsive snapshot contains Agency AI settings. These
+are capture/reference reconciliation findings, not confirmed UI defects. The
+approved captures remain unchanged pending an upstream design update; see
+`docs/audits/ARCHITECTURE_REVIEW_2026-10-20.md`.
 
 ## M1 — Multi-agency tenancy and authorization
 
@@ -1489,15 +1695,37 @@ This note supersedes the browser-evidence wording in M1.4, M1.5, and M1.9. Commi
 
 > **2026-08-24** — Implementation branch `feat/m3-ai-governance-and-support-access` lands M3 in 7 sub-tasks. The AI capability intersection is server-enforced (`resolveEnabledCapabilities`); the per-user daily AI budget is enforced inside the same transaction as the monthly reservation (`enforceAiBudget`); the support-access workflow replaces any implicit-impersonation model with a ticketed request → agency-admin approval → grant → tenant-view flow. Every state transition and every view through an active grant is audited in `support_access_audit` (append-only, trigger-enforced). A persistent banner surfaces the active session on every (app)/* page the platform admin lands on. Architecture: `docs/architecture/ai-governance-and-support-access.md`. Plan: `docs/m3-ai-governance-support/PLAN.md`.
 
-| ID   | Status | Required implementation                                                              | Acceptance                                                                                                                                                                                                        | Evidence                                                                                                                                                     |
-| ---- | ------ | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| M3.1 | Tested | Support access + AI daily budget schema; append-only audit; additive backfill.       | Migration 0012 lands on an empty DB; new tables and triggers install cleanly; agency / workspace / user data unchanged.                                                                                           | `src/lib/db/migrations/0012_support_access_grants.sql`; Drizzle schema `src/lib/db/schema/support.ts`.                                                       |
-| M3.2 | Tested | Ticketed support-access workflow service (create / decide / revoke / expire / gate). | Authority split enforced (platform admin vs agency admin); UNIQUE on request_id blocks double approval; revocation immediately deactivates; expiry sweep flips status.                                            | `src/lib/support/access.ts`; `tests/unit/support-access.test.ts` (15 cases); `tests/integration/support-access.test.ts` (7 cases).                           |
-| M3.3 | Tested | AI capability intersection and per-user daily budget enforcement.                    | Agency can never widen beyond plan ceiling; daily counter cap throws `LimitExceededError` (route 429); reconciliation refunds unused tokens.                                                                      | `src/lib/ai/governance.ts`; `tests/unit/ai-governance.test.ts` (9 cases); `tests/integration/ai-governance.test.ts` (4 cases).                               |
-| M3.4 | Tested | Platform console security tab + agency admin request list.                           | Platform-only access to security console; cross-agency workspace scope rejected (IDOR); agency admin sees pending requests; no tenant self-edit.                                                                  | `/app/platform/security/{page,actions}.tsx`; `/app/platform/agencies/[agencyId]/support-section.tsx`; `/app/agency-settings/plan/support-requests-card.tsx`. |
-| M3.5 | Tested | Persistent support-session banner for active grants.                                 | Banner appears on every (app)/* page when the platform admin holds an active grant; revocation / expiry remove the banner on the next request; React 19 purity rule respected (`Date.now()` moved to the layout). | `src/components/app-shell/support-session-banner.tsx`; `src/app/(app)/layout.tsx` integration.                                                               |
-| M3.6 | Tested | Unit + integration tests for the full M3 surface.                                    | 1,374 unit tests + 98 integration tests green; `pnpm verify` clean; no skipped required tests.                                                                                                                    | `pnpm test:unit` 1,374/1,374; `TEST_DATABASE_URL=… pnpm test:integration` 98/98; `pnpm verify` exits 0.                                                      |
-| M3.7 | Tested | Architecture doc, M3 plan, and tracker update.                                       | New `docs/architecture/ai-governance-and-support-access.md` describes the gate, audit, and intersection; M3 row visible in this tracker; no M1 / M2 regression.                                                   | `docs/m3-ai-governance-support/PLAN.md`; this section; full integration suite re-runs at 98/98.                                                              |
+| ID   | Status      | Required implementation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Acceptance                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ---- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| M3.1 | Tested      | Support access + AI daily budget schema; append-only audit; additive backfill.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Migration 0012 lands on an empty DB; new tables and triggers install cleanly; agency / workspace / user data unchanged.                                                                                                                                                                                                                                                                                                                                                                                                                                                         | `src/lib/db/migrations/0012_support_access_grants.sql`; Drizzle schema `src/lib/db/schema/support.ts`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| M3.2 | Tested      | Ticketed support-access workflow service (create / decide / revoke / expire / gate).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Authority split enforced (platform admin vs agency admin); UNIQUE on request_id blocks double approval; revocation immediately deactivates; expiry sweep flips status.                                                                                                                                                                                                                                                                                                                                                                                                          | `src/lib/support/access.ts`; `tests/unit/support-access.test.ts` (15 cases); `tests/integration/support-access.test.ts` (7 cases).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| M3.3 | Tested      | AI capability intersection and per-user daily budget enforcement.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Agency can never widen beyond plan ceiling; daily counter cap throws `LimitExceededError` (route 429); reconciliation refunds unused tokens.                                                                                                                                                                                                                                                                                                                                                                                                                                    | `src/lib/ai/governance.ts`; `tests/unit/ai-governance.test.ts` (9 cases); `tests/integration/ai-governance.test.ts` (4 cases).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| M3.4 | Tested      | Platform console security tab + agency-admin request review and decision route.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Platform-only security console; agency admins see and decide requests for their active agency; cross-agency decisions fail closed; no tenant self-edit.                                                                                                                                                                                                                                                                                                                                                                                                                         | `/app/platform/security/{page,actions}.tsx`; `/app/platform/agencies/[agencyId]/support-section.tsx`; `/app/agency-settings/plan/support/{page,actions}.tsx`; `src/lib/support/access.ts`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| M3.5 | Tested      | Persistent support-session banner for active grants.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Banner appears on every (app)/* page when the platform admin holds an active grant; revocation / expiry remove the banner on the next request; React 19 purity rule respected (`Date.now()` moved to the layout).                                                                                                                                                                                                                                                                                                                                                               | `src/components/app-shell/support-session-banner.tsx`; `src/app/(app)/layout.tsx` integration.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| M3.6 | Tested      | Unit + integration tests for the full M3 surface.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | 1,374 unit tests + 98 integration tests green; `pnpm verify` clean; no skipped required tests.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `pnpm test:unit` 1,374/1,374; `TEST_DATABASE_URL=… pnpm test:integration` 98/98; `pnpm verify` exits 0.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| M3.7 | Tested      | Architecture doc, M3 plan, and tracker update.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | New `docs/architecture/ai-governance-and-support-access.md` describes the gate, audit, and intersection; M3 row visible in this tracker; no M1 / M2 regression.                                                                                                                                                                                                                                                                                                                                                                                                                 | `docs/m3-ai-governance-support/PLAN.md`; this section; full integration suite re-runs at 98/98.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| M3.8 | In Progress | Workspace Assistant foundation: private session metadata with browser-memory-only transcripts, bilingual prompt library with typed text/month/content-reference parameters, 30 versioned first-party skills, evidence-backed monthly plan review, authorized plan/content references, bounded read-only tool loop (agency gate off by default), request-scoped MiniMax streaming, real activity events, scoped knowledge entries with immutable revisions, model capability registry, and expiring user-confirmed title/brief/planned-date previews for one selected draft. | Workspace/agency isolation; role and entitlement checks; bounded authorized plan, selected-item, brand, and knowledge context; structured responses with valid evidence references; prompt publication governance; parameter validation before provider/budget work; transcript text never read or written by assistant runtime; knowledge revision conflicts and scope enforcement; unsupported reasoning controls rejected before budget work; proposal ownership, exact before/after, expiry, atomic expected-revision apply, rejection, replay handling, and content audit. | `docs/architecture/workspace-ai-agent-platform.md`; focused assistant/provider/tool/skill/knowledge/proposal tests, assistant session privacy/apply integration cases, migration drill on PostgreSQL 16/17, and Chromium EN/AR/RTL E2E on the working tree. The full browser/device matrix, external MiniMax account/retention UAT, review/disposal of any pre-existing transcript rows, production migration/rollback evidence, manual CI, and independent review remain open. Broader multi-item/calendar proposals, document/web ingestion and semantic retrieval, broader model/account verification, and process-restart worker resumption remain open. |
+
+> **2026-10-23 continuation** — The workspace assistant now has bilingual
+> request-level Ask, Plan, and Apply modes. Ask and Apply cannot create new
+> change proposals; Plan can prepare a before/after preview for an explicitly
+> selected draft. Applying still requires a separate per-change confirmation
+> while in Apply mode. Focused mode/evidence validation passed 19/19, the
+> assistant Chromium E2E passed 4/4, and `pnpm verify` passed at 5,261 unit
+> tests on the working tree. M3.8 remains In Progress; this does not satisfy
+> its remaining broad-plan, knowledge, typed-prompt, full browser, clean-SHA,
+> independent-review, or production rollout gates.
+
+> **2026-10-23 continuation** — Added a bounded read-only tool loop for
+> `MiniMax-M3.1-Flash`, gated off by default and controlled by an agency
+> setting. Expanded the first-party procedural skill registry to 30 versioned
+> definitions, with metadata-only discovery and full instructions loaded only
+> for selected skills. Focused orchestration/provider/tool/skill/route tests
+> passed 25/25 after the registry update. Latest `pnpm verify` passed format,
+> lint, typecheck, 615 unit files / 5,280 tests, and build. Assistant Chromium
+> E2E passed 4/4 on PostgreSQL 17.10 including EN/AR/RTL. PostgreSQL 16/17 migration and
+> integration evidence from this working tree remains valid; production UAT,
+> browser matrix, independent review, and rollout evidence remain open.
 
 **Sub-task sequence on `feat/m3-ai-governance-and-support-access`:** `05982c4` (M3.1) → `c9d0288` (M3.2) → `7424cb1` (M3.3) → `(M3.4 platform+security)` → `4701985` (M3.5) → `b4fc136` (M3.6). Architecture: `docs/architecture/ai-governance-and-support-access.md`. Plan: `docs/m3-ai-governance-support/PLAN.md`. **No M3 row is `Verified`** — the `Verified` transition is the independent reviewer's, per the status protocol at the top of this file.
 
@@ -1861,3 +2089,2356 @@ focused bilingual five-browser cases. The audit report contains commands,
 synthetic captures, independent static-review notes, and failed local full-release
 attempts. Full release/visual evidence, native Arabic sign-off, and provider UAT
 remain open; no merge/deployment or independent Verified claim is made.
+
+## 2026-10-21 — Architecture review implementation follow-up
+
+- The import-direction, ownership, DRY extraction, page-quality, and migration
+  rules are documented in `docs/architecture/module-ownership.md` and linked
+  from the architecture overview and contributor guidance. Trends remains the
+  first feature-module pilot; broad migration is intentionally incremental.
+- The first review batch has centralized repeated form-action error UI and cron
+  authorization, fixed confirmed Trends policy and social connection tenant
+  defects, and added a concurrency-safe outbox claim. Each fix has focused
+  regression coverage; the outbox change adds no schema migration.
+- The historical visual-harness claim TEST-03 is stale: committed baselines and
+  assert-mode checks exist. Exact-clean-commit visual comparison and independent
+  visual review remain release evidence. Historical FEAT-01/FEAT-02 are stale
+  about event dispatch and scheduling; source/configuration presence does not
+  certify a live VPS cron installation or production UAT. See A6 and A22 in
+  `docs/audits/ARCHITECTURE_REVIEW_2026-10-20.md`.
+- Verification on the current uncommitted implementation tree: `pnpm verify`
+  passed (format, lint, strict typecheck, 552 unit files / 4,967 tests, and
+  production build); all 43 integration specs passed; the new concurrent
+  outbox regression passed against the disposable Postgres database; and
+  `pnpm migration-drill` passed all five scenarios. This is candidate evidence
+  only, not clean-SHA evidence.
+- The latest full `pnpm test:e2e:release` attempt progressed through Chromium
+  but logged a missing mobile More dialog, several Trends journey failures,
+  and closed response streams before reaching Firefox. An isolated fresh-DB
+  retry reproduced the missing More dialog; its screenshot shows the menu
+  closed and the Next dev server logged a late Fast Refresh / closed stream.
+  The test now uses the canonical agency-qualified workspace URL, but the
+  More sheet and calendar checks subsequently passed individually, and the
+  full Chromium mobile spec passed 9/9; close the mobile fixture concern from
+  this interrupted run. The Firefox project then timed out
+  launching its local Nightly binary after 180 seconds, reporting
+  `sandbox_extension_issue_file_to_process ... Operation not permitted`; a
+  focused retry with `MOZ_DISABLE_CONTENT_SANDBOX=1` failed the same way. The
+  visual phase did not run. Keep the Trends failures and full five-browser
+  matrix open for a stable run.
+- `AD-002` remains **In Progress**. The route/domain/database inventory is not
+  yet complete; the full five-browser matrix, visual gate, exact clean-SHA
+  evidence, and independent review are still required. No `Verified` status
+  is assigned by this implementation update.
+
+## 2026-10-21 — Validation efficiency follow-up
+
+- The documented validation cadence now uses focused checks during edits,
+  batches independent final checks once per milestone, runs shared-database
+  checks sequentially, and reserves the full browser/visual release suite for
+  the final candidate. Documentation-only edits require formatting and diff
+  checks rather than unrelated full-suite reruns.
+- The latest `pnpm verify` run passed formatting, ESLint, strict TypeScript,
+  and 4,966 of 4,967 unit tests. One social Meta callback test exceeded its
+  5-second timeout under suite load; its focused 3-test rerun passed. The
+  production build passed. Since there was a suite timeout, the aggregate
+  verify gate is recorded as incomplete, not passed.
+- A temporary Next Webpack memory-optimization setting did not prevent the
+  Linux dev server from restarting or a first-visit route from exceeding its
+  30-second navigation timeout, so the setting was reverted. The full browser
+  and visual gates remain open; no status is advanced from the incomplete run.
+- `AD-002` remains **In Progress**; the full route/domain/database inventory,
+  clean-SHA release evidence, and independent review remain open.
+
+## 2026-10-21 — Affected-test runner correction
+
+- The affected-test runner now passes Playwright projects using
+  `--project=<name>`, escalates when any changed test file lacks ownership, and
+  avoids Git diff discovery for explicit manual-area runs. The ownership map
+  now covers Advertising, Trends, Command Center accessibility, and mobile
+  browser specs.
+- Runner-core tests passed 14/14; the manual workspace unit batch passed
+  396/396. Earlier affected Discussion/notification browser checks passed
+  14/14 and Advertising checks passed 11/11 including visual assertions.
+  These targeted results improve feedback speed but do not close the full
+  browser/visual gate.
+- The latest runner and fixture edits pass strict TypeScript, targeted
+  Prettier checks, and `git diff --check`.
+- `AD-002` remains **In Progress**. Route/domain/database inventory, exact
+  clean-SHA release evidence, full browser/visual checks, and independent
+  review remain open.
+
+## 2026-10-21 — Sidebar context ownership correction
+
+- Restored agency and workspace selectors to the persistent sidebar beneath
+  the brand. The top bar now contains global utilities only. Expanded, tablet,
+  and collapsed layouts keep selector names accessible; shared workspace
+  switcher copy is centralized. The mobile context header remains the compact
+  mobile navigation surface.
+- Updated affected workspace and agency browser specs to target the sidebar
+  selectors. The focused sidebar unit suite passed 48/48; the agency,
+  workspace, mobile, and social-analytics Chromium batch passed 42/42 including
+  Arabic RTL journeys. Seven focused visual comparisons passed after reviewing
+  the updated captures. The full visual matrix and five-browser release check
+  remain pending.
+- Recorded the confirmed source/contract drift as A24 in
+  `docs/audits/ARCHITECTURE_REVIEW_2026-10-20.md`. `AD-002` remains **In
+  Progress**; no readiness status is promoted.
+
+## 2026-10-21 — Combined persistence and repository verification
+
+- `pnpm verify` passed formatting, ESLint, strict TypeScript, 553 unit files /
+  4,971 tests, and the Next.js production build.
+- `NODE_ENV=test pnpm migration-drill` passed all five scenarios on the
+  disposable `planner_test` database. The full integration suite passed,
+  including the overlapping outbox-dispatch regression.
+- These results apply to the current implementation tree, not an exact clean
+  commit. Full five-browser release coverage, the complete visual matrix,
+  exact-clean-SHA evidence, and independent review remain open. `AD-002`
+  remains **In Progress**.
+
+## 2026-10-21 — Native-host browser follow-up
+
+- A native-host `pnpm test:e2e:release` attempt reached 257/1,632 Chromium
+  cases, then was stopped after four failures; the visual phase did not run.
+  The failures were platform overview navigation, Trends degraded-page
+  loading, Trends onboarding completion, and Trends Use-in-brief navigation.
+- A fresh focused rerun passed the platform overview, degraded-source, and
+  onboarding journeys (4/4 cases, including both platform roles). The
+  Use-in-brief route compiles lazily on a cold Next dev server; its first
+  navigation exceeded the default test timeout. The assertion now allows the
+  measured cold compile window and the focused journey passes 1/1. No
+  application navigation code changed.
+- The static route inventory now records 91 page routes by family and 105 API
+  handlers by ownership group, alongside 42 loading surfaces and 9 error
+  boundaries. Per-route state/quality review and route-to-test mapping remain
+  open. `AD-002` remains **In Progress**; no release gate is marked complete.
+
+## 2026-10-21 — Feature ownership boundary follow-up
+
+- The Trends workspace-enabled-source query moved from `src/lib/trends/` into
+  the feature's explicit server-only entry point. The client-safe catalog
+  remains exported from `index.ts`; the two server pages now use `server.ts`.
+- `tests/unit/architecture/module-ownership.test.ts` enforces public feature
+  entry points and prevents shared presentation/platform modules from
+  depending on features. Existing UI-to-route-action and platform-to-UI type
+  imports remain separately tracked migration work. This is a focused guard
+  for a rule the existing lint configuration does not enforce.
+
+## 2026-10-22 — Route review tenant and behavior corrections
+
+- Corrected six confirmed issues in Trends agency selection, Team audit-event
+  scoping, Account agency workspace counts, Activity pagination across merged
+  sources, Calendar filter preservation, and workspace timezone selection.
+  Role-change audit events now carry workspace IDs; the workspace Team panel
+  omits legacy events with no auditable workspace scope.
+- Shared timezone validation is now used by both workspace creation and
+  workspace settings. The page uses the existing accessible IANA timezone
+  combobox.
+- `pnpm verify` passed on the combined implementation tree: formatting, lint,
+  strict TypeScript, 563 unit files / 5,022 tests, and production build. Focused
+  timezone tests passed 8/8. The new audit metadata assertion is in the
+  integration suite but has not run; `TEST_DATABASE_URL` is unset and Docker
+  returned HTTP 500.
+- This pass is **Tested**, not **Verified**. Exact clean-SHA evidence, database
+  integration, page-specific browser/visual checks, the remaining route
+  inventory, and independent review remain open. `AD-002` remains **In
+  Progress**.
+- The static guard passed 3/3 through `pnpm test:affected -- --area
+architecture --layer unit`; the Trends area mapping selected five unit files
+  and passed 12/12. Formatting and `git diff --check` also passed. Full
+  milestone verification is still pending. The route-by-route quality map,
+  full browser/visual evidence, exact clean-SHA verification, and independent
+  review remain open; `AD-002` remains **In Progress**.
+
+## 2026-10-21 — Validation batching and shell evidence
+
+- The sidebar context move passed the focused Chromium batch (42/42). Four
+  representative visual comparisons passed after the final candidate captures.
+- The full 252-case visual capture with four workers completed with 207 passing,
+  15 server/bootstrap failures, and 30 cases not run. A focused two-worker
+  capture of affected surfaces passed 43/45; the remaining Trends tablet case
+  and its related route cases passed in a four-case single-worker rerun. The
+  full visual compare remains open.
+- A two-worker full browser attempt caused a shared-seed race in
+  `/api/dev/seed` (duplicate `workspace_membership` insert). The full 1,632-case
+  release command was therefore stopped after its initial serialized cases.
+  No release status is promoted from partial evidence. The full five-browser
+  matrix and complete visual compare remain required before merge; `AD-002`
+  remains **In Progress**.
+- Screenshot inspection caught blank or skeleton candidates from the overloaded
+  capture. Thirty affected reference/responsive cases were recaptured with one
+  worker; the workspace settings, content detail, workspace list, agency pages,
+  research, library, channels, and approvals captures were inspected. The
+  focused compare of five corrected candidates passed 5/5. This does not close
+  the full visual compare gate.
+- The latest `pnpm verify` passed formatting, ESLint, strict TypeScript, all
+  553 unit files / 4,971 tests, and the production build. After this run, the
+  final evidence-only tracker edit passed Prettier and `git diff --check`.
+
+## 2026-10-21 — Canonical workspace test ownership
+
+- Corrected affected-test ownership globs that still referenced the retired
+  `/app/w/[slug]` source paths. Content, publishing, workspace, Brand Kit,
+  channels/social analytics, AI settings, and discussion UI ownership now
+  follows the agency-qualified App Router tree.
+- Added focused ownership areas for workspace pages, calendar, tasks, media,
+  research, agency settings, account, users, and public pages. Regression
+  coverage confirms all 91 current App Router pages select a focused browser
+  suite, have an ancestor loading/error fallback, and checks representative
+  canonical route paths. The affected-runner suite passes 17/17. The actual
+  `pnpm test:affected -- --layer unit` command selects only the architecture
+  area for manifest and mapping-test edits; Prettier and `git diff --check`
+  pass. No route or runtime behavior changed.
+- The full five-browser release matrix, complete visual comparison, exact
+  clean-SHA evidence, and independent review remain open. `AD-002` remains
+  **In Progress**.
+
+## 2026-10-23 — Bound design-queue bulk archive failures
+
+- Bulk archive server actions now return stable error codes for unauthenticated,
+  invalid-selection, forbidden, and unexpected failures. Unexpected details
+  are logged through the credential-scrubbing logger; the client renders safe
+  localized English/Arabic messages.
+- Five action tests passed; the publishing area passed 214/214. On clean SHA
+  `479437bc2f863041359f249c884c120477960221`, grouped `pnpm verify` passed
+  formatting, lint, TypeScript, 598 unit files / 5,169 tests, and production
+  build.
+- Route browser/accessibility/responsive/visual checks, full browser matrix,
+  and independent verification remain open. Successful archive results,
+  authorization policy, and persistence behavior are unchanged. This work is
+  **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## 2026-10-21 — Media retry worker ownership
+
+- Reviewed the 2,674-line media service and confirmed it spans several
+  responsibilities. Extracted cron-owned pending-upload promotion to
+  `src/features/media/server.ts`. Added coverage for ready promotion, invalid
+  signatures, transient storage failures, and batch clamping.
+- The affected runner selected 46 related unit files / 378 tests, then the
+  directly changed media and ownership tests passed 18/18. Prettier and
+  `git diff --check` and strict TypeScript passed. No route, database schema,
+  or API contract changed.
+- Further media service boundaries and the full route review remain open;
+  `AD-002` remains **In Progress**.
+
+## 2026-10-21 — Correct unsupported section-title utility
+
+- Replaced 16 uses of the unsupported `text-section-title` utility with the
+  `text-title-section` utility backed by the existing theme token. Added a
+  focused architecture regression that checks source usage and token presence.
+- The affected runner escalated to the full unit suite for this multi-area app
+  diff; that run was intentionally interrupted before completion. The focused
+  architecture, media, settings, sidebar, and Brand Kit suites then passed
+  79/79. Strict TypeScript, Prettier, and `git diff --check` passed.
+- Full `pnpm verify`, bilingual route/visual evidence, and exact clean-SHA
+  recording remain pending. `AD-002` remains **In Progress**.
+
+## 2026-10-21 — Correct lead-time setup detection
+
+- The settings checklist now compares each lead-time stage with the default
+  schedule instead of treating any total other than 18 days as customized.
+  Shared defaults drive both initial values and checklist detection. Focused
+  regression cases cover default, same-total customized, and different-total
+  schedules.
+- The full settings/browser visual evidence and final `pnpm verify` remain
+  pending. Focused settings suites passed 12/12 and strict TypeScript passed;
+  formatting was applied after the initial check identified the two new files.
+  `AD-002` remains **In Progress**.
+
+## 2026-10-21 — Place media retry worker behind its feature boundary
+
+- Moved the worker into `src/features/media/server.ts` and migrated the cron
+  route and focused test to that server-only entry point. Removed the temporary
+  re-export from the broad media service and added the feature path to media
+  test ownership. The public cron URL and response shape are unchanged.
+- The focused media, cron-auth, affected-ownership, and module-boundary suites
+  passed 36/36; strict TypeScript, Prettier, and `git diff --check` passed.
+  `AD-002` remains **In Progress** pending full milestone and release evidence.
+
+## 2026-10-21 — Extract media folder tree projection
+
+- Moved pure folder classification and descendant counting into
+  `src/lib/media/folder-tree.ts`, leaving authorization and batched database
+  reads in the existing service. The content-format union/list now has a
+  presentation-free module shared by the content status projection and media
+  tree classifier.
+- Fixed a confirmed misclassification: user-created folders under `Posts` and
+  their date-shaped descendants were marked as system folders even though the
+  UI/API allows creating those subfolders. The classifier now recognizes only
+  canonical generated format names. Focused projection tests cover generated
+  and user folders, counts, and cyclic data. Media, format-payload,
+  architecture-boundary, and ownership tests passed 34/34; strict TypeScript,
+  Prettier, and `git diff --check` passed. Media route visual evidence remains
+  pending.
+
+## 2026-10-21 — Scope workspace AI settings to its URL-resolved agency
+
+- Fixed a tenant isolation defect: the workspace AI settings page previously
+  combined a URL-resolved workspace with AI status and admin data from the
+  active-agency cookie. The new server-side read model scopes agency values to
+  `workspace.agencyId` and request counts to `workspace.id`; the page no longer
+  consults active-agency context for workspace-specific output.
+- A focused regression checks that agency admin status, provider-key
+  availability, feature configuration, and workspace usage use the resolved
+  tenant. Full EN/AR responsive visual evidence and the database integration
+  suite are recorded in the architecture evidence consolidation below.
+
+## 2026-10-21 — Architecture refinement evidence consolidation
+
+- `pnpm verify` passed on the updated worktree: formatting, ESLint, strict
+  TypeScript, 557 unit files / 4,985 tests, and the production build.
+- `pnpm test:integration` passed against the disposable `planner_test`
+  database. The five-scenario migration drill passed: from-zero, skipped
+  migration repair, in-place upgrade, backup/restore, and failed-migration
+  abort. No schema migration was added in this batch.
+- Workspace AI settings and workspace Settings passed strict English and
+  Arabic/RTL visual comparison at 375/768/1024/1280/1440px. Workspace Media
+  passed six strict visual cases; English coverage and the Arabic/RTL matrix
+  span the same five widths, with critical accessibility and overflow checks.
+  The Arabic screenshots normalize only the disposable agency UUID; component
+  coverage still verifies the actual storage prefix.
+- After commit `7e4e4b13c590d31f080ff71480903addd33d10ea`, the focused strict
+  visual suite passed 18/18 on the committed baselines. It covers all five
+  English widths and the full Arabic/RTL matrix for each of the three routes.
+  This supersedes earlier route-specific notes that marked these visuals
+  pending; see `docs/production-readiness/TEST_EVIDENCE.md` for the checkpoint.
+- `AD-002` remains **In Progress**. The full five-browser release matrix,
+  manual review of every route, and independent review remain open. Exact
+  implementation-SHA evidence is recorded above and in the test evidence log.
+  Do not advance `Tested` or `Verified` from this local evidence alone.
+
+## 2026-10-21 — Media query ownership and pagination correction
+
+- Duplicate advisory reads and content-item asset-link operations now have
+  feature-owned server modules. Upload registration uses the feature-owned
+  content-link command; existing feature facade exports preserve callers.
+- The media library listing and count use the same tenant, visibility, folder,
+  status, kind, text, and asset-id filters. A regression test proved workspace
+  pagination undercounted agency-shared assets; the correction also covers
+  descendant-folder counts. No schema or public API change was made.
+- Focused disposable-Postgres media integration passes 17/17, focused unit and
+  ownership checks pass 9/9, and strict type/lint/format checks pass on exact
+  clean SHA `9a4c8adb4c51c799bb56d97c0284bd2aac78c51d`. See
+  `docs/production-readiness/TEST_EVIDENCE.md`.
+- Full `pnpm verify`, all integration files, migration drill, full route
+  review, release browser matrix, and independent review remain open. AD-002
+  remains **In Progress**; no independent `Verified` status is assigned.
+
+## 2026-10-21 — Media asset query ownership follow-up
+
+- Media listing, pagination totals, related-content projection, and page-size
+  parsing now live in `src/features/media/asset-library-queries.server.ts`.
+  The client row type is serializable; shared storage access is isolated in
+  `src/lib/media/asset-access.server.ts`. The obsolete media filter helper was
+  removed after confirming there were no callers.
+- The broad media service is now 286 lines and owns derived folder paths and
+  content-item folder reconciliation. The latter remains in the review queue
+  because it coordinates content changes with media-folder state.
+- Focused media Postgres tests pass 18/18; related unit/ownership checks pass
+  21/21; type, lint, format, and diff checks pass on exact clean SHA
+  `7ea8c7991de28d7f95fc30b607cfac2fa532ea46`. See the test evidence log.
+- Full `pnpm verify`, all integration files, migration drill, route review,
+  release browser matrix, and independent review remain open. AD-002 remains
+  **In Progress**; no independent `Verified` status is assigned.
+
+## 2026-10-21 — Activate content deadline reminders
+
+- Confirmed that the deadline notification dispatcher had no caller and no
+  VPS schedule despite the product contract requiring deadline events through
+  the transactional outbox. Moved it behind the content feature boundary and
+  added an authenticated cron route plus an hourly VPS schedule.
+- Candidate selection and outbox writes now share a transaction; advisory
+  locking prevents overlapping dispatches, recent events are deduplicated,
+  and duplicate owner/designer recipients collapse to one notification.
+  Added focused Postgres tests for repeat runs, competing ticks, state and
+  archive filters, and route tests for authorization and sanitized failures.
+- On implementation SHA `98c7040ca1327000283d2b6eeba8aaa379ca8d6a`,
+  `pnpm verify`, the full `pnpm test:integration` suite, and
+  `pnpm migration-drill` passed. The cron installer dry-run and focused
+  ownership/lint/format checks passed as well. Exact results are recorded in
+  `docs/production-readiness/TEST_EVIDENCE.md`.
+- No schema migration or user-facing route contract changed. Installing the
+  new cron on the VPS, complete manual route review, release browser/visual
+  coverage, and independent review remain open. AD-002 remains **In
+  Progress**; this work is **Tested**, not **Verified**.
+
+## 2026-10-21 — Move media sharing behind the feature boundary
+
+- Moved public media share lifecycle and single-asset folder assignment into
+  server-only media feature modules, with shared manager authorization. Updated
+  route adapters to use the feature server entry point and removed the moved
+  implementations from the broad media service. Public URLs, route responses,
+  permission checks, token hashing, and transaction/audit behavior are
+  preserved.
+- Added disposable-Postgres integration coverage for share create/rotate/read/
+  revoke and non-member denial, plus route coverage for auth/permission
+  failures, cache headers, public origin, and JSON shapes. No schema migration
+  or API contract change.
+- `pnpm verify` passed on exact clean SHA
+  `a016d98b683235f803891155e405ea7f46a1a4e8`: formatting, zero-warning ESLint,
+  strict TypeScript, 558 unit files / 4,988 tests, and production build.
+  Focused integration passed 4/4 and the migration drill passed 5/5 on that
+  SHA. Full details are in `docs/production-readiness/TEST_EVIDENCE.md`.
+- `AD-002` remains **In Progress**; folder management, broader route review,
+  the five-browser release matrix, and independent review remain open.
+
+## 2026-10-21 — Move media folder management behind the feature boundary
+
+- Extracted media folder reads, tree projection, create, rename, and cascade
+  archive into `src/features/media/folders.server.ts`; shared access scoping
+  now lives in `src/lib/media/access.ts`. Migrated app pages and API route
+  adapters to the media feature entry point. No schema, route, permission, or
+  response contract changed.
+- Focused media-sharing integration passed 5/5, read-path batching passed
+  11/11, and architecture/ownership/folder unit checks passed 23/23. Strict
+  TypeScript and `git diff --check` passed. `pnpm verify` passed on exact clean
+  SHA `19983639fe39e869b8be6e640a34181e7da987ac`: formatting, zero-warning
+  ESLint, strict TypeScript, 558 unit files / 4,988 tests, and production
+  build. The migration drill passed 5/5 scenarios on the same SHA. Evidence is
+  recorded in `docs/production-readiness/TEST_EVIDENCE.md`.
+- `AD-002` remains **In Progress**; trash/restore, bulk/reconciliation,
+  full route review, release browser matrix, and independent review remain
+  open.
+
+- Content workflow-transition ownership: moved the workflow transition command
+  into the content feature boundary and migrated planning, MCP, and test
+  callers. Authorization, scenario rules, transactional side effects, and
+  notification behavior remain stable. Focused checks pass 63/63; typecheck,
+  targeted lint, formatting, diff checks, and commit hook pass on code SHA
+  `88b23a41d52628d965d6da7de023b8f620314013`. Database integration and full
+  `pnpm verify` remain pending; no schema migration was introduced.
+
+- Content assignment ownership: extracted designer claim/assign/release and
+  content-owner assignment into the content feature server module; planning,
+  MCP, and tests use the feature boundary. Focused behavior and ownership tests
+  pass 60/60; typecheck, targeted lint, formatting, diff checks, and the commit
+  hook pass on code SHA `488c3273165c0efbb57635edefdc5fed8699e06f`. Database
+  integration and full `pnpm verify` remain pending. No schema migration.
+
+- Confirmed concurrency defect: designer self-claim now uses a conditional
+  database update requiring an unassigned item in a claimable status. A losing
+  claim cannot create a competing active assignment or notification. The
+  focused content-service suite passes 60/60; typecheck, targeted lint,
+  formatting, diff checks, and commit hook pass on code SHA
+  `e2f50c62d7f9bfbc75d92c710dabe70a8212eeae`. Database integration and full
+  `pnpm verify` remain pending; no schema migration.
+
+- Content archive lifecycle ownership: extracted single archive, restore, and
+  bulk archive into the content feature module; planning, design queue, and MCP
+  callers use the feature entry point. Focused behavior and ownership tests
+  pass 62/62; typecheck, targeted lint, formatting, diff checks, and commit
+  hook pass on code SHA `5e780a58651f9518e5fe5e718cebbcd21b5db840`. Database
+  integration and full `pnpm verify` remain pending. No schema migration.
+
+## 2026-10-21 — Move media import workflows behind the feature boundary
+
+- Moved single-file public import and folder-import batching into
+  `src/features/media/`, migrated both import routes to the feature entry
+  point, and moved the batch unit suite to the feature module. Existing URL
+  safety, authorization, storage-intent cleanup, per-item error mapping, and
+  response contracts are preserved. Asset registration remains a shared
+  persistence primitive in the legacy service.
+- Focused folder-import, module-ownership, and affected-test selection suites
+  passed 26/26; strict TypeScript and formatting passed. `pnpm verify` passed
+  on exact clean SHA `277c5af88d4cd3b8f0ba0e1fd6637152cc2cfb20`: formatting,
+  zero-warning ESLint, strict TypeScript, 558 unit files / 4,988 tests, and
+  production build. All integration files passed against disposable
+  `planner_test`; the migration drill passed all five scenarios. Evidence is
+  recorded in `docs/production-readiness/TEST_EVIDENCE.md`.
+- `AD-002` remains **In Progress**; trash/restore/expunging,
+  bulk/reconciliation, full route review, release browser matrix, and
+  independent review remain open.
+
+## 2026-10-21 — Move media trash lifecycle behind the feature boundary
+
+- Moved single and bulk trash/restore operations and expired-trash cleanup to
+  `src/features/media/trash-lifecycle.server.ts`; media asset routes and the
+  storage-cleanup cron now call the feature entry point. Existing role gates,
+  30-day retention behavior, per-item results, storage soft-delete sequence,
+  and quota release semantics are preserved.
+- Focused media route, cron authorization, module ownership, and expiry unit
+  checks passed 21/21; strict TypeScript passed. The disposable-Postgres
+  media-sharing test verifies original/preview cleanup and released byte
+  counts. `pnpm verify` passed on exact clean SHA
+  `05f3a301e756c0de3e2bb07c080ad976797d53eb`: formatting, zero-warning ESLint,
+  strict TypeScript, 558 unit files / 4,988 tests, and production build. All
+  integration files passed against disposable `planner_test`; the migration
+  drill passed all five scenarios. Evidence is in
+  `docs/production-readiness/TEST_EVIDENCE.md`.
+- `AD-002` remains **In Progress**; bulk move/tag/visibility, duplication,
+  reconciliation, full route review, release browser matrix, and independent
+  review remain open.
+
+## 2026-10-21 — Route media pages and handlers through the feature API
+
+- Added explicit media service compatibility exports to the server-only
+  feature entry point and migrated all app pages and API handlers off direct
+  imports of `src/lib/media/service.ts`. Added an ownership regression that
+  prevents media app routes from returning to that internal module. Service
+  implementations and route contracts remain unchanged.
+- The focused media, module-ownership, and affected-test suites passed
+  209/209; strict TypeScript passed. `pnpm verify` passed on exact clean SHA
+  `9c2b728771aeae8e8d2f63a9511364dfb4c3d42d`: formatting, zero-warning ESLint,
+  strict TypeScript, 558 unit files / 4,988 tests, and production build.
+  Evidence is recorded in `docs/production-readiness/TEST_EVIDENCE.md`.
+- `AD-002` remains **In Progress**; the manual page review, full browser
+  matrix, and independent review remain open.
+
+## 2026-10-21 — Enforce workspace access for media folder audit
+
+- The folder-audit route now checks the requested workspace against the
+  actor's accessible workspace IDs before reading reconciliation metadata.
+  This closes an agency-member cross-workspace disclosure path without
+  changing the API response or schema.
+- The focused route regression passes, including the no-query-on-denial
+  assertion; targeted ESLint and formatting checks pass. The fix is recorded
+  at exact code SHA `ad7a9956e65c42d094901c3ade55f42dec2bf3d2`.
+- `AD-002` remains **In Progress**; full repository verification, the complete
+  route review, browser release matrix, and independent review remain open.
+
+## 2026-10-21 — Move media library reads behind the feature boundary
+
+- Moved the library tag/uploader facets and reconciliation audit queries,
+  tenant authorization, and response projection into
+  `src/features/media/library-queries.server.ts`. The API handlers now adapt
+  auth, query validation, status mapping, and cache headers.
+- Focused route/query and module-boundary tests pass 12/12; strict TypeScript,
+  targeted lint, formatting, and diff checks pass on exact clean code SHA
+  `9cb1187f212a7b5cba285e077e70fc7c1f256aed`.
+- A cross-workspace Postgres regression is added but pending execution because
+  `TEST_DATABASE_URL` is unavailable and local Docker did not respond. Full
+  repository verification, route review, browser matrix, and independent
+  review remain open; `AD-002` remains **In Progress**.
+
+## 2026-10-21 — Move media upload registration behind the feature boundary
+
+- Moved asset registration, return projection, and transient validation retry
+  into `src/features/media/asset-registration.server.ts`; the import workflow
+  now uses the feature-owned command. The stable feature facade exports the
+  command and result type.
+- The registration, folder-import, and module-ownership suites pass 14/14;
+  strict TypeScript, targeted ESLint, formatting, and diff checks pass on
+  exact clean code SHA `ab66308ed0c9383376e7cb5d11f8e5f4be4b6901`.
+- A follow-up on clean SHA `d25e25af9b6c45d7b49b22941d0bd73a837d5dd5`
+  verified planner_test and passed the media Postgres integration suite
+  14/14, including workspace denial, authorized facets, and idempotent upload
+  registration. Full integration, `pnpm verify`, migration drill, route
+  review, browser release matrix, and independent review remain open;
+  `AD-002` remains **In Progress**.
+
+## 2026-10-21 — Centralize manager-only media asset commands
+
+- Moved single-asset rename and visibility operations into the feature command
+  module and shared the manager lookup/authorization with tag updates.
+  Existing role behavior is unchanged.
+- Focused unit and ownership tests pass 18/18; disposable-Postgres media
+  integration passes 14/14; strict TypeScript, targeted lint, formatting, and
+  diff checks pass on exact clean SHA
+  `b8323114d288665b6f1f5ef40c0eca0cbfa83655`.
+- Full `pnpm verify`, repository-wide integration, migration drill, route
+  review, browser matrix, and independent review remain open. AD-002 remains
+  **In Progress**.
+
+## 2026-10-21 — Extract structured creative writes into the content feature
+
+- Moved format-payload validation, role checks, designer-field restrictions,
+  activity recording, and linked research-teardown prefill into
+  `src/features/content/format-payload.server.ts`, exposed through
+  `src/features/content/server.ts`. The planning action and existing service
+  tests now use the feature entry point. User-visible behavior and contracts
+  are unchanged.
+- `tests/unit/content-service.test.ts` passes 57/57; strict TypeScript,
+  targeted ESLint, Prettier, and diff checks pass on exact clean implementation
+  SHA `e5b238f38830d6729b986261a0277dc9017df9e5`.
+- `AD-002` remains **In Progress**. Full `pnpm verify`, repository-wide
+  integration, migration drill, route review, release browser matrix, and
+  independent review remain open.
+
+## 2026-10-21 — Move audience-copy writes behind the content feature
+
+- Moved canonical audience-copy material edits and the legacy partial-patch
+  adapter into `src/features/content/audience-copy.server.ts`; the explicit
+  server entry point is marked `server-only`. The planning action now imports
+  both creative and audience-copy writes from the content feature. The schema
+  test moved into `tests/unit/content/` so the affected-test runner can map it
+  to the content area instead of escalating to the full unit suite.
+- 103 focused content, materiality, and ownership tests pass; strict TypeScript,
+  targeted ESLint, Prettier, and diff checks pass on exact clean SHA
+  `4ad0f0473d5d001096390757cf60bf47cd69e68a`.
+- `AD-002` remains **In Progress**. Full `pnpm verify`, repository-wide
+  integration, migration drill, route review, release browser matrix, and
+  independent review remain open.
+
+## 2026-10-21 — Route content reads through feature boundaries
+
+- Moved content detail/list queries, designer roster, and CSV export behind
+  `src/features/content/server.ts`; moved calendar and MCP servers into their
+  feature modules. Planning, calendar, design queue, export, API, and test
+  callers now use those feature entry points. Added content/calendar/MCP test
+  ownership so affected checks remain targeted.
+- Extracted workflow-scenario persistence into the content feature and removed
+  the MCP server's import of a Next server action. The Settings and MCP paths
+  now call one manager-gated command with the actor authenticated at their
+  respective boundary. Workflow, approval-mode side effect, and response
+  contracts remain stable.
+- Full unit suite: 5,003 tests across 562 files passed. Focused feature and
+  architecture checks, strict TypeScript, targeted ESLint, Prettier, and diff
+  checks pass on exact clean SHA
+  `975c9f468bd419b65ce3e04c998ed3383f07182c`.
+- Database-backed integration is pending because the disposable test URL is
+  not configured and local Docker did not respond. No schema changes were
+  made. `AD-002` remains **In Progress**; full `pnpm verify`, integration,
+  migration drill, route review, browser matrix, and independent review remain
+  open.
+
+- Content rescheduling ownership: moved the MCP-used reschedule command into
+  `src/features/content/reschedule.server.ts` and added schema, role-gate, and
+  unchanged-date coverage. Focused content-service and ownership tests pass
+  66/66; typecheck, targeted lint, formatting, diff checks, and commit hook
+  pass on code SHA `6f928e093874bc8690e65738279a34db27fc5041`. Database
+  integration and full `pnpm verify` remain pending. No schema migration.
+
+- Batched milestone verification passes on exact clean implementation SHA
+  `65cec551460865b9a1ca3c2f508ea61570884093`: formatting, repository-wide
+  lint, typecheck, 562 unit files / 5,009 tests, and production build. The
+  stale read-path guard exception caused one initial failure and was updated
+  to the feature-owned bounded workflow loop before the passing rerun.
+- Database integration and migration drill remain pending because
+  `TEST_DATABASE_URL` is not configured and Docker is unavailable. No schema
+  changes were introduced. Manual route review, release browser matrix, and
+  independent verification remain open; `AD-002` remains **In Progress**.
+
+- Confirmed assignment-target authorization defect: `assignDesigner` now checks
+  that a changed target is a designer in the item's workspace before writing
+  assignment history or notifications. Focused content-service tests pass
+  64/64; typecheck, targeted lint, formatting, diff checks, and commit hook pass
+  on code SHA `2bf99cb39238ee122f9f92e3e31be8cee9b1d02e`.
+- Final `pnpm verify` passes on exact clean implementation SHA
+  `2bf99cb39238ee122f9f92e3e31be8cee9b1d02e`: format, repository lint,
+  typecheck, 562 unit files / 5,010 tests, and production build. Database
+  integration and migration drill remain pending because the disposable test
+  database is unavailable. Manual route/visual review and independent
+  verification remain open; `AD-002` is **In Progress**.
+
+## 2026-10-22 — Move Quick Create behind the content feature boundary
+
+- Moved `QuickCreateSchema`, its input type, and `quickCreateContentItem`
+  into the server-only `src/features/content/quick-create.server.ts` module
+  and exported them through `src/features/content/server.ts`. The planning
+  action and MCP command now call the feature entry point. Research provenance,
+  default assignments, channel selection, role gates, and transactional
+  creation behavior are unchanged.
+- The 69 focused content-service/schema unit tests, the 30-case acceptance
+  journey, and the page-render regression passed. `pnpm verify` passed with
+  562 unit files / 5,014 tests and production build; the full integration
+  suite and five-scenario migration drill also passed on implementation SHA
+  `1b072f169c9287a2878357dea9a0dc05bd4af896`. See
+  `docs/production-readiness/TEST_EVIDENCE.md`.
+- No route, API, permission, workflow, or schema contract changed. Other
+  content commands remain in the incremental ownership queue. Route-by-route
+  review, release browser/visual coverage, and independent review remain open;
+  `AD-002` remains **In Progress** and this work is **Tested**, not **Verified**.
+
+## 2026-10-22 — Reject cross-workspace channels during Quick Create
+
+- Review confirmed that Quick Create accepted any existing `social_channel`
+  ID, although the database only has separate foreign keys for the new item
+  and channel. A caller with write permission in one workspace could therefore
+  link a channel owned by another workspace. The command now verifies every
+  explicit selection against the active, unarchived channels of the target
+  workspace before beginning the insert transaction.
+- Added a Postgres regression that creates a channel in a second workspace,
+  attempts to use it in Quick Create, and verifies that no content item is
+  created. Focused unit coverage also verifies invalid selections are rejected
+  before any insert.
+- On clean implementation SHA `09d1ab9ff427f0ef7cca8bcf7474f380cf9d935a`,
+  `pnpm verify` passed (562 unit files / 5,015 tests and production build),
+  the full integration suite passed, and the migration drill passed 5/5 with
+  90/90 ledger checks. No schema migration was needed. See
+  `docs/production-readiness/TEST_EVIDENCE.md`.
+- The role gate and public contracts remain unchanged. Route-by-route review,
+  release browser/visual coverage, and independent verification remain open;
+  `AD-002` remains **In Progress** and this work is **Tested**, not **Verified**.
+
+## 2026-10-22 — Move content update and batch commands behind the feature boundary
+
+- Moved `UpdateContentSchema`, `updateContentItem`, and the update status
+  constants into `src/features/content/update-content.server.ts`; moved
+  `batchCreateContentItems` into `src/features/content/batch-create.server.ts`.
+  Planning actions, monthly planning, and MCP now import these commands through
+  `src/features/content/server.ts`. A shared server helper supplies active
+  workspace channels and validates selected IDs across Quick Create, update,
+  and batch creation. No route, permission, workflow, or schema contract
+  changed as part of the ownership migration.
+- Focused content unit tests passed 70/70. The migration is commit `5a8558c`;
+  the combined implementation gates are recorded below on `3347bad`.
+
+## 2026-10-22 — Reject cross-workspace channels during content updates
+
+- Review found that `updateContentItem` could replace channel links with an
+  active channel from another workspace. The command now validates channel
+  ownership before opening the write transaction. The Postgres regression
+  confirms a rejected update preserves both the original item title and its
+  existing channel link.
+- On implementation SHA `3347bad1d00d75c3e288039b92283487eb5e66b2`, the full
+  `pnpm verify` passed (562 unit files / 5,015 tests and production build),
+  the full `pnpm test:integration` suite passed, and `pnpm migration-drill`
+  passed all 5 scenarios, including the 90/90 from-zero and restored ledger
+  checks. No schema migration was needed. See
+  `docs/production-readiness/TEST_EVIDENCE.md`.
+- Role gates and public contracts remain unchanged. Route-by-route review,
+  release browser/visual coverage, and independent verification remain open;
+  `AD-002` remains **In Progress**, and this work is **Tested**, not
+  **Verified**.
+
+## 2026-10-22 — Remove the legacy content service module
+
+- Moved the brief-draft merge helper and planning cursor encode/decode helpers
+  into feature-owned content modules, exported them through the content server
+  entry point, and removed `src/lib/content/service.ts`. The planning action
+  and unit/integration callers now use the feature boundary. No route, API,
+  workflow, permission, or data contract changed.
+- On implementation SHA `6b33f42f582ecac15814966a6c2fd5c070c5adf3`,
+  `pnpm verify` passed with 562 unit files / 5,015 tests and production build.
+  The focused helper unit suites passed 81/81, and the Postgres journey plus
+  page-render integration suites passed 33/33. The full integration suite and
+  migration drill passed on the preceding content-boundary implementation
+  SHA; this cleanup made no persistence or schema changes.
+- Route-by-route review, release browser/visual coverage, and independent
+  verification remain open. `AD-002` remains **In Progress**; this work is
+  **Tested**, not **Verified**.
+
+## 2026-10-22 — Enforce platform and presentation ownership
+
+- Removed three `src/lib` → UI type dependencies. Shared content/task badge
+  variant mapping now lives with workspace presentation, and the typography
+  option catalog now belongs to `src/features/brand-kit` behind its
+  client-safe public entry point.
+- Extended the architecture import guard to reject `src/lib` imports from
+  routes or shared presentation. Added a regression proving the supplied
+  audience-copy save action is invoked on submit.
+- Focused ownership, content/task status, calendar, board, planning header,
+  Brand Kit, and copy-editor suites pass 95/95. `pnpm verify` passes in the
+  current worktree: formatting, repository lint, strict TypeScript, 569 unit
+  files / 5,042 tests, and production build. Exact clean-SHA evidence will be
+  recorded on the final implementation candidate.
+- `AD-002` remains **In Progress**. Repository-wide integration and migration
+  drill, full route/browser/visual review, and independent verification remain
+  open; this milestone is **Tested**, not **Verified**.
+
+## 2026-10-22 — Reconcile additional historical architecture findings
+
+- Current source and tests show historical OTHER-02, OTHER-04, and OTHER-05
+  no longer match the original claims: workspace role reads are request-cached,
+  the proxy mints and propagates correlation IDs, and sign-in error capture is
+  server-only. The regression suites cover these boundaries.
+- Historical TEST-03 is stale about the visual harness: it is runnable and
+  assert-based, while final browser/visual comparison and exact-HEAD release
+  evidence remain incomplete. Historical FEAT-01/02 describe a dispatcher and
+  caller that now exist, but live cron installation and operations evidence
+  remain open. OTHER-03 is reconciled against the current source: caught
+  server-side failures in content delivery, account preferences, mentions,
+  email, brand profile, secret fallback, storage, media cleanup/preview, and
+  planning edit now use the sanitizing structured logger. The old "10+ raw
+  console.error" count is stale. Remaining direct output is limited to shared
+  environment bootstrap validation, the development-only seed route, and
+  browser-side diagnostics; these still need their own boundary review.
+  OTHER-10 is reconciled against current migration practice: a dedicated
+  non-transactional runner already existed, and now rejects journaled Drizzle
+  paths, non-concurrent indexes, unrelated DDL, and multiple commands before
+  connecting to Postgres. The migration directory has 205 historical index
+  statements across 59 files (52 are in the initial schema); these files stay
+  immutable. No actual `CREATE INDEX CONCURRENTLY` SQL command currently lives
+  in that directory. Future production-critical indexes use the guarded
+  outside-journal path. `TEST_DATABASE_URL` is missing, so database gates for
+  this operational change remain unverified.
+- A5 records the initial 34-tool MCP server-factory inventory and a bounded
+  split queue by tool domain. The five diagnostics tools and the two Brand Kit
+  export/import tools now register from feature modules. Shared context,
+  response-format, error, and result-envelope types live in one MCP contract
+  module. Tool names, schemas, scopes, and response contracts remain unchanged.
+  No MCP contract changes were made.
+- Shared page-state review confirms the existing `EmptyState` (33 callers),
+  `RouteErrorState` (used by route error boundaries), and `Skeleton` (11
+  callers) already centralize their respective presentation patterns. Do not
+  add another generic state component based on superficial similarity; the
+  remaining route-by-route state and localization review is still open.
+
+## 2026-10-22 — Close remaining direct logging review
+
+- Environment validation logs only field names and fixed configuration
+  messages. The seed route is disabled in production, and remaining browser
+  diagnostics do not print request or credential payloads. No high-risk
+  application-server `console` leak was confirmed.
+- Removed user-supplied file names and workspace identifiers from the local
+  upload migration warning; the existing report retains the aggregate count
+  of changed files that were kept. Concurrent-index migration output now
+  reports a validated error class/code without raw Postgres message detail.
+- Exact implementation SHA `b23fc604529056b1b8be497b101d1e41d9082efb` passed
+  26 focused tests, TypeScript, targeted ESLint, Prettier, and diff checks.
+  No route, permission, workflow, migration, schema, or stored-data behavior
+  changed. Full verification and release browser/visual/manual review remain
+  open; AD-002 remains **In Progress** and this work is **Tested**, not
+  **Verified**.
+
+## 2026-10-22 — Reconcile historical migration index-lock finding
+
+The dedicated concurrent-index runner already prevents future production index
+builds from needing to run inside Drizzle's transaction. The authoring guide now
+states when to use the standalone runner and what execution, index-validity,
+cleanup, and rollback evidence to retain. Deployed migration files were left
+unchanged. The existing runner and journal-order regression suites pass 29/29;
+no database migration was executed. The exact current code was previously
+verified at implementation SHA `2d6aa2a081063360cc9eeba2e69045519f86673c`;
+full route review and release evidence remain open.
+
+## 2026-10-22 — Inject the planning publication action
+
+- The publish form no longer imports the planning route's publication action.
+  The route supplies a typed callback that only permits the pending-channel
+  exclusion input; authorization, workspace scope, and publication records
+  remain in the server action.
+- Publishing and preview suites pass 212/212; strict TypeScript, targeted
+  ESLint, and Prettier pass. The grouped full `pnpm verify` passes in the
+  current worktree: 569 unit files / 5,042 tests and production build. Exact
+  clean-SHA evidence remains pending.
+- `AD-002` remains **In Progress**; browser/visual review, the remaining route
+  inventory, and independent verification remain open.
+
+## 2026-10-22 — Batched database evidence for architecture refinement
+
+- The disposable `planner_test` database was identified and verified before
+  use. `NODE_ENV=test pnpm migration-drill` passed all five scenarios, and the
+  full `pnpm test:integration` run completed successfully across the repository
+  integration suite (46 integration files present).
+- This closes the database evidence that earlier entries marked unavailable.
+  No schema or migration changes were made in this architecture pass. Browser,
+  visual, native Arabic editorial, exact clean-SHA, and independent review
+  evidence remain open; `AD-002` remains **In Progress** and work is
+  **Tested**, not **Verified**.
+- The combined `pnpm test:e2e:release` attempt did not reach browser specs:
+  Playwright timed out after 120 seconds waiting for `/api/health/ready` from
+  its isolated Next.js server. A separate local dev-server check also accepted
+  no HTTP response, and was stopped. Treat browser/visual verification as
+  blocked pending diagnosis of local Next.js request handling; no browser test
+  pass is claimed.
+- The final grouped `pnpm verify` passed formatting, ESLint, strict TypeScript,
+  all 572 unit files / 5,057 tests, and the production build with the full
+  App Router manifest. The source tree remains uncommitted and therefore has
+  no exact clean-SHA evidence yet.
+
+## 2026-10-22 — Isolated browser failure classification
+
+- With `DEBUG=pw:webserver`, the full 1,654-case browser run reached Chromium;
+  278 Chromium cases completed before Firefox Nightly launched and spun at
+  99% CPU for three minutes. Playwright recorded the known macOS Firefox
+  sandbox error (`sandbox_extension_issue_file_to_process`, operation not
+  permitted). The run was stopped; the five-browser gate remains incomplete.
+- Next.js dev-server memory restart preceded three Chromium failures (workspace
+  navigation load timeout, research response timeout, and Trends onboarding
+  dialog state). All 13 cases from those three specs passed in a fresh isolated
+  Chromium rerun, classifying them as restart-related flakes in this run.
+- The visual matrix has not yet run. No `Verified` status is assigned.
+
+## 2026-10-22 — Move social analytics selection into its feature
+
+- Moved the dashboard selection/comparison model into the feature's
+  client-safe entry point and the database/provider diagnostic query and
+  command behind its `server-only` entry. The settings page and diagnostic API
+  route use that server entry; affected-test ownership includes the feature.
+- Focused dashboard, probe-card, architecture-boundary, and test-ownership
+  checks pass 29/29. Grouped `pnpm verify` passes: formatting, lint, strict
+  TypeScript, 569 unit files / 5,042 tests, and production build. Exact
+  clean-SHA evidence, browser/visual review, and independent verification
+  remain open; `AD-002` remains **In Progress**.
+
+## 2026-10-22 — Prevent caching social analytics probe responses
+
+- Added the shared `no-store` policy to every response path for the admin-only
+  analytics probe POST route. Added regression coverage for success, missing
+  channel, invalid input, forbidden, and unauthenticated responses.
+- Added `/api/social/**` to affected-test ownership and a mapping assertion for
+  the route. Focused route, ownership, and import-boundary suites pass 27/27;
+  strict TypeScript and targeted ESLint pass. Grouped `pnpm verify` passes on
+  the current worktree: formatting, lint, strict TypeScript, 570 unit files /
+  5,047 tests, and production build. Postgres/browser evidence and exact
+  clean-SHA evidence remain open; `AD-002` remains **In Progress**.
+
+## 2026-10-22 — Review workspace social analytics route
+
+- Static source review confirms URL workspace resolution, internal-role
+  gating, workspace-scoped analytics reads, separate agency-admin controls,
+  server-resolved interface labels, and an explicit no-channel state. No
+  additional defect was confirmed.
+- Browser, keyboard/accessibility, responsive visual, and bilingual runtime
+  evidence remain open because `TEST_DATABASE_URL` is unset and Docker is
+  unresponsive. This source review does not complete the route; `AD-002`
+  remains **In Progress**.
+
+## 2026-10-22 — Localize and correct provider settings outcomes
+
+- Replaced English server-action strings with stable error/test codes and
+  bilingual catalog copy. Save/test/remove failures no longer expose raw
+  exception messages. Successful provider checks no longer display the save
+  success state, and TikTok checks correctly allow its optional Login Kit
+  config id to be empty.
+- Eight action tests, two provider-card localization/state tests, and fourteen
+  catalog tests pass (24 total); strict TypeScript, targeted ESLint, Prettier,
+  and diff checks pass. Grouped `pnpm verify` passes on the current worktree:
+  formatting, lint, strict TypeScript, 572 unit files / 5,057 tests, and
+  production build. Native Arabic editorial review, Postgres and
+  browser/accessibility/visual checks, and exact clean-SHA evidence remain
+  open; `AD-002` remains **In Progress**.
+
+## 2026-10-22 — Group Brand Kit helpers under the feature
+
+- Moved the success-reset hook and template catalog into
+  `src/features/brand-kit/`, with a client-safe UI entry and a server-only
+  template entry. Added the feature path to affected-test ownership.
+- Focused Brand Kit, architecture-boundary, and affected-test ownership checks
+  pass 33/33. Grouped `pnpm verify` passes on the current worktree: formatting,
+  lint, strict TypeScript, 569 unit files / 5,042 tests, and production build.
+  Exact clean-SHA evidence, browser/visual route review, and independent
+  verification remain open; `AD-002` remains **In Progress**.
+
+## 2026-10-22 — Group content overview and board UI by feature
+
+- Moved Recently Updated, Needs Attention, the content status badge, and the
+  workflow board into `src/features/content/components/`. Workspace, home,
+  design-queue, client-calendar, and board routes use the feature entry point.
+  Shared DashboardPanel and semantic Badge variant mapping remain shared.
+- Overview, board, planning-list, Reviews, affected-test ownership, and import
+  guard suites pass 84/84; strict TypeScript, targeted ESLint, Prettier, and
+  diff checks pass. Full `pnpm verify` passes in the current worktree: 569
+  unit files / 5,042 tests and production build. Exact clean-SHA evidence
+  remains pending.
+- `AD-002` remains **In Progress**; route/visual review and independent
+  verification remain open.
+
+## 2026-10-22 — Move content planning list UI into its feature
+
+- Moved the planning list row, week grouping, and filter bar from the shared
+  workspace folder into `src/features/content/components/`. The route now
+  uses the content feature entry point; focused tests moved into the content
+  test area. Shared lower-level people, channel, readiness, and UI modules
+  remain shared.
+- Planning list, affected-test ownership, and import-guard checks pass 35/35;
+  strict TypeScript, targeted ESLint, Prettier, and diff checks pass. Full
+  `pnpm verify` now passes in the current worktree: 569 unit files / 5,042
+  tests and production build. Exact clean-SHA evidence remains pending.
+- `AD-002` remains **In Progress**; browser/visual route review and independent
+  verification remain open.
+
+## 2026-10-22 — Move the Reviews row into the content feature
+
+- The Reviews queue row had one production caller and was moved from shared
+  workspace presentation into the content feature's approval UI. The route
+  now imports through the feature entry point, and the focused test moved into
+  the content test area.
+- Review-row, planning-list, affected-test ownership, and import-guard suites
+  pass 48/48; strict TypeScript, targeted ESLint, Prettier, and diff checks
+  pass. Full `pnpm verify` now passes in the current worktree: 569 unit files /
+  5,042 tests and production build. Exact clean-SHA evidence remains pending.
+- `AD-002` remains **In Progress**; browser/visual review, the remaining route
+  inventory, and independent verification remain open.
+
+## 2026-10-22 — Grouped release-validation results
+
+- The full `pnpm verify`, disposable-Postgres integration suite, and five
+  migration-drill scenarios passed on the current worktree before this
+  documentation-only update. These results are not exact-clean-SHA evidence.
+- The Chromium release run completed 278 cases before the Next.js dev server
+  restarted after its memory threshold. Three resulting timeouts passed in a
+  fresh focused rerun (13/13 across the affected specs). Firefox Nightly then
+  failed to make progress under the local macOS sandbox
+  (`sandbox_extension_issue_file_to_process`, operation not permitted); the full five-browser gate
+  remains incomplete. The earlier Chromium run and focused rerun do not
+  replace the remaining browser projects.
+- `pnpm test:visual` completed 264 captures: 207 passed and 57 failed. The
+  failures span multiple routes and viewports, including unchanged settings and
+  platform routes. On `/app/w/acme/settings`, the current rendering includes
+  setup-health and Meta-readiness content absent from the tracked reference,
+  and its deadline date differs by one day. This shows visual differences
+  beyond date variance; it does not yet establish whether the reference is
+  stale or the product layout has drifted from the approved design. No
+  snapshots were updated.
+- `AD-002` remains **In Progress**. Compare the 57 failures against the
+  current approved design and fix confirmed product mismatches or refresh
+  proven-stale references with reasons. Finish the remaining browser
+  projects, route-level bilingual/accessibility checks, and exact-clean-SHA
+  evidence. No independent `Verified` status is assigned.
+- A current attempt to resume isolated browser validation could not start:
+  `TEST_DATABASE_URL` is unset and Docker returned HTTP 500 for its local API
+  socket. No test database was reset or browser command run in this attempt;
+  the earlier passing integration and migration results remain recorded but
+  do not supply exact-clean-SHA evidence.
+- Local validation resumed with a newly initialized temporary PostgreSQL
+  cluster and a verified `planner_test` database. The first WebKit pass exposed
+  apparent title and dark-theme contrast violations. Source review confirmed
+  the planning detail already exports a non-empty metadata title; both
+  warnings occurred while App Router metadata and theme-color transitions were
+  still settling. `expectClean` now waits for a non-empty document title and
+  finite active animations before running axe. The focused reproductions pass
+  6/6 across WebKit, mobile Chrome, and mobile Safari; the complete
+  `a11y-routes.spec.ts` suite passes 120/120 across those projects. No product
+  UI or workflow behavior changed. Desktop Chromium, Firefox, the full
+  five-browser behavioral suite, and visual reconciliation remain open.
+
+## 2026-10-22 — Stabilize workspace-settings deadline hydration
+
+- The settings server page and interactive lead-time form independently
+  constructed `Date` values for the same deadline forecast. A day boundary
+  between server render and browser hydration could produce different labels
+  and a React hydration warning. The server now passes one render-time `Date`
+  to the static forecast and client form; the form reuses it for live previews.
+- Added a browser regression that fixes the client clock to 2020 while the
+  server remains current, checks both deadline labels match, and rejects a
+  hydration warning. It passes 4/4 across Chromium, WebKit, mobile Chrome, and
+  mobile Safari. The visual harness normalizes the date to the value already
+  captured in its reference image.
+- The focused workspace-settings visual group ran 25 cases: 5 passed and 20
+  failed. All five responsive captures for `/app/w/acme/settings` passed. The
+  canonical reference differs by 3% and 16px of page height; several legacy
+  section references expect a standalone surface (for example, the tablet
+  Trends-settings reference expects 1,888px while the current unified page is
+  4,818px). Compare these against current Stitch and the one-page settings
+  contract before product or baseline changes; no snapshots were refreshed.
+- `AD-002` remains **In Progress**. Run grouped `pnpm verify` after this code
+  change, reconcile visual references, finish the remaining browser and
+  exact-clean-SHA gates, and keep independent verification separate.
+
+## 2026-10-22 — Reconcile unified workspace-settings visual aliases
+
+- Replaced the six legacy standalone settings-section references with current
+  route captures at the correct 360px mobile, 768px tablet, and 1440px wide
+  viewports. The strict focused visual comparison passes 18/18. The root
+  settings canonical 390px reference still differs by 40px of page height and
+  is left for Stitch comparison; the one-page settings contract is preserved.
+- Reviewed the platform-overview visual mismatch against the route guard and
+  fixture. The current Stitch case seeds `platform_owner`, and the route
+  enforces `platform.agency.read`; the captured overview is authorized while
+  the expected image shows a forbidden state. This is a stale role-state
+  reference, not an authorization defect. The current dashboard also differs
+  from the approved Stitch design, so snapshot refresh alone would conceal
+  design drift; record a separate UI parity follow-up.
+- The prior completed full visual run remains 207/264 passing with 57
+  differences; this milestone does not claim the full visual matrix is green.
+  No schema or product behavior changed. Grouped full verification, remaining
+  visual/browser evidence, exact-clean-SHA evidence, and independent review
+  remain open; `AD-002` remains **In Progress** and work is **Tested**, not
+  **Verified**.
+
+## 2026-10-22 — Keep affected-test selection focused
+
+- Added the workspace-settings unit area to the workspace page owner and added
+  a regression proving settings-route changes select its deadline test. Added
+  a visual-regression owner for screenshot assets so visual baseline changes
+  no longer escalate the pre-commit unit layer to the full suite. Ownership
+  selection tests pass 23/23; the staged hook then selects the focused
+  architecture suite for ownership-only edits.
+- This keeps validation scope evidence-driven: the focused layer remains
+  mapped to the changed contract, and the full visual release suite remains a
+  separate milestone gate. No application behavior or route contract changed.
+
+## 2026-10-22 — Final grouped architecture verification
+
+- Grouped `pnpm verify` passed on clean code SHA
+  `690de91683e1d917b877009fe3684f41e0e56022`: formatting, repository lint,
+  strict TypeScript, 572 unit files / 5,060 tests, and the production build.
+- Existing disposable-Postgres integration and migration-drill evidence still
+  applies: this architecture batch adds no schema or migration changes.
+  Focused settings visuals pass 18/18; the earlier route accessibility and
+  deadline-hydration browser checks remain recorded above.
+- The affected-browser selector escalated to the full browser matrix because
+  shared route/test infrastructure and visual assets changed. That redundant
+  matrix attempt was stopped before browser assertions; it is not a pass. The
+  full five-browser release gate and full visual reconciliation remain open,
+  including the previously recorded local Firefox sandbox failure and 57
+  visual differences. No independent reviewer assigned **Verified**.
+- Architecture review remains **In Progress** / **Tested**, pending the open
+  route, browser, visual, and independent-review evidence. No production
+  deployment or main-branch merge is authorized by this milestone.
+
+## 2026-10-22 — E2E runner ownership and multi-role fixture stability
+
+- Commit `49161a5105af78c1791caf23a76a37af9948041e` passes clean-SHA
+  `pnpm verify`: formatting, lint, strict TypeScript, 573 unit files / 5,064
+  tests, and production build. The focused architecture area passes 20/20.
+- Runner-only changes now select the focused architecture area in the pre-push
+  core layer instead of escalating to unrelated integration tests. The full
+  browser release suite remains separate.
+- The Add Directly E2E now targets the workspace returned by its own seed.
+  Five previously failing Chromium journeys pass targeted reruns; one failure
+  was a test selecting another seeded workspace, while the other four passed
+  when rerun against a fresh server. The earlier full Chromium run on parent
+  `89cc6f2b` remains 273/279 with five failures and one expected skip; the dev
+  server restarted late in the run.
+- Firefox, full five-browser coverage, visual reconciliation (57 known
+  differences), remaining route-by-route review, and independent verification
+  remain open. No schema or product behavior changed. This is **Tested**, not
+  **Verified**; `AD-002` remains **In Progress**.
+
+## 2026-10-22 — Publishing, notification, and AI route refinement
+
+- Moved the publish-package form into `src/features/publishing/` behind a
+  client-safe feature entry point and typed route-action adapter.
+- Split notification inbox and preference responsibilities into focused
+  modules. Preference updates now use one transaction and enforce the locked
+  system notification row.
+- Moved the AI generation route's role and write-capability checks ahead of
+  research, trend, and brand-context reads. Added an authorization-order
+  regression check without changing response or provider contracts.
+- Moved monthly proposal apply into a server-owned AI feature command. The
+  proposal claim, content creation, and both final status writes now share one
+  transaction; integration coverage proves rollback and single-winner claims.
+- Grouped worktree checks pass: `pnpm verify` (574 unit files / 5,066 tests
+  and production build), full integration suite on a fresh disposable Postgres
+  database, and all five migration-drill scenarios.
+- Exact clean-SHA evidence, full browser and visual release gates, remaining
+  route-by-route review, and independent verification remain open. AD-002 is
+  **In Progress**; this implementation is **Tested**, not **Verified**.
+
+## 2026-10-22 — Account route MCP scope validation
+
+- Route review confirmed that an empty or all-unknown MCP scope submission
+  silently became `content:read`; mixed valid/unknown input also issued a
+  partial grant. The account server action now rejects empty or invalid scope
+  selections rather than granting a scope the user did not select.
+- `tests/unit/account-mcp-token-action.test.ts` passes 10/10, including all
+  offered scopes, diagnostics-only selection, mixed invalid, unknown-only,
+  empty, and unauthenticated cases.
+- This records review of the account MCP scope-issuance path only. The rest of
+  the account route contracts and remaining page-by-page review, release
+  browser/visual evidence, exact clean-SHA evidence, and independent review
+  remain open. AD-002 stays **In Progress**; this focused work is **Tested**,
+  not **Verified**.
+
+## 2026-10-22 — Platform route result boundary
+
+- Reviewed the platform console gate and its overview, agencies, access,
+  security, errors, storage, and cron route/service boundaries. Page reads
+  check exact permissions before protected reads; mutations repeat their
+  action-specific permission in the owning service.
+- Fixed agency creation's raw exception and validation-message response.
+  The action returns stable codes, and the form translates them with the EN
+  and AR catalogs. The email-delivery warning is also localized.
+- Focused platform action, drawer, and agency-service tests pass 13/13. This
+  source review and unit evidence do not replace platform route browser,
+  responsive, keyboard/axe, native Arabic editorial, or visual release
+  evidence. The full route review and release gates remain open; AD-002 stays
+  **In Progress** and independent **Verified** status remains unassigned.
+
+## 2026-10-22 — Agency provider settings boundary
+
+- The provider settings page passes only a typed, secret-free configuration
+  summary to its client component. The unused client actor-id prop was removed;
+  provider actions continue to derive the actor from the session and enforce
+  active-agency/admin checks.
+- Replaced the route's generic table loading state with a responsive skeleton
+  matching its provider forms, readiness panel, and analytics-probe cards.
+- Provider config/action/loading and shared loading tests pass 23/23. Full
+  bilingual browser, keyboard/axe, responsive visual, exact-clean-SHA, and
+  independent verification evidence remain open; AD-002 remains **In
+  Progress**.
+
+## 2026-10-22 — Agency AI settings result and encryption-status boundary
+
+- Reviewed the admin-only agency AI settings route, action authorization,
+  managed-secret service boundary, client state, and key-status loading path.
+  No plaintext provider key is passed to the page or client components.
+- Replaced raw server-action validation and exception text with stable codes
+  translated by the EN/AR catalogs. Encryption-key status now uses explicit
+  warning codes and does not send raw filesystem error details to the browser.
+  The development fallback is represented as a no-file state.
+- Focused action, page, provider-secret, and encryption-status tests pass
+  62/62; Prettier and `git diff --check` pass. No schema, permission, route,
+  provider, workflow, or persisted-data contract changed.
+- Route browser, bilingual runtime, keyboard/axe, responsive visual, exact
+  clean-SHA, remaining route review, and independent verification evidence
+  remain open. AD-002 stays **In Progress**; this work is **Tested**, not
+  **Verified**.
+
+## 2026-10-22 — Agency settings entitlement failure handling
+
+- Narrowed the Community Inbox entitlement fallback to the explicit
+  `AgencyNotFoundError`. Unexpected entitlement or database failures now reach
+  the route's localized retry boundary instead of appearing as a missing plan
+  feature; the toggle remains fail-closed. The read policy now lives behind a
+  server-only community module helper with direct error-path coverage.
+- The settings-page, entitlement-merge, and entitlement-hardening suites pass
+  56/56; formatting and `git diff --check` pass. Browser, bilingual runtime,
+  keyboard/axe, responsive visual, exact clean-SHA, broader route review, and
+  independent verification remain open. AD-002 stays **In Progress**; this
+  work is **Tested**, not **Verified**.
+
+## 2026-10-22 — Agency Plan and Usage route source review
+
+- Reviewed the plan page against ADR 0002 and M2.9: active agency resolution,
+  agency-admin gate, tenant-scoped usage and support-request reads, read-only
+  entitlement presentation, missing-plan state, locale formatting, and parent
+  loading/error boundaries. No new defect was confirmed in this source pass.
+- Existing a11y and visual route cases were located but not run here. Full
+  bilingual runtime, responsive/keyboard/axe/visual release checks, exact
+  clean-SHA evidence, and independent verification remain open. AD-002 stays
+  **In Progress**.
+
+## 2026-10-22 — Controlled support-access review and decision route
+
+- Added the missing agency-admin request-review route and tenant-scoped action;
+  removed the platform-side decision action because the service correctly
+  requires target-agency admin authority. The service's locked decision path
+  now returns not-found when the active agency does not match the request.
+- Focused action coverage passes 6/6; the cross-agency regression and support
+  integration suite pass 9/9 against disposable `planner_test`. The route's
+  English empty-state axe scan and Arabic RTL check pass 2/2 in Chromium. Full
+  browser matrix, responsive visual, exact clean-SHA, and independent
+  verification evidence remain open. AD-002 stays **In Progress**; this slice
+  is **Tested**, not **Verified**.
+
+## 2026-10-22 — Batched browser validation result
+
+- The affected-browser selector escalated to the full isolated Chromium suite
+  because shared app-shell and test-infrastructure files were in scope. The
+  281-case run completed with 277 passing, 3 failing during repeated local
+  Next server memory-threshold restarts, and 1 expected skip. Focused reruns of
+  all three failed cases passed 3/3.
+- Record this as an unstable full-suite run, not a green release gate. Keep the
+  failed-run details and focused rerun evidence in
+  `docs/production-readiness/TEST_EVIDENCE.md`; use focused affected checks
+  during implementation and reserve another full browser run for the final
+  release candidate after stabilizing the local runner.
+- AD-002 remains **In Progress**. Full browser/visual release evidence, exact
+  clean-SHA evidence, remaining route review, and independent verification
+  remain open; this run does not assign **Verified** status.
+
+## 2026-10-22 — Route inventory reconciled after support review
+
+- Recounted the current App Router tree after adding the agency-admin support
+  request review route: 92 pages, 106 API handlers, 43 loading surfaces, and 9
+  error boundaries. The route family table now records 11 agency-settings
+  pages; prior dated counts remain historical snapshots.
+- The ownership manifest continues to cover the full page inventory. Manual
+  review of the remaining route contracts and the release browser/visual gates
+  remain open; AD-002 stays **In Progress**.
+
+## 2026-10-22 — Password-reset anti-enumeration and auth ownership
+
+- Moved the forgot-password Server Action out of the page into the explicit
+  `src/features/auth/server.ts` entry point. SMTP, token lookup, or recipient-
+  locale lookup failures now produce the same generic confirmation as an
+  unknown account and log only a non-PII warning event.
+- Reset emails now use the recipient's validated saved locale, falling back to
+  the active interface locale when the profile value is unset. Added unit and
+  isolated browser regressions for SMTP failure, existing/unknown accounts,
+  and focused auth test ownership. The route, token, role, and stored-data
+  contracts remain unchanged.
+- Focused test results are recorded in
+  `docs/production-readiness/TEST_EVIDENCE.md`; full clean-SHA and release
+  evidence remain open. AD-002 stays **In Progress**.
+
+## 2026-10-22 — Trend source settings read boundary
+
+- The agency-admin gate now precedes feature and plan reads. Trend source and
+  health data loads through `src/features/trends/server.ts` into a typed,
+  secret-free view model; unused provider error details and key references are
+  not serialized to the client.
+- The focused route-order, view-model, UI, and module-boundary suites pass
+  8/8; the existing Trends Sources Chromium journey passes 1/1. Formatting and
+  whitespace checks pass. Full clean-SHA, route-by-route, release visual, and
+  independent verification evidence remain open; AD-002 stays **In Progress**.
+
+## 2026-10-22 — Agency Reports tenant-scope enforcement
+
+- Confirmed that client-provided workspace and channel IDs could cross the
+  active agency boundary during PDF generation. Added a server-side selection
+  validator before rendering/persistence and an independent agency filter in
+  the aggregate query; metric reads now use only channels returned by that
+  tenant-scoped query. Action errors return stable codes with English and
+  Arabic catalog entries.
+- Added disposable-Postgres regressions for foreign workspace/channel IDs,
+  valid same-agency selections, and mixed-tenant/direct aggregate calls. The
+  focused integration result and grouped quality checks will be recorded in
+  `docs/production-readiness/TEST_EVIDENCE.md`. Full verification, remaining
+  route/browser review, exact clean-SHA evidence, and independent verification
+  remain open; AD-002 stays **In Progress**.
+
+## 2026-10-22 — Custom report date validation
+
+- Invalid or missing custom date values previously passed through the action
+  and could fail later while rendering the PDF. Custom-period resolution now
+  rejects malformed as well as reversed ranges, and the action responds with
+  a stable date-range validation error. Focused unit coverage was added; this
+  is a separate input-reliability correction from the tenant-isolation fix.
+
+## 2026-10-22 — Report channel picker behavior
+
+- The channel list previously rendered only checked rows, so a user could
+  remove a channel but could not select it again. The list now keeps all
+  channels in selected workspaces visible and submits only checked channel
+  IDs. Focused component coverage exercises deselect/reselect and workspace
+  deselection; the component and report domain suites pass 12/12. Added an
+  English/LTR and Arabic/RTL Chromium journey for the same selection contract.
+
+## 2026-10-22 — Reports Server/Client translation boundary
+
+- The Reports Server Component passed its translator function into the client
+  history list, causing Next.js to reject the route during serialization. The
+  history list now reads translations from the existing locale provider and
+  receives only serializable report data. The first browser run reproduced the
+  route failure; the English/LTR and Arabic/RTL rerun passes 2/2. Each locale
+  also verifies 375, 768, 1024, 1280, and 1440 pixel widths for horizontal
+  overflow.
+
+## 2026-10-22 — Report download anti-IDOR response
+
+- The PDF endpoint returned `403` for foreign-agency reports and `404` for
+  unknown IDs, revealing whether a guessed report ID existed. Cross-agency
+  requests now receive the same `404` response as missing reports, while
+  same-agency member downloads remain available. Focused route regressions
+  pass 2/2 and cover both behaviors.
+
+## 2026-10-22 — Account multi-agency membership context
+
+The Account page previously chose one arbitrary active membership, which could
+make its role badge and workspace count disagree with the active agency shown
+by the app shell. It now lists active memberships in stable order, displays
+each role and its agency-scoped workspace count together, and marks the agency
+resolved by the signed active-agency context. The profile role badge follows
+that resolved agency. English and Arabic labels are present. No authorization,
+route, schema, or stored-data contract changed. The multi-agency Chromium
+regression passes 1/1; account accessibility and theme journeys pass 4/4;
+typecheck, ownership checks, formatting, and whitespace checks pass. The
+remaining bilingual runtime and responsive visual evidence are open; see
+`docs/audits/ARCHITECTURE_REVIEW_2026-10-20.md` and working-tree evidence in
+`docs/production-readiness/TEST_EVIDENCE.md`.
+
+## 2026-10-22 — Unresolved agency-context recovery
+
+When a signed-in user had multiple agency memberships but no valid active
+agency cookie, the app shell sent them to `/setup`, which redirected back to
+`/app` after initial bootstrap had completed. The setup page now presents the
+existing shared agency switcher for authorized memberships and gives users
+with no active membership a clear access state. Choosing an agency uses the
+existing membership-gated switch endpoint and reaches that agency's canonical
+workspace. The English/Arabic recovery browser journeys pass 2/2; the
+no-membership English state passes 1/1; TypeScript, focused ownership/cookie
+checks, formatting, and whitespace checks pass. Arabic no-membership runtime,
+full route browser/visual evidence, exact clean-SHA, and independent review
+remain open. See `docs/audits/ARCHITECTURE_REVIEW_2026-10-20.md` and the working-
+tree evidence in `docs/production-readiness/TEST_EVIDENCE.md`.
+
+## 2026-10-22 — Platform-only tenant landing states
+
+The `/app` home and `/app/workspaces` returned empty output when a platform
+operator had no active agency context. Both now route to the platform console;
+platform roles still do not authorize tenant data. The focused Chromium
+regression passes 1/1 across both routes, and typecheck, ownership,
+formatting, and whitespace checks pass. Full route browser/visual, exact
+clean-SHA, and independent review remain open; see the architecture audit and
+working-tree evidence.
+
+## 2026-10-22 — AI budget accounting and usage-event consistency
+
+- Added one AI governance entry point for token-reservation refunds and request
+  usage events. Standard generation, monthly planning, and Community Test Lab
+  now share the same event fields and refund behavior.
+- Fixed monthly planning to validate messages before reserving tokens, refund
+  estimated tokens after pre-provider failures, return 429 for budget limits,
+  sanitize provider errors, and record model, capability, context categories,
+  token counts, outcome, and request ID.
+- Fixed standard generation so post-provider audit failures cannot refund
+  already reconciled tokens, and its empty-result branch settles reservations.
+- The AI affected-test map now includes the Community Test Lab route.
+- Focused AI units pass 242/242; ownership and affected-selection suites pass
+  28/28. TypeScript, formatting, and whitespace checks pass.
+- Focused AI governance Postgres integration passes 5/5 against the verified
+  disposable `planner_test` database; the full integration suite remains open.
+- This is **Tested**, not **Verified**. Full Postgres integration,
+  `pnpm verify`, browser/visual release coverage, exact clean-SHA evidence, and
+  independent verification remain open. No schema or migration changed. See
+  the architecture audit and `docs/production-readiness/TEST_EVIDENCE.md`.
+
+## 2026-10-22 — Agency report download contract
+
+- Confirmed that PDF downloads intentionally permit authenticated members of
+  the report's active agency, while generation and report history remain
+  agency-admin-only. Removed the discarded admin-role lookup from the download
+  route and corrected the feature documentation's ambiguous “own reports”
+  statement. Runtime and storage contracts are unchanged.
+- Focused report download tests pass 2/2; targeted formatting passes. This is
+  **Tested**, not **Verified**. Full route browser/visual, exact clean-SHA, and
+  independent review remain open; see the architecture audit.
+
+## 2026-10-22 — Report history file cleanup
+
+- Fixed retention cleanup to delete displaced PDF files instead of truncating
+  them and leaving orphaned zero-byte files. A temporary-directory regression
+  writes 101 reports and confirms both the 100-entry history and 100-file cap.
+- Focused report storage and download tests pass 3/3. **Tested**, not
+  **Verified**; exact clean-SHA, full route browser/visual, and independent
+  review remain open.
+
+## 2026-10-22 — Grouped architecture pass validation
+
+- Final grouped `pnpm verify` passes: formatting, lint, type checks, all 587
+  unit files / 5,117 tests, and the production build.
+- The disposable-Postgres integration suite reported all files passing; the
+  migration drill passed all five scenarios. No schema changed in the latest
+  report download/storage work.
+- The one-worker release browser run passed 276/289 tests and hit memory
+  threshold restarts. Ten of its 11 failing cases passed in a focused rerun;
+  the advertising client-report timeout passed after moving dashboard-only
+  work below the client-report branch. The adjusted case then passed alone.
+- The current visual comparison attempt was stopped at 23/264 after repeated
+  reference mismatches. The prior full visual capture remains 207/264 with 57
+  known differences; no snapshots were updated.
+- This remains **Tested**, not **Verified**. Full browser/visual reconciliation,
+  exact clean-SHA evidence, manual route review, independent review, and clean
+  commit/push remain open. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+## 2026-10-22 — Browser shard follow-up
+
+- Chromium shard work was grouped to avoid rerunning the whole suite per issue:
+  shard 1 had 96 passes and its advertising timeout passed after a focused
+  rerun; shard 2 had 95 passes and one environment-gated MCP skip; shard 3 had
+  94 passes and the research teardown suite passed 4/4 in a focused rerun.
+- Updated the stale YouTube paid-source E2E assertion to match the route's
+  existing `api_key_required` response, disabled source state, and configure
+  action. Its focused Chromium check passes 1/1; product behavior did not
+  change.
+- Firefox shard 1/3 is incomplete. The `/app` accessibility case failed, and
+  Firefox then ran at full CPU without progress during retry; the run was
+  stopped after more than five minutes. WebKit and mobile-browser checks and
+  visual reconciliation remain open. This is **Tested**, not **Verified**.
+
+## 2026-10-22 — Advertising timestamp hydration and browser follow-up
+
+- The advertising Data Health timestamp used raw `Intl.DateTimeFormat` in a
+  Client Component. WebKit showed different server/client connectors in both
+  English and Arabic. It now uses the shared deterministic `formatDate` and
+  `DateFormat.dateTime` contract with the workspace timezone.
+- Added hydration-console assertions to both advertising reporting journeys;
+  focused WebKit coverage passed 2/2 for English and Arabic RTL.
+- WebKit shard 1/3 completed 96/97. Its remaining Brand Kit test failed when a
+  route navigation was interrupted by a fallback navigation to the publishing
+  route after an RSC fetch failure. The isolated rerun reproduced it. This is
+  not yet classified as a product defect; remaining WebKit shards, mobile
+  browser coverage, and visual reconciliation are open.
+- A direct Firefox launch against a plain `data:` page also hangs at full CPU,
+  independent of the application. Firefox coverage remains blocked by the
+  local browser runtime; the release matrix is incomplete.
+- Grouped `pnpm verify` passes after the locale type correction: formatting,
+  lint, typecheck, all 587 unit files / 5,117 tests, and the production build.
+  No migration or persistent data contract changed. Status remains **Tested**,
+  not **Verified**; exact clean-SHA evidence and independent review are open.
+
+## 2026-10-22 — Mobile browser reconciliation
+
+- Mobile Chrome shard 3/3 completed with 90 passed and six responsive-selector
+  failures. The analytics workspace-switch test now opens the mobile More
+  sheet; workspace overview assertions target the mobile context header; and
+  desktop-sidebar keyboard cases are explicitly scoped to the desktop layout.
+  The focused mobile Chrome group passed 19 tests with three desktop-only
+  skips.
+- Mobile Safari shard 1/3 completed 96/97; its Brand Kit journey was navigating
+  between sections while the form's server action was refreshing the current
+  route. The journey is now split into focused publishing-rule and linked-
+  resource route tests. Both pass on mobile Safari and WebKit (2/2 per browser).
+- Mobile Safari shard 2/3 passed 95 with one environment-gated skip; shard 3/3
+  passed 93 with three desktop-only skips. No product route or data contract
+  changed in these browser-test refinements.
+- Browser evidence is reconciled through sharded runs and targeted reruns;
+  Firefox runtime, visual-reference differences, exact clean-SHA evidence, and
+  independent review remain open. Status remains **Tested**, not **Verified**.
+
+## 2026-10-22 — Final grouped working-tree validation
+
+- `pnpm verify` passes formatting, lint, typecheck, all 587 unit files / 5,117
+  tests, and the production build.
+- The full disposable-Postgres integration suite passes. The migration drill
+  passes all five scenarios: from-zero, skipped-migration repair, in-place
+  upgrade, backup and restore, and failed-migration abort. No schema or
+  migration changed in this architecture batch.
+- Mobile Chrome shard 3/3 and mobile Safari shard results, including focused
+  responsive and Brand Kit reruns, are recorded above. Chromium shard evidence
+  is reconciled in the earlier entry; WebKit targeted Brand Kit reruns pass.
+- Remaining release gates: local Firefox runtime failure, 57 visual reference
+  differences, route-by-route manual review, independent review, clean exact
+  commit evidence, and commit/push. No `Verified` status is assigned; AD-002
+  remains **In Progress**.
+
+## 2026-10-22 — Firefox runtime diagnostics
+
+- Reinstalled/checked the repository-pinned Playwright 1.62.1 Firefox
+  installation and reproduced the hang against a plain `data:` page. The
+  bundled Firefox 1538 process reaches `RenderCompositorSWGL failed mapping
+default framebuffer`, then consumes a CPU core without returning control;
+  disabling WebRender did not change the result. The app and test database
+  are not involved.
+- The installed branded Firefox 158 exits before Playwright can attach its
+  Juggler protocol. This is expected to be an unsupported executable for
+  Playwright's patched Firefox. The Docker service also returned an API 500,
+  so a containerized browser could not be used as a local fallback.
+- Firefox browser coverage remains incomplete. Chromium, WebKit, and mobile
+  results already recorded above remain separate evidence; none substitutes
+  for the missing Firefox release gate.
+
+## 2026-10-22 — Agency AI localization regression and RTL visual coverage
+
+- Fixed the missing English and Arabic labels/descriptions for the
+  `advertising_recommendations` capability; added a unit assertion covering
+  localized copy for every agency-facing capability.
+- Made the agency AI visual fixture deterministic and added Arabic/RTL
+  responsive coverage at 375, 768, 1024, 1280, and 1440px, including overflow
+  and critical/serious accessibility checks.
+- Refreshed only the agency AI exact/responsive references after reviewing the
+  application capture. The focused English exact, responsive, and Arabic/RTL
+  strict visual checks pass 5/5; this does not count as approval against the
+  active Stitch design.
+- The focused catalog unit suite passes 19/19. The new visual suite check
+  also passes for the English exact reference and Arabic/RTL matrix. Status
+  remains **Tested**, not **Verified**; AD-002 remains **In Progress**.
+- The full visual matrix was restarted once after updating this route, then
+  stopped at 96/265 before the responsive-fixture correction. The affected
+  English exact, three responsive captures, and five-width Arabic/RTL check
+  pass 5/5; the partial matrix is not counted as a release pass.
+- Grouped `pnpm verify` passes with 587 unit files / 5,118 tests; the full
+  disposable-Postgres integration suite and all five migration-drill scenarios
+  also pass on the current worktree. Firefox, 57 known visual differences,
+  route review, exact clean-SHA evidence, independent review, and commit/push
+  remain open.
+
+## 2026-10-22 — Full visual reconciliation attempt and harness fixes
+
+- The grouped full visual run completed all 265 cases: 215 passed and 50
+  failed. Forty-eight failures are screenshot differences against the current
+  references. The remaining two were test-harness issues: Trends setup
+  navigated through a legacy workspace URL and could redirect to `/app`, and
+  the Arabic workspace AI assertion matched both the sidebar and its card.
+- Switched Trends setup to its canonical tenant-qualified route and scoped the
+  Arabic AI assertion to its capability card. Both cases pass in a focused
+  rerun (2/2), including the five-width Arabic/RTL matrix.
+- The 48 screenshot differences still require review against the active design
+  source; no blanket snapshot refresh was made. Firefox, manual route review,
+  the full release browser matrix, independent review, and push remain open.
+  Status is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+### Exact clean-SHA verification — `3d0612a249b980bc9fc232859444889122df70ed`
+
+- `pnpm verify` passed on the clean commit: formatting, ESLint, TypeScript,
+  587 unit files / 5,118 tests, and production build.
+- The focused visual rerun passed both affected cases (2/2), including all
+  five documented widths for Arabic/RTL workspace AI. The Trends exact
+  reference also passed.
+- Integration and all five migration-drill scenarios passed on
+  `cd4ce270a53a7381b2debd69da059028769fd821`; the following commit contains
+  only the visual harness correction and its evidence.
+- This is exact-SHA evidence for the grouped code checks, not release approval:
+  48 visual reference differences, Firefox, the full browser matrix, manual
+  route review, and independent **Verified** review remain open.
+
+## 2026-10-22 — Isolate platform visual fixtures
+
+- The visual suite seeded platform and ordinary routes with the same default
+  account. Concurrent ordinary seeds revoke that account's platform role, so
+  `/app/platform/errors` could render a forbidden state during a platform
+  capture. Platform visual cases now use dedicated per-case fixture accounts.
+- Added an explicit authorized-page heading assertion for the platform-errors
+  responsive cases. With the isolated account, the page consistently renders
+  its empty state; the old reference contained 13 `ChunkLoadError` rows that
+  the visual fixture does not seed.
+- Refreshed only the platform-errors responsive references at mobile, tablet,
+  and wide widths. The focused strict comparison passes 3/3. The full visual
+  matrix has not been rerun, and other reference differences remain open.
+- A representative Brand Kit root comparison still differs from its active
+  Stitch design; it remains a product-parity item and its snapshot was not
+  refreshed. Status remains **Tested**, not **Verified**; Firefox, full visual
+  reconciliation, route review, independent review, and push remain open.
+
+### Exact clean-SHA checks — `aa61956414666b2777c814d11862ffcdb2e9421a`
+
+- `pnpm verify` passed: formatting, ESLint, TypeScript, 587 unit files / 5,118
+  tests, and production build.
+- The focused platform-errors visual comparison passed 3/3 on the same clean
+  SHA. No schema or runtime behavior changed in this test/evidence batch.
+
+## 2026-10-22 — Transactional workflow refinement evidence
+
+- `pnpm verify` passed on clean implementation SHA
+  `f85506fc1aa18d47717eac15d7fba990416919bc`: formatting, ESLint, TypeScript,
+  587 unit files / 5,124 tests, and production build.
+- Planning library transaction and authorization tests passed 25/25;
+  notification dispatch tests passed 46/46. The full disposable-Postgres
+  integration suite and migration drill were not run because
+  `TEST_DATABASE_URL` is unset and the local Docker API returned HTTP 500.
+- A database-backed competing email-dispatch regression test was added but
+  still needs to run against `planner_test`. Do not treat the unit mock as
+  concurrency evidence.
+- Full browser/visual release gates, complete route review, and independent
+  verification remain open. AD-002 remains **In Progress**; no
+  **Verified** status is assigned.
+
+## 2026-10-22 — Sanitize media folder import failures
+
+- Corrected A45 in the architecture review: item-level and route-level folder
+  import failures no longer expose unexpected storage/database error text;
+  late permission denials consistently return 403. Known sanitized provider
+  guidance and successful imports are unchanged.
+- Focused regression tests passed 8/8. `pnpm verify` passed on the code tree
+  committed as clean SHA `aabd19ea0478791be9d6a564bad051936c6c0466`:
+  formatting, lint, TypeScript, 588 unit files / 5,127 tests, and production
+  build. The commit hook also passed type-checking and 259 related tests.
+- This change adds no schema or persistence behavior, so no migration drill is
+  required for this milestone. Earlier transactional database integration
+  evidence remains open; full route, browser, visual, Firefox, and independent
+  review gates remain open. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Verify transactional planning and notification workflows
+
+- The local PostgreSQL 17 service and its `planner_test` database were verified
+  through the documented test credentials. The full integration suite passed;
+  this includes the email dispatcher race case after aligning its mock with the
+  real `{ id } | null` result contract.
+- The five-scenario migration drill passed against the disposable database.
+  Planning-library Postgres coverage now proves rollback for failed activity
+  writes across campaigns, pillars, and templates, and proves concurrent
+  archive/restore idempotency (2/2).
+- The full unit suite and typecheck passed in the commit hook at clean SHA
+  `e888315b591bd1acf3aa250f852ac9d88928d088`; grouped `pnpm verify` passed on
+  the unchanged application code at `aabd19ea0478791be9d6a564bad051936c6c0466`.
+- This closes the database evidence for A43/A44. Visual reconciliation, the
+  full browser matrix including Firefox, manual route review, and independent
+  verification remain open. AD-002 remains **In Progress**; no
+  **Verified** status is assigned.
+
+## 2026-10-23 — Add sanitized folder-import diagnostics
+
+- Unexpected per-item and route-level media folder import failures now emit
+  structured errors through the existing sanitized logger. User-facing
+  responses remain generic; late permission denials remain 403 and are not
+  logged as unexpected failures.
+- Focused regression tests passed 8/8. Grouped `pnpm verify` passed on the
+  application tree committed at
+  `e41d18784543791c077363a7ba3c29913e183a15`: formatting, ESLint, TypeScript,
+  all 588 unit files / 5,127 tests, and the production build. The commit hook
+  also passed TypeScript and 259 affected tests.
+- No schema, permission, route, or persisted-data contract changed. Full
+  browser/visual release coverage, manual route review, Firefox, and
+  independent verification remain open. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Centralize public media download response behavior
+
+- The single-asset and collection-asset routes now share a server-only media
+  feature adapter for storage proxying, byte-range forwarding, download
+  filenames, and security/cache headers. Route-specific token validation,
+  lookup, rate limiting, and unavailable responses remain at their original
+  boundaries.
+- The focused response contract tests passed 2/2; the commit hook passed
+  TypeScript and 255 affected tests. On clean SHA
+  `f93d3d51947732099fc51603bd47ee96b670f2f1`, `pnpm verify` passed formatting,
+  ESLint, TypeScript, 589 unit files / 5,129 tests, and the production build.
+- No route, permission, token, or persisted-data contract changed. The
+  remaining route review, full browser/visual evidence, Firefox, and
+  independent verification remain open. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Route media collection calls through the feature API
+
+- Media share-collection create/revoke, public lookup, and ZIP export
+  operations are exposed through `features/media/server.ts`; their App Router
+  callers now use that boundary. The existing `lib/media/collection-service`
+  stays behind the feature adapter during this incremental move.
+- Focused share-collection and module-ownership tests passed 9/9. The commit
+  hook passed TypeScript and 253 affected unit tests. On clean SHA
+  `f0a5c0dab05480f613b4e6c9f39b1a3d20b9a113`, `pnpm verify` passed formatting,
+  ESLint, TypeScript, 589 unit files / 5,129 tests, and production build.
+- No route or data contract changed. Manual route review, release
+  browser/visual evidence, Firefox, and independent verification remain open.
+  AD-002 remains **In Progress**.
+
+## 2026-10-23 — Validate sign-in callback targets at server boundaries
+
+- A shared `safeCallbackUrl` now canonicalizes and validates the callback on
+  the sign-in page and again inside all three sign-in server actions. Review
+  of the installed Auth.js redirect callback did not confirm an exploitable
+  external redirect; this is recorded as boundary hardening.
+- The focused auth page, action, and callback tests passed 18/18. The commit
+  hook passed TypeScript and the full unit suite (590 files / 5,137 tests).
+  On clean SHA `04c8bea93023bb7b75eafe914464dae2b91272d6`, `pnpm verify`
+  passed formatting, ESLint, TypeScript, 590 unit files / 5,137 tests, and the
+  production build.
+- No auth provider, permission, or valid same-origin callback contract
+  changed. Full browser/visual evidence, remaining manual route review,
+  Firefox, and independent verification remain open. AD-002 remains
+  **In Progress**.
+
+## 2026-10-23 — Sanitize brand-kit MCP import failures
+
+- Logo fetch failures and per-item failures no longer return arbitrary error
+  messages. Safe `McpToolError` details remain available, permission failures
+  use generic copy, and unexpected failures go through the sanitized logger.
+- The focused MCP brand-kit database integration suite passed 10/10 against
+  the disposable `planner_test` database, including a fake source URL token
+  that is redacted in logs and absent from the returned result. On clean SHA
+  `b10bfd6380826287c814e9a3d694783de58b3e42`, `pnpm verify` passed formatting,
+  ESLint, TypeScript, 590 unit files / 5,137 tests, and the production build.
+  The commit hook passed 51 MCP-related tests.
+- No MCP tool contract or persisted-data behavior changed. Full browser/visual
+  release coverage, remaining manual route review, Firefox, and independent
+  verification remain open. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Sanitize cron failure details
+
+- Email dispatch, notification outbox, and social-metrics cron routes now log
+  exception diagnostics and return stable failure copy. Social-metrics cron
+  history and the manual Run Now action store the same safe failure text.
+- On clean SHA `b7ec99a3bc721021d129a10833fa092ec0e8224`, formatting, ESLint,
+  and TypeScript passed. The unit suite passed 5,140/5,141 tests; an unrelated
+  report-retention test timed out under suite load and passed alone in 782 ms.
+  `pnpm build` passed separately on this SHA. Since `pnpm verify` exited
+  nonzero on the suite timeout, this is not recorded as a passing full gate.
+- No schema, route, cron authorization, success response, or persisted-data
+  contract changed. Browser/visual release checks, full route review, Firefox,
+  and independent verification remain open. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Separate notification email delivery ownership
+
+- Moved the preference-aware SMTP dispatcher and its recipient mapping / retry
+  policy into `src/lib/notifications/email-dispatch.ts`; extracted shared
+  fallback copy to `src/lib/notifications/copy.ts`. The email cron route and
+  worker-specific tests use the dedicated module. The old service keeps a
+  temporary compatibility export.
+- On clean SHA `be867104f611965e34c9ec6f9a1d0431aba3dc9e`, `pnpm verify` passed
+  formatting, ESLint, TypeScript, 591 unit files / 5,141 tests, and production
+  build. The disposable-Postgres email retry/concurrency suite passed 2/2.
+- A full-suite timeout previously occurred in the report retention filesystem
+  test; its unchanged assertions now have a scoped 15-second budget and pass
+  under the full suite. No schema, notification payload, response, or delivery
+  state contract changed. Browser/visual review, Firefox, and independent
+  verification remain open. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Sanitize inline-edit persistence failures
+
+- Brief, title, date, and production-note actions now log unexpected write
+  failures and return stable safe copy. Failures after a content row has saved
+  clearly retain the saved-state and unchanged-approval-history information.
+  Validation errors remain field-specific.
+- Focused inline-edit and materiality tests pass 33/33. On clean SHA
+  `91ef925fe6327efad376e48a6a6a25ab07c0cf4d`, `pnpm verify` passed formatting,
+  ESLint, TypeScript, 591 unit files / 5,142 tests, and the production build.
+  The commit hook passed 75 affected tests.
+- No schema, permission, route, or successful workflow behavior changed.
+  Browser/visual release checks, manual route review, Firefox, and independent
+  verification remain open. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Sanitize social administration failures
+
+- Centralized social API and server-action error mapping. Established typed
+  service errors retain their response code, message, and status; unexpected
+  failures are sanitized in client responses and recorded through the existing
+  structured logger. Unknown key-management fallback errors follow the same
+  policy.
+- Focused social service and admin tests passed 19/19. On clean SHA
+  `69ee4706ef366f1a5b3e6d5034c39f071d7e29b3`, `pnpm verify` passed formatting,
+  ESLint, TypeScript, the full unit suite, and the production build.
+- No success response, route, permission, or persisted-data behavior changed.
+  Browser/visual release checks, full route review, Firefox, and independent
+  verification remain open. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Sanitize Brand Kit template failures
+
+- Unexpected publishing-template persistence failures now emit sanitized
+  diagnostics and return stable safe copy. Idempotent duplicate handling is
+  unchanged; regression coverage proves a credential-shaped database URL is
+  absent from the caller's action state.
+- Focused action tests passed 48/48; the commit hook passed 90 affected tests.
+  On clean SHA `4b8ca2611550a71a34aeee4b37f7c0fba485ebcd`, `pnpm verify`
+  passed formatting, ESLint, TypeScript, 592 unit files / 5,146 tests, and
+  production build.
+- No route, permission, success, or persisted-data behavior changed. Full
+  browser/visual coverage, manual route review, Firefox, database evidence for
+  unrelated open items, and independent verification remain open. AD-002
+  remains **In Progress**.
+
+## 2026-10-23 — Sanitize Brand Kit and social action failures
+
+- Brand Kit profile, pillar, publishing-template, and AI suggestion actions
+  now share feature-owned sanitized diagnostics and return stable safe copy
+  for unexpected failures. Known duplicate pillar/template outcomes remain
+  unchanged. Credential-shaped persistence and provider failures are covered
+  by action-level regressions.
+- Social profile linking now sanitizes unexpected transaction failures while
+  preserving the existing quota-limit response. The affected channel unit set
+  passed 34/34; the direct failure regression passed 1/1. Brand Kit action
+  tests passed 51/51 and the profile-action regression passed 1/1. Commit hooks
+  passed TypeScript and affected unit selection.
+- Full `pnpm verify` passed on parent SHA `4b8ca2611550a71a34aeee4b37f7c0fba485ebcd`;
+  exact-HEAD grouped verification will be recorded at the next stable code
+  checkpoint. No route, permission, success, or persisted-data contract
+  changed. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Sanitize destructive-action audit failures
+
+- Reset-idea and workspace trend-data deletion audit records now store stable
+  `permission_denied` / `persistence_failure` codes instead of arbitrary
+  exception text. Focused destructive-action tests passed 10/10. The commit
+  hook escalated to the full unit suite because the existing reset-idea test
+  lacked ownership mapping; all 595 files / 5,153 tests passed at code SHA
+  `708630e7b007a9229916a17a3f9e86218e92b7dc`.
+- Added a content-area owner mapping and selector regression so reset-idea
+  changes now select focused tests. The architecture selector test passed
+  25/25 and the commit hook stayed in that focused area.
+- No schema, permission, destructive workflow, or audit outcome changed.
+  Final exact-SHA `pnpm verify`, Postgres/browser gates, and independent review
+  remain open. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Sanitize bulk reset audit failures
+
+- Reset-all ideas audit records now use stable `permission_denied` and
+  `persistence_failure` codes instead of arbitrary exception text. Focused
+  reset-all and ownership-selection tests passed 34/34; the affected hook set
+  passed 15/15.
+- On clean SHA `d056a8ccbdd0f2b46710a1648a77fc924455735a`, grouped
+  `pnpm verify` passed formatting, lint, TypeScript, 595 unit files / 5,155
+  tests, and the production build.
+- Postgres integration/migration checks remain unavailable (`TEST_DATABASE_URL`
+  unset; Docker unavailable). Browser/visual release coverage, manual route
+  review, Firefox, and independent verification remain open. No schema,
+  permission, destructive workflow, or success contract changed. This work is
+  **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## 2026-10-23 — Sanitize email worker failure metadata
+
+- Email delivery, email dispatch, and in-app outbox failure metadata now store
+  stable failure codes; structured logs retain diagnostics through the
+  credential scrubber. SMTP retry and poisoned-row behavior remain unchanged.
+  Added regressions for credential-shaped provider and transaction errors.
+- On clean SHA `b5166d983e8b1cf470b57d78e1741eb813532913`, grouped
+  `pnpm verify` passed formatting, lint, TypeScript, 595 unit files / 5,157
+  tests, and the production build. The affected notification unit area passed
+  152/152.
+- The Postgres DLQ integration regression could not run because
+  `TEST_DATABASE_URL` is unset and Docker is unavailable. Browser/visual release
+  checks, route review, Firefox, and independent verification remain open. No
+  schema, retry threshold, delivery state, route, or user-facing response
+  changed. This work is **Tested**, not **Verified**; AD-002 remains
+  **In Progress**.
+
+## 2026-10-23 — Sanitize workspace Settings AI suggestion failures
+
+- Lead-time and monthly-target suggestions now return stable error codes and
+  log unexpected provider errors through the credential-scrubbing logger.
+  Approval mode is validated at runtime; errors render in English and Arabic.
+- Three action tests and the Arabic lead-time form test passed; the
+  workspace-pages unit area passed 584/584. On clean SHA
+  `273dc281e84b70b21f4a06693e5831d0369cd39e`, grouped `pnpm verify` passed
+  formatting, lint, TypeScript, 597 unit files / 5,164 tests, and production
+  build.
+- Browser/accessibility/responsive/visual route checks and independent
+  verification remain open, as does native Arabic editorial review. No
+  permissions, routes, successful suggestions, or persistence behavior
+  changed. This work is **Tested**, not **Verified**; AD-002 remains
+  **In Progress**.
+
+## 2026-10-23 — Bound planning-pack action errors
+
+- Planning-pack server actions now return stable localized error codes for
+  authentication, agency-admin denial, invalid manifests, not-found packs,
+  and unexpected failures. Unexpected diagnostics use the structured logger;
+  arbitrary validation and persistence text no longer reaches client state.
+- Three action regressions passed; the AI area passed 248/248. On clean SHA
+  `c9d4906684d61d0fa56b8a8f049eadb6f43e55e`, grouped `pnpm verify` passed
+  formatting, lint, TypeScript, 596 unit files / 5,160 tests, and production
+  build.
+- English/Arabic route browser, axe, responsive and visual checks remain
+  pending. No authorization, route, persistence, or successful save behavior
+  changed. This work is **Tested**, not **Verified**; AD-002 remains
+  **In Progress**.
+
+## 2026-10-23 — Bound designer claim action errors
+
+- Claim outcomes now use typed service errors and stable codes. The action logs
+  unexpected persistence failures through the sanitized logger and returns
+  safe localized copy in English and Arabic. Claim authorization and transaction
+  behavior are unchanged.
+- Focused claim/action-state regressions passed 76/76. On clean SHA
+  `baa77c1144bf317335e3b879a48e3fcef9f15c44`, `pnpm verify` passed formatting,
+  lint, TypeScript, 599 unit files / 5,173 tests, and production build. The
+  pre-commit hook also passed TypeScript and the full 599-file unit suite.
+- Browser/a11y/responsive/visual checks, the full browser matrix, native Arabic
+  editorial review, and independent verification remain open. Docker returned
+  HTTP 500; the available loopback Postgres is Homebrew 17 rather than the
+  required disposable Postgres 16 service and was not used for integration or
+  migration evidence. This work is **Tested**, not **Verified**; AD-002 remains
+  **In Progress**.
+
+## 2026-10-23 — Narrow affected validation ownership
+
+- Feature-specific content-detail locale catalogs now select the content area;
+  the action-state contract has a focused ownership area. Locale infrastructure
+  stays global, and unmapped catalogs still escalate conservatively.
+- Selector regression tests passed 28/28; the ownership commit hook passed its
+  focused architecture and claim tests, 30/30. For the claim change, the
+  affected browser selector chose three Chromium content specs instead of the
+  full matrix, then stopped at the missing `TEST_DATABASE_URL` guard before
+  launching browsers. The affected unit selection passed. No tests or release
+  gates were removed.
+- Docker returned HTTP 500, so the disposable Postgres/browser gate remains
+  open. This tooling change does not promote **Tested** to **Verified**; AD-002
+  remains **In Progress** pending release evidence and independent review.
+
+## 2026-10-23 — Bound quick-create and content-edit action errors
+
+- Quick-create and content-edit actions now return stable error codes and
+  localize them in English and Arabic. Expected domain and permission errors
+  remain actionable; unexpected persistence failures are logged and hidden
+  from client state. Shared action-code localization is centralized for both
+  forms. Successful writes, routes, permissions, and stored data are unchanged.
+- Focused action and catalog tests passed 27/27; focused ESLint and
+  `pnpm typecheck` passed. On clean SHA
+  `5a7213ba609fa3abe9e863235573a071baec7e6f`, the commit hook passed
+  TypeScript and 220 affected unit files / 1,761 tests, then reran the direct
+  action suite, 13/13.
+- No database, migration, browser, visual, or manual route evidence was
+  produced. The disposable Postgres and bilingual browser gates remain open;
+  this change is **Tested**, not **Verified**. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Bound creative and audience-copy action errors
+
+- Creative-payload, research-teardown, and audience-copy actions now return
+  stable localized error codes. Domain validation, missing records, and invalid
+  workflow states have typed errors; unexpected failures are logged and
+  withheld from client state. The creative editor and copy panel localize the
+  shared codes in the active interface locale. Successful edits, permissions,
+  routes, and persisted formats are unchanged.
+- Focused UI, content, action, and catalog checks passed 133/133; focused ESLint
+  and `pnpm typecheck` passed. On clean SHA
+  `3b23ac8e2ecc9dc6ead1a4d2d65e918d8cde0423`, the commit hook passed TypeScript
+  and 33 affected unit files / 299 tests, then reran the changed action and
+  localization suites, 19/19.
+- Database, migration, browser, visual, and manual route evidence were not
+  produced. This change is **Tested**, not **Verified**; those release gates
+  remain open and AD-002 remains **In Progress**.
+
+## 2026-10-23 — Enforce route workspace scope for AI draft updates
+
+- `applyAiDraftAction` now checks the loaded content item's `workspaceId`
+  against the route workspace before applying a draft. Cross-workspace IDs
+  return the same safe not-found code and never reach the update service.
+  Unexpected read/update errors are logged and localized. A regression covers
+  the cross-workspace attempt.
+- Focused action and localization tests passed 22/22; focused ESLint and
+  `pnpm typecheck` passed. On clean SHA
+  `bcd4053e0d7dc5ce86b2c6c19d691bbcf6af465f`, the hook passed TypeScript and 12
+  affected unit files / 84 tests, then reran the direct action suite, 19/19.
+- Database, browser, visual, route, and independent verification remain open.
+  This work is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## 2026-10-23 — Bound batch-creation validation and persistence errors
+
+- Batch actions now return stable validation/failure codes and the form
+  localizes the summary and row field in English and Arabic. Batch service
+  validation no longer includes row content or schema details in thrown
+  messages. Unexpected persistence failures use the sanitized logger. Batch
+  validation and transaction atomicity are unchanged.
+- Focused action, service, UI, localization, and catalog checks passed
+  104/104; focused ESLint and `pnpm typecheck` passed. On clean SHA
+  `7e825366514d28d8b6fcfd65eef555f6de0c7d39`, the hook passed TypeScript and
+  221 affected unit files / 1,771 tests, then reran changed action/localization
+  suites, 23/23.
+- Database, browser, visual, and independent verification remain open. This
+  work is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## 2026-10-23 — Make shared action failures safe by default
+
+- `actionFailure` now returns the safe fallback unless the caller explicitly
+  supplies classified public copy. It never returns an exception message;
+  the planning action call sites no longer need repeated opt-out flags. The
+  regression test covers credential-shaped diagnostic text and an explicitly
+  classified message.
+- Focused helper tests passed 8/8; focused ESLint, Prettier, and TypeScript
+  passed. On clean code SHA `43b59841a61c52495a7177492e56ad8d07508a45`, the
+  commit hook passed TypeScript and 13 affected unit files / 94 tests, then
+  reran the helper suite, 8/8.
+- No persistence, route, permission, or successful-workflow behavior changed.
+  Database, browser, visual, full `pnpm verify`, and independent review remain
+  open. This work is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## 2026-10-23 — Sanitize invitation action failures and restore focused selection
+
+- Resend/revoke actions now capture unexpected failures and return stable codes
+  translated in English and Arabic; stale resend outcomes have explicit copy.
+  A credential-shaped failure regression proves internal details do not reach
+  the client. Routes, permissions, invitation writes, and success behavior are
+  unchanged.
+- Focused action tests passed 6/6; ESLint, Prettier, and TypeScript passed. On
+  code SHA `2d0616cbc89bf1e76834dd7a5acd1d5a0e033a0d`, the ownership miss
+  escalated the hook to 601 unit files / 5,201 tests, all passing. The mapping
+  was added in `b412ad5655c5be48a7ebaa4bcf9a7f2270b060f3`; its selector suite
+  passed 29/29 and the hook selected only the architecture area.
+- No database or migration behavior changed. Browser, responsive, axe, visual,
+  full `pnpm verify`, and independent review remain open. Both changes are
+  **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## 2026-10-23 — Sanitize planning-library action failures
+
+- Campaign, pillar, template, archive, and content-duplicate action failures
+  now return stable codes for permission, missing-record, duplicate-name, and
+  unexpected cases. Unexpected details are logged and withheld. The library
+  forms and duplicate flows render localized EN/AR copy. Successful writes,
+  role gates, and data contracts are unchanged.
+- Credential-shaped failure and known duplicate-pillar regressions passed;
+  focused form-locale tests and selector tests passed. Focused ESLint,
+  Prettier, and TypeScript passed. On clean SHA
+  `b566c43d6d768dbe0cc66fd05532f8a55ad92c7d`, the hook passed TypeScript,
+  222 related unit files / 1,774 tests, then reran 32 direct action/selector
+  tests.
+- No database or migration behavior changed. Browser/a11y/responsive/visual,
+  full `pnpm verify`, and independent review remain open. This work is
+  **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## 2026-10-23 — Sanitize platform agency-edit failures
+
+- Platform agency edits continue to return typed domain failures, but
+  unexpected exceptions now go to structured logs and the existing generic
+  fallback. A credential-shaped DB URL regression proves no internal detail
+  reaches the edit form. Permission checks, validation, successful updates,
+  routes, and data remain unchanged.
+- Focused action and selector suites passed 32/32; focused ESLint, Prettier,
+  and TypeScript passed. On clean SHA
+  `5ba9ef6309093f8cea00765a88c06830e09dd30c`, the hook reran the changed action
+  suite and ownership regression successfully.
+- No database or migration behavior changed. Full `pnpm verify`, browser,
+  visual, and independent review remain open. This work is **Tested**, not
+  **Verified**; AD-002 remains **In Progress**.
+
+## 2026-10-23 — Centralize agency update action failures
+
+- Agency-admin and platform-admin edit actions now share one domain error
+  mapper. Typed `AgencyUpdateError` outcomes keep their public codes; unknown
+  failures are logged and return the same generic message. Both use separate
+  authorization checks and retain their existing success behavior.
+- The two action regressions and selector suite passed 34/34. Focused ESLint,
+  Prettier, and TypeScript passed. On clean SHA
+  `4ef3ff8a6a01fcd782b4280b9cb197517e7e3486`, the hook selected platform,
+  agency-settings, and architecture areas, passed both action tests, then
+  reran 34 direct tests.
+- No database, migration, route, permission, or stored-data behavior changed.
+  Full `pnpm verify`, browser, and independent review remain open. This work is
+  **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+### Architecture review — platform access action outcomes (2026-10-23)
+
+- **Tested on:** `d7dee524f351aaa6d08223da7a416a793cff3baf`
+- **Change:** Platform access actions now distinguish typed permission denial
+  from unexpected failures. Unexpected errors are logged and returned as a
+  stable localized code; English and Arabic grant/change-role/revoke feedback
+  use the same safe outcome.
+- **Evidence:** Commit hook passed TypeScript, 224 related unit files / 1,778
+  tests, and 42 focused action, form, and affected-test-selector tests.
+- **Compatibility:** No permission, route, successful workflow, persistence,
+  or migration behavior changed.
+- **Status:** Tested. Full release verification and independent review remain
+  open; do not mark Verified.
+
+### Architecture review — member reactivation failure state (2026-10-23)
+
+- **Tested on:** `cb74cbfaaf65101c0c8c01af07c944b2b05e82ca` (full SHA recorded in the evidence bundle).
+- **Change:** Reactivation failures now stay in the users page's inline
+  feedback, are logged for diagnosis, and use localized English/Arabic copy.
+- **Evidence:** Commit hook passed TypeScript, 224 related unit files / 1,780
+  tests, and 13 focused action and member-list tests.
+- **Compatibility:** Successful membership changes, permissions, routes,
+  persisted data, and migrations are unchanged.
+- **Status:** Tested. Full release verification and independent review remain
+  open; do not mark Verified.
+
+### Architecture review — deterministic Community E2E entitlement (2026-10-23)
+
+- **Code tested on:** `b5a34a94` (full SHA recorded in the evidence bundle).
+- **Finding:** Community fixture selected an arbitrary fallback plan if
+  `enterprise` was missing; in this disposable database that plan did not
+  include `community_inbox`, so the route correctly denied access.
+- **Change:** Dev seed now creates/reuses a dedicated E2E plan with the module
+  ceiling and assigns only the Community fixture agency to it.
+- **Evidence:** The Community inbox and Trends opt-out regressions passed
+  together, 2/2. The commit hook passed TypeScript and 604 unit files / 5,215
+  tests. An earlier full browser run passed 281, failed 2, skipped 1, and did
+  not run 6; its visual phase did not start. Full release rerun is pending.
+- **Compatibility:** Test fixture only; no production plan, permission,
+  persistence schema, or route contract changed.
+- **Status:** Tested. Full release browser/visual evidence and independent
+  review remain open; do not mark Verified.
+
+### Architecture review — batched validation reliability (2026-10-23)
+
+- **Tested on:** `b08c073681d12c006ab014141803b1b442f18c72`.
+- **Batched gates:** `pnpm verify` passed (format, lint, typecheck, 604 unit
+  files / 5,215 tests, and production build). The full integration suite
+  passed against the disposable `planner_test` database.
+- **Migration drill:** `NODE_ENV=test pnpm migration-drill` passed all five
+  scenarios in 37.4 seconds.
+- **Browser evidence:** the full isolated Chromium project ran 290 tests in
+  25 minutes: 284 passed, five failed, one skipped. Next restarted after its
+  memory threshold was reached during Trends coverage. The five failed tests
+  passed together on a fresh server (9/9). Firefox, WebKit, mobile Chromium,
+  and mobile Safari did not run because the release command stopped after
+  Chromium failures.
+- **Visual evidence:** `pnpm test:visual` started 265 checks and was stopped
+  after 42 checks when exact-reference mismatches appeared across account,
+  settings, platform overview/agency, Brand Kit, and Client screens. This is
+  incomplete and failed evidence; no snapshots were refreshed. The visual
+  route inventory needs triage, and no design-system change was made.
+- **Next step:** assess safe fresh-server test batching between deterministic
+  fixture groups, then rerun the complete browser and visual gates on the
+  resulting clean SHA.
+- **Status:** **Tested**, not **Verified**. Release evidence is incomplete and
+  the push gate remains closed; AD-002 remains **In Progress**.
+
+### Architecture review — E2E dev-server restart follow-up (2026-10-23)
+
+The 8 GiB heap increase alone did not stop Next's memory-threshold restart. A
+Chromium attempt stopped at 189/290 with two a11y/mobile timeouts at restart
+boundaries. A subsequent experiment disabled threshold restarts for the local
+E2E server; the server exited around test 53 and later requests across unrelated
+specs were refused. That experiment was rolled back. The runner-specific unit
+suite and `pnpm verify` had passed on the experimental commit, but the full
+browser run did not. The current runner retains the 8 GiB heap setting without
+restart suppression. The full browser matrix has not passed, so this is
+**Tested**, not **Verified**. Visual parity remains incomplete under A84.
+AD-002 remains **In Progress** and the push gate remains closed.
+
+### Architecture review — Platform overview query ownership (2026-10-23)
+
+On clean SHA `70bcf3695be7e9b18bd73e6940abeb6778cc37d1`, the platform overview's
+aggregate and recent-agency reads moved behind the server-only
+`src/features/platform/overview/server.ts` entry point. The route retains its
+permission gate, translation, and UI. The recent-agency query no longer selects
+an unused timestamp. Empty and populated query results have focused coverage;
+the platform test area passed 86/86, and the hook passed type-check plus the
+focused ownership/query tests (37/37). On clean SHA
+`0e2e74b9289503dfd52df739b902b9eb64323620`, the focused platform browser area
+passed 9/9, including responsive Platform Access, non-admin denial, and the
+authorized overview KPI surface. No public contract or stored-data behavior
+changed. Full release-browser/visual evidence and independent review remain
+open; this is **Tested**, not **Verified**. AD-002 remains **In Progress**.
+
+### Architecture review — Account overview query ownership (2026-10-23)
+
+On clean SHA `865512f8cca64fa21c7aeba9bf97fb9e8721fb83`, the account feature now
+loads profile, password state, and agency membership rows together. This removes the duplicate user lookup
+that existed only to determine whether a password was set, and the feature
+returns only the boolean rather than password material. The account unit area
+passed 3/3; type-check passed; the focused account browser batch passed 5/5,
+including light/dark accessibility and account preference journeys. No route,
+role, or stored-data behavior changed. Full browser/visual release evidence and
+independent review remain open; this is **Tested**, not **Verified**. AD-002
+remains **In Progress**.
+
+### Architecture review — batched verification and Chromium shards (2026-10-23)
+
+On clean SHA `36aa336872859bffff560944cf9d3756b696ad9f`, `pnpm verify` passed:
+formatting, lint, type-check, all 606 unit files / 5,225 tests, and production
+build. The isolated Chromium project ran in two sequential shards against the
+disposable database: 145/145 and 144 passed / one skipped. The total is 289
+passed and one skipped. The second shard logged a destination-stream warning,
+but all tests completed successfully. This is Chromium-only evidence; the
+remaining browser projects and complete visual matrix have not passed. Work
+remains **Tested**, not **Verified**; AD-002 stays **In Progress** and the push
+gate stays closed until the required release evidence is complete.
+
+### Architecture review — cold legacy workspace route assertion (2026-10-23)
+
+On clean SHA `9b1a6ddc`, the legacy tenant-isolation E2E keeps its workspace
+identity and cross-tenant absence checks while allowing 15 seconds for the
+first marker on a cold dev server. The workspace test-ownership area now
+selects this browser case for legacy route changes, and its selector
+regression passed. Chromium passed 2/2 and WebKit passed 2/2. The run emitted
+Next development-server stream/RSC warnings, but both browsers reached the
+canonical workspace and completed the isolation assertions. No product route,
+permission, or data behavior changed. Full `pnpm verify`, the complete
+five-browser matrix, the visual matrix, and independent review remain open;
+this is **Tested**, not **Verified**, and AD-002 remains **In Progress**.
+
+### Architecture review — batched baseline verification (2026-10-23)
+
+`pnpm verify` passed on clean SHA `057677e83a9b235235562bda316164f8e8ae34e7`:
+format check, lint, typecheck, 606 unit test files / 5,226 tests, and the
+production build. This closes the local baseline gate for that exact SHA. It
+does not close the full five-browser release matrix, the visual matrix, or
+independent verification; AD-002 remains **In Progress**.
+
+### Workspace AI Assistant continuation — persisted operating mode (2026-10-23)
+
+The private assistant conversation now stores its Ask/Plan/Apply mode. The
+conversation list and resume endpoint return that mode; changing it uses the
+existing owner- and workspace-scoped update service. Older records default to
+Ask. Migration `0094_thick_lockheed.sql` is additive, and its allowed values
+are constrained in PostgreSQL. TypeScript and focused assistant route/analysis
+tests passed (19/19). All five migration drills passed on disposable Homebrew
+PostgreSQL 17.10; this does not satisfy the required PostgreSQL 16 evidence.
+The full integration suite, exact-clean-SHA `pnpm verify`, bilingual full
+browser/visual matrix, manual CI, independent review, MiniMax live UAT/privacy
+review, production backup/rollback evidence, and deployment remain open. M3.8
+is still **In Progress**, and this work must not be merged or deployed yet.
+
+### Workspace AI Assistant continuation — typed prompt parameters and broader checks (2026-10-23)
+
+Prompt definitions now support validated `text`, `month`, and
+`content_reference` parameters, immutable revision snapshots, placeholder
+checking, and bilingual form controls. Missing and unknown parameter values
+are rejected before AI budget reservation. On the dirty feature worktree,
+`pnpm verify` passed (612 unit files / 5,267 tests and production build), the
+complete integration suite passed, the focused assistant Chromium journey
+passed 4/4 including EN/AR/RTL, and all five migration drills passed on
+PostgreSQL 17.10. These are development results, not exact-clean-SHA release
+evidence. The complete 5-browser run remains incomplete after workspace-route
+timeouts at Next memory-threshold restarts. Visual regression found exact
+reference mismatches across existing screens and was stopped after confirming
+baseline drift. PostgreSQL 16 upgrade/rollback evidence, CI, independent
+review, model/account tool-call smoke, privacy/retention review, complete skill
+and knowledge management, dynamic tool orchestration, durable run
+reconnect/recovery, production backup, and deployment remain open. M3.8 is
+still **In Progress** and is not ready to merge or deploy.
+
+### Workspace AI Assistant continuation — bounded read-tool orchestration (2026-10-23)
+
+The current working tree adds a provider-neutral bounded tool loop and a server-only MiniMax tool-use adapter. Read-only tools expose the active month's summary, calendar distribution, content mix, bounded item list, explicitly selected content item, and authorized brand context. The model cannot choose a workspace or introduce tools. Agency tool calling remains disabled by default and is available only for configured `MiniMax-M3.1-Flash`; a live non-production key/model smoke is required before enablement.
+
+Working-tree checks on 2026-10-23: `pnpm verify` passed format, lint, typecheck, 615 unit files / 5,279 tests, and build; the full integration suite passed on both PostgreSQL 17.10 and PostgreSQL 16.15; assistant Chromium E2E passed 4/4 including EN/AR/RTL; and the five-scenario migration drill passed with 97/97 migrations on both database versions. The replay drill first found migration 0096 needed an idempotent column addition; the migration was corrected and all five scenarios then passed. The configured Firefox E2E run stalled after an immediate first-test failure and was stopped before diagnostics; WebKit, mobile, and visual evidence remain incomplete. These checks are not exact-clean-SHA release evidence. Manual CI, independent review, live MiniMax account/tool and data-processing verification, privacy/retention review, production backup/rollback, and deployment remain outstanding. M3.8 remains **In Progress** and must not be merged or deployed yet.
+
+### 2026-10-24 continuation — schedule proposal transaction and release checks
+
+The first schedule-proposal integration run exposed a lock cycle: media-folder
+reconciliation opened a second transaction before the proposal transaction
+committed. Reconciliation now runs after the proposal commit, while ordinary
+content updates retain their existing behavior. The focused regression passed,
+and the full integration suite passed on both PostgreSQL 16.15 and 17.10.
+
+`pnpm verify` passed formatting, lint, typecheck, all 615 unit files / 5,282
+tests, and the production build on the working tree. Both five-scenario
+migration drills passed with 98/98 migrations. The isolated Workspace
+Assistant Chromium journeys passed 4/4 (prompt editing at mobile widths,
+selected-reference clarification, streamed activity/validated output, and
+Arabic RTL); its English and Arabic/RTL accessibility cases also passed. A
+broad Chromium run was stopped after test 130/296 because of runtime and
+Next-server memory restarts; it had two timeout failures in unrelated calendar
+accessibility and sign-in middleware cases. The later Firefox invocation
+stalled without results and was stopped. WebKit, mobile, and visual release
+evidence remain open.
+
+These results are from a dirty worktree, not a verified clean SHA. Multi-item
+and broader calendar proposals, skill management, managed knowledge, durable
+run recovery, and model capability preferences remain unimplemented. Manual
+CI, independent review, live MiniMax account/model and data-processing UAT,
+privacy/retention review, production backup/rollback, and deployment
+verification are also open. M3.8 remains **In Progress** and must not be
+merged or deployed.
+
+### 2026-10-24 continuation — transcript privacy correction
+
+The assistant now treats conversations as private session metadata only.
+Transcript turns stay in browser memory and the browser may send at most eight
+recent turns with a request; session reads always return an empty message list.
+New sessions use a neutral title instead of storing the first user prompt. The
+legacy transcript table remains for migration compatibility and is neither
+read nor written by assistant runtime code. Any pre-existing rows still need a
+separately reviewed, backed-up retention decision.
+
+Focused route unit tests passed 19/19, PostgreSQL 16 assistant integration
+tests passed 5/5 (including an empty transcript table assertion), and the
+focused Chromium assistant journeys passed 4/4 after removing the obsolete
+transcript-save activity event. `pnpm verify` then passed formatting, lint,
+typecheck, all 615 unit files / 5,283 tests, and the production build. These
+remain dirty-worktree results. Browser/device release coverage, exact-clean-SHA
+evidence, manual CI, independent review, MiniMax account/model and privacy UAT,
+and production backup/rollback remain open. M3.8 remains **In Progress**; do
+not merge or deploy yet.
+
+### 2026-10-24 continuation — bounded run replay and responsive inventory
+
+Assistant requests now receive a durable run ID and persist a bounded sequence
+of sanitized activity events. Authorized members can replay events after a
+cursor and request server-side cancellation; stale nonterminal runs are
+reported as failed. The streamed answer and conversation turns remain in
+browser memory only. This is request-bound recovery, not durable worker
+resumption: a process restart still loses in-flight provider work, and worker
+leases/retry recovery remain open.
+
+The workspace assistant is included in the app-only visual route inventory and
+has English responsive baselines for 375/768/1024/1280/1440 widths. Arabic
+visual snapshots now cover the same five widths. Initial attempts reused the
+shared visual test account and stalled; the assistant Arabic visual test now
+uses a dedicated seeded user and loads the route once before resizing. Strict
+Chromium snapshot comparison passed all five Arabic and all five English
+viewports on 2026-10-24, including the `lang="ar"`, `dir="rtl"`, overflow, and
+accessibility assertions in the Arabic case. The rest of the full visual suite
+and browser/device release matrix remain open.
+
+On the dirty feature worktree, the current verification evidence is:
+
+- `pnpm verify`: passed formatting, lint, typecheck, 616 unit files / 5,288
+  tests, and production build.
+- Full integration suite: passed on PostgreSQL 16.15 and PostgreSQL 17.10.
+- Migration drill: passed 5/5 scenarios on PostgreSQL 17.10; the prior
+  PostgreSQL 16.15 drill passed before the latest non-schema stale-run change.
+- Focused Workspace Assistant Chromium E2E: 5/5 passed on isolated rerun;
+  bilingual assistant accessibility: 2/2 passed.
+- The complete multi-browser assistant run stalled after Chromium. The
+  assistant's dedicated English and Arabic/RTL visual comparisons each passed
+  5/5 viewports. The full visual suite and browser/device release matrix remain
+  open.
+
+These are not exact-clean-SHA evidence. Skill authoring/review and rollback,
+document/web ingestion, model preferences, durable worker recovery, broader
+calendar/multi-item proposals, live MiniMax account/model tool-call and privacy
+UAT, manual CI, independent review, production backup/rollback, and deployment
+verification remain open. M3.8 remains **In Progress**; do not merge or deploy.
+
+### 2026-10-24 continuation — authorized assignment workload context
+
+Added a workspace-scoped workload read service using the existing content
+feature boundary. It returns bounded counts by content owner and designer for
+the selected month, includes unassigned design work, omits email addresses and
+user IDs, and denies access outside the assistant's manager/planner role gate.
+The assistant loads this context only when the selected skill/request asks for
+workload analysis. The bilingual starter prompt and skill state explicitly
+that assignment totals do not establish available capacity, deadlines, or
+performance.
+
+Focused verification passed: typecheck, 11 unit tests across the tool/prompt/
+skill suites, and the PostgreSQL 16.15 Workspace Assistant integration suite
+(8/8, including workspace and month isolation). After the prompt library
+change, strict Chromium visual comparison passed the English and Arabic/RTL
+responsive matrices (5 viewports each). The current focused Workspace
+Assistant Chromium E2E passed 5/5, including knowledge editing/history,
+private prompt creation, content reference selection, streamed results, and
+Arabic RTL. The latest `pnpm verify` passed formatting, lint, typecheck, all
+616 unit files / 5,290 tests, and the production build.
+
+These are dirty-working-tree results. Full integration and migration
+verification must be repeated on the final clean SHA; complete browser/device
+coverage, exact-clean-SHA CI, independent review, provider/privacy UAT,
+production backup/rollback, and deployment remain open. Skill authoring/review
+and rollback, document/web ingestion, model preferences, durable worker
+recovery, and broader calendar/multi-item proposals remain unimplemented.
+M3.8 remains **In Progress** and is not eligible for merge or deployment.
+
+The complete PostgreSQL 16.15 integration suite subsequently completed on the
+dirty feature worktree, including all eight Workspace Assistant integration
+cases. The PostgreSQL 16.15 migration drill passed all five scenarios and
+replayed 100/100 migrations from zero. These results do not satisfy exact-clean
+SHA, manual CI, independent review, production backup/rollback, or deployment
+verification.
+
+The plan-review flow additionally supports an explicitly selected batch of up
+to three distinct fields on the same draft, applied in one revision-checked
+Planner content transaction. Workspace Assistant integration passed 10/10 and
+the focused Chromium suite passed 5/5 with the selected-batch UI and axe scan.
+Multi-item batches and exact-clean-SHA/release gates remain open.
+
+### 2026-10-24 continuation — exact local release verification
+
+On clean application commit `f43ce2b5687daf52baf007fc123bd641dee00031`, local `pnpm verify` passed formatting, lint, typecheck, all 617 unit files / 5,300 tests, and production build. The complete PostgreSQL 16 integration suite passed, including Workspace Assistant 12/12; the five-scenario migration drill passed with 103/103 migrations from zero, repair, upgrade, backup/restore, and failed-migration rollback. The current assistant implementation includes agency skill author/review/rollback and bounded run event replay/cancellation, so these are removed from the M3.8 open items.
+
+M3.8 remains **In Progress**. Full browser/device release coverage, independent review, live MiniMax model/tool and privacy UAT, separated-account human UAT, and production backup/rollback evidence remain open. Do not merge or deploy until these gates are complete.

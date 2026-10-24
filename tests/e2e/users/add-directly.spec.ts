@@ -1,5 +1,30 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { bootstrapTestSession, setAuthCookie } from "../_helpers";
+
+async function navigateThroughExpectedRedirect(page: Page, path: string, destination: RegExp) {
+  try {
+    await page.goto(path, { waitUntil: "commit" });
+  } catch (error) {
+    // WebKit can report the expected middleware redirect as an interrupted
+    // navigation. The destination URL and page landmarks below remain the
+    // contract, so ignore only this specific navigation handoff.
+    if (
+      !(error instanceof Error) ||
+      !/Navigation to .* is interrupted by another navigation to/.test(error.message)
+    ) {
+      throw error;
+    }
+  }
+  await page.waitForURL(destination, { timeout: 10_000 });
+}
+
+async function openAddDirectlyTab(page: Page) {
+  await page.goto("/app/users");
+  await page.waitForLoadState("networkidle");
+  const tab = page.getByTestId("users-tab-add");
+  await tab.click();
+  await expect(tab).toHaveAttribute("aria-selected", "true");
+}
 
 /**
  * E2E tests for the "Add directly" tab on /app/users.
@@ -20,7 +45,10 @@ test.describe("User Management — Add directly flow", () => {
     await expect(page.getByRole("heading", { name: "User Management" })).toBeVisible();
 
     // The "Send invitation" tab is the default; "Add directly" is a sibling trigger.
-    await page.getByTestId("users-tab-add").click();
+    await page.waitForLoadState("networkidle");
+    const addTab = page.getByTestId("users-tab-add");
+    await addTab.click();
+    await expect(addTab).toHaveAttribute("aria-selected", "true");
     await expect(page.getByTestId("add-directly-form")).toBeVisible();
     await expect(page.getByTestId("add-directly-generate")).toBeVisible();
     await expect(page.getByTestId("add-directly-must-change")).toBeChecked();
@@ -31,8 +59,7 @@ test.describe("User Management — Add directly flow", () => {
   }) => {
     await bootstrapTestSession(page);
 
-    await page.goto("/app/users");
-    await page.getByTestId("users-tab-add").click();
+    await openAddDirectlyTab(page);
 
     const newEmail = `e2e-add-${Date.now()}@laratik.local`;
     await page.getByRole("textbox", { name: /^Email/i }).fill(newEmail);
@@ -61,10 +88,9 @@ test.describe("User Management — Add directly flow", () => {
   });
 
   test("admin can assign multiple workspace roles and Agency Admin access", async ({ page }) => {
-    await bootstrapTestSession(page);
+    const seeded = await bootstrapTestSession(page);
 
-    await page.goto("/app/users");
-    await page.getByTestId("users-tab-add").click();
+    await openAddDirectlyTab(page);
 
     const newEmail = `e2e-multi-admin-${Date.now()}@laratik.local`;
     const newName = "E2E Multi Role Admin";
@@ -78,21 +104,34 @@ test.describe("User Management — Add directly flow", () => {
     await page.getByTestId("add-directly-grants-admin").click();
     // The shared chip deliberately makes the Radix checkbox visually hidden;
     // click its associated label so Playwright follows the real user target.
-    const firstWorkspaceRoles = page.locator('[data-testid^="add-directly-workspace-"]').first();
-    await firstWorkspaceRoles.getByText("Designer", { exact: true }).click();
-    await firstWorkspaceRoles.getByText("Publisher", { exact: true }).click();
+    const roleMatrix = page.getByTestId("add-directly-role-matrix");
+    await roleMatrix
+      .getByTestId(`add-directly-chip-${seeded.workspaceId}-designer`)
+      .getByText("Designer", { exact: true })
+      .click();
+    await roleMatrix
+      .getByTestId(`add-directly-chip-${seeded.workspaceId}-publisher`)
+      .getByText("Publisher", { exact: true })
+      .click();
 
     await page.getByRole("button", { name: /Add user/i }).click();
     await expect(page.getByTestId("add-directly-reveal")).toBeVisible({ timeout: 10_000 });
+    await page.waitForLoadState("networkidle");
 
     // The Team page reads the persisted membership-role rows. Both selected
     // roles must be visible on the same member row; the old last-role-wins
     // defect would show only Publisher here.
-    await page.goto("/app/w/acme/team");
-    const memberRow = page.locator("tr").filter({ hasText: newName });
-    await expect(memberRow).toContainText("Designer");
-    await expect(memberRow).toContainText("Publisher");
-    await expect(memberRow).toContainText(/Agency admin/i);
+    const teamPage = await page.context().newPage();
+    try {
+      await teamPage.goto(`/app/a/test-agency/w/${seeded.workspaceSlug}/team`);
+      await expect(teamPage).toHaveURL(/\/team$/);
+      const memberRow = teamPage.locator("tr").filter({ hasText: newName });
+      await expect(memberRow).toContainText("Designer");
+      await expect(memberRow).toContainText("Publisher");
+      await expect(memberRow).toContainText(/Agency admin/i);
+    } finally {
+      await teamPage.close();
+    }
 
     // A fresh session with a normal global user role must still pass the
     // tenant-scoped Agency Admin gate because the membership flag is the
@@ -106,8 +145,7 @@ test.describe("User Management — Add directly flow", () => {
   test("submitting without a strong password shows a server-side error", async ({ page }) => {
     await bootstrapTestSession(page);
 
-    await page.goto("/app/users");
-    await page.getByTestId("users-tab-add").click();
+    await openAddDirectlyTab(page);
 
     await page.getByRole("textbox", { name: /^Email/i }).fill(`weak-${Date.now()}@laratik.local`);
     // Type a password that the form-level meter would reject.
@@ -137,8 +175,7 @@ test.describe("First-login redirect (mustChangePassword)", () => {
     // in as the new user, verify the redirect to /set-password.
     await bootstrapTestSession(page);
 
-    await page.goto("/app/users");
-    await page.getByTestId("users-tab-add").click();
+    await openAddDirectlyTab(page);
 
     const newEmail = `redirect-${Date.now()}@laratik.local`;
     await page.getByRole("textbox", { name: /^Email/i }).fill(newEmail);
@@ -158,8 +195,7 @@ test.describe("First-login redirect (mustChangePassword)", () => {
     await setAuthCookie(page, page.request, { email: newEmail, role: "user" });
 
     // Visit any protected route; the middleware should redirect to /set-password
-    await page.goto("/app");
-    await page.waitForURL(/\/set-password/, { timeout: 10_000 });
+    await navigateThroughExpectedRedirect(page, "/app", /\/set-password/);
     await expect(page.getByTestId("set-password-page")).toBeVisible();
     await expect(page.getByTestId("set-password-form")).toBeVisible();
 
@@ -181,8 +217,7 @@ test.describe("First-login redirect (mustChangePassword)", () => {
     // get to /set-password (mustChangePassword=true).
     await bootstrapTestSession(page);
 
-    await page.goto("/app/users");
-    await page.getByTestId("users-tab-add").click();
+    await openAddDirectlyTab(page);
 
     const newEmail = `signout-${Date.now()}@laratik.local`;
     await page.getByRole("textbox", { name: /^Email/i }).fill(newEmail);
@@ -195,8 +230,7 @@ test.describe("First-login redirect (mustChangePassword)", () => {
     // Sign in as the new user; middleware redirects to /set-password
     await page.context().clearCookies();
     await setAuthCookie(page, page.request, { email: newEmail, role: "user" });
-    await page.goto("/app");
-    await page.waitForURL(/\/set-password/, { timeout: 10_000 });
+    await navigateThroughExpectedRedirect(page, "/app", /\/set-password/);
 
     // The sign-out escape must be present and clickable.
     const signOutLink = page.getByTestId("set-password-signout-link");
@@ -216,8 +250,7 @@ test.describe("First-login redirect (mustChangePassword)", () => {
     // so a future refactor doesn't strip it.
     await bootstrapTestSession(page);
 
-    await page.goto("/app/users");
-    await page.getByTestId("users-tab-add").click();
+    await openAddDirectlyTab(page);
 
     const checkbox = page.getByTestId("add-directly-grants-admin");
     await expect(checkbox).toBeVisible();

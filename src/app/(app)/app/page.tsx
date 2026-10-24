@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { and, eq, isNull, or } from "drizzle-orm";
 import {
   AlertTriangle,
@@ -22,7 +23,7 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { KpiCard } from "@/components/workspace/kpi-card";
 import { ListCard, ListItem } from "@/components/workspace/list-item";
 import { PageHeader } from "@/components/workspace/page-header";
-import { StatusBadge } from "@/components/content/status-badge";
+import { StatusBadge } from "@/features/content";
 import { KpiContentStatus, calculateOverviewMetrics } from "@/lib/dashboard/kpis";
 import { formatDate } from "@/lib/i18n/format-locale";
 import { tForActive } from "@/lib/i18n/t-for-active";
@@ -72,7 +73,10 @@ export default async function MyWorkPage() {
   // error page. Scoping at the data layer is the correct fix.
   const ctx = await resolveActiveAgencyContext({ actor: { id: userId } });
   const activeAgencyId = ctx?.agencyId ?? null;
-  if (!activeAgencyId) return null;
+  // The app shell lets platform administrators through without a tenant
+  // context. Send them to the actual platform landing page; `/app/platform`
+  // is only a route prefix and has no page of its own.
+  if (!activeAgencyId) redirect("/app/platform/overview");
   const canCreateWorkspace = await isAgencyAdmin({ id: userId }, activeAgencyId);
 
   // Pull every item I have any stake in (owner / designer / reviewer)

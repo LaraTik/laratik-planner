@@ -1,13 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { bootstrapTestSession } from "./_helpers";
 
-/**
- * Paid source with no API key — graceful error.
- *
- * TikTok via the official Research API requires a server-side key.
- * If the operator tries to enable the source without one, the UI
- * shows a friendly error rather than crashing the page.
- */
+/** A paid source reports a clear error when enabled without its required key. */
 
 test.describe("Trend Radar — paid source without key", () => {
   test.beforeEach(async ({ page }) => {
@@ -18,7 +12,7 @@ test.describe("Trend Radar — paid source without key", () => {
     });
   });
 
-  test("enabling youtube_data_api without a key shows a graceful error", async ({
+  test("youtube_data_api without a key shows a graceful configuration error", async ({
     page,
   }: {
     page: Page;
@@ -26,18 +20,17 @@ test.describe("Trend Radar — paid source without key", () => {
     // Visit the source admin page directly.
     await page.goto("/app/agency-settings/trend-sources");
 
-    // The TikTok Research card exists.
     const card = page.getByTestId("source-card-youtube_data_api");
     await expect(card).toBeVisible();
 
-    // The "Enable" button is rendered, but clicking surfaces a "missing
-    // API key" inline error — not a 500.
     const enable = card.getByRole("button", { name: /enable/i });
     await enable.click();
+    const errorBanner = card.getByTestId("source-enable-error");
+    await expect(errorBanner).toBeVisible();
+    await expect(errorBanner).toContainText(/api key|key|required/i);
+    await expect(card.getByTestId("source-status-youtube_data_api")).toContainText(/disabled/i);
 
-    // Wait for either the inline error or a modal.
-    const errorBanner = page.getByTestId("source-enable-error");
-    await expect(errorBanner).toBeVisible({ timeout: 5_000 });
-    await expect(errorBanner).toContainText(/api key|key|missing/i);
+    await card.getByRole("button", { name: /configure/i }).click();
+    await expect(card.getByTestId("source-config-youtube_data_api-key")).toBeVisible();
   });
 });

@@ -190,7 +190,28 @@ describe("resetAllIdeasAction", () => {
       action: "platform.destructive.reset_all_ideas",
       targetType: "workspace",
       outcome: "denied",
+      metadata: { error_message: "permission_denied" },
     });
+  });
+
+  it("stores a stable audit code when a persistence failure is unexpected", async () => {
+    platformAccessMock.requirePlatformPermission.mockResolvedValueOnce({});
+    dbMock.db.transaction.mockRejectedValueOnce(
+      new Error("postgres://planner:secret@example.test/planner_test: connection refused"),
+    );
+
+    const result = await resetAllIdeasAction("acme", undefined, makeFormData());
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/ideas could not be deleted/i),
+    });
+    const audit = findAudit("failed")?.values as Record<string, unknown>;
+    expect(audit).toMatchObject({
+      outcome: "failed",
+      metadata: { error_message: "persistence_failure" },
+    });
+    expect(JSON.stringify(audit)).not.toContain("secret");
   });
 
   it("refuses when the workspace is not accessible", async () => {

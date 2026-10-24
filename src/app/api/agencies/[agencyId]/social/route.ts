@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
-import { getSocialStatus, SocialServiceError } from "@/lib/social/service";
+import { getSocialStatus, toSocialFailureResponse } from "@/lib/social/service";
 
 /**
  * GET /api/agencies/[agencyId]/social
@@ -53,12 +53,7 @@ export async function GET(
       lastRotatedAt: status.enabled ? (status.lastRotatedAt?.toISOString() ?? null) : undefined,
     });
   } catch (err) {
-    if (err instanceof SocialServiceError) {
-      return NextResponse.json({ error: err.message, code: err.code }, { status: err.status });
-    }
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Unexpected error" },
-      { status: 500 },
-    );
+    const failure = toSocialFailureResponse(err);
+    return NextResponse.json(failure.body, { status: failure.status });
   }
 }

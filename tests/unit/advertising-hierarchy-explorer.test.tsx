@@ -10,7 +10,12 @@ const labels = {
   ad: "Ad",
   spend: "Spend",
   results: "Results",
+  costPerResult: "Cost / result",
+  reach: "Reach",
+  frequency: "Frequency",
   ctr: "CTR",
+  ctrLink: "CTR (link)",
+  cpm: "CPM",
   delivery: "Delivery",
   expand: "Expand",
   collapse: "Collapse",
@@ -24,6 +29,11 @@ const labels = {
   sortSpend: "Spend",
   sortResults: "Results",
   sortCtr: "CTR",
+  sortCostPerResult: "Cost / result",
+  sortReach: "Reach",
+  sortFrequency: "Frequency",
+  sortCtrLink: "CTR (link)",
+  sortCpm: "CPM",
 } as const;
 
 const metrics = {

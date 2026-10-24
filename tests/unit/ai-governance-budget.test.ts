@@ -171,6 +171,9 @@ vi.mock("@/lib/usage", async () => {
 const {
   enforceAiBudget,
   reconcileAiBudget,
+  releaseAiBudgetReservation,
+  reserveAdditionalAiBudgetTokens,
+  recordAiUsageEvent,
   loadEnabledCapabilities,
   getUserDailyBudgetSnapshot,
   AI_CAPABILITIES,
@@ -282,6 +285,14 @@ describe("enforceAiBudget", () => {
 });
 
 describe("reconcileAiBudget", () => {
+  it("reserves incremental provider-round tokens without incrementing request count", async () => {
+    await expect(
+      reserveAdditionalAiBudgetTokens({ agencyId, inputTokens: 900, outputTokens: 1_400 }),
+    ).resolves.toBeUndefined();
+    expect(dbMock.transaction).toHaveBeenCalled();
+    expect(recordUsageMock).not.toHaveBeenCalled();
+  });
+
   it("is a no-op when actual === estimated", async () => {
     await reconcileAiBudget({
       agencyId,
@@ -325,10 +336,7 @@ describe("reconcileAiBudget", () => {
     expect(recordUsageMock).toHaveBeenCalledWith(dbMock, agencyId, "ai_output_tokens_month", -75);
   });
 
-  it("top-up tokens when the provider uses more than estimated", async () => {
-    // The positive-delta path is exercised through the
-    // `db.transaction` → reserveCapacity (mocked). We just confirm
-    // it does NOT call `recordUsage` (the refund path).
+  it("records actual provider usage when it exceeds the preflight reservation", async () => {
     await reconcileAiBudget({
       agencyId,
       userId,
@@ -337,7 +345,9 @@ describe("reconcileAiBudget", () => {
       actualInputTokens: 200,
       actualOutputTokens: 100,
     });
-    expect(recordUsageMock).not.toHaveBeenCalled();
+    expect(recordUsageMock).toHaveBeenCalledTimes(2);
+    expect(recordUsageMock).toHaveBeenCalledWith(dbMock, agencyId, "ai_input_tokens_month", 150);
+    expect(recordUsageMock).toHaveBeenCalledWith(dbMock, agencyId, "ai_output_tokens_month", 75);
   });
 
   it("handles a mixed delta (one side over, one side under)", async () => {
@@ -349,8 +359,9 @@ describe("reconcileAiBudget", () => {
       actualInputTokens: 50, // refund 50
       actualOutputTokens: 150, // top-up 50
     });
-    expect(recordUsageMock).toHaveBeenCalledTimes(1);
+    expect(recordUsageMock).toHaveBeenCalledTimes(2);
     expect(recordUsageMock).toHaveBeenCalledWith(dbMock, agencyId, "ai_input_tokens_month", -50);
+    expect(recordUsageMock).toHaveBeenCalledWith(dbMock, agencyId, "ai_output_tokens_month", 50);
   });
 });
 
@@ -385,6 +396,68 @@ describe("loadEnabledCapabilities", () => {
     expect(out.size).toBe(1);
     expect(out.has("completeness_check")).toBe(true);
     expect(out.has("caption_drafts")).toBe(false);
+  });
+});
+
+describe("releaseAiBudgetReservation", () => {
+  it("refunds only token reservations and keeps request counters untouched", async () => {
+    recordUsageMock.mockClear();
+
+    const released = await releaseAiBudgetReservation({
+      agencyId,
+      inputTokens: 1200,
+      outputTokens: 600,
+    });
+
+    expect(released).toBe(true);
+    expect(recordUsageMock.mock.calls.map((call) => call.slice(1))).toEqual([
+      [agencyId, "ai_input_tokens_month", -1200],
+      [agencyId, "ai_output_tokens_month", -600],
+    ]);
+  });
+
+  it("attempts both refunds and reports a failed counter release", async () => {
+    recordUsageMock.mockClear();
+    recordUsageMock.mockRejectedValueOnce(new Error("counter unavailable"));
+
+    const released = await releaseAiBudgetReservation({
+      agencyId,
+      inputTokens: 10,
+      outputTokens: 20,
+    });
+
+    expect(released).toBe(false);
+    expect(recordUsageMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("recordAiUsageEvent", () => {
+  it("stores request metadata and a deduplicated context-category manifest", async () => {
+    await recordAiUsageEvent({
+      agencyId,
+      workspaceId: "44444444-4444-4444-8444-444444444444",
+      userId,
+      capability: "monthly_planning_copilot",
+      model: "MiniMax-M3",
+      inputTokens: 120,
+      outputTokens: 45,
+      requestId,
+      succeeded: true,
+      contextCategories: ["monthly_planning_session", "brand_profile", "monthly_planning_session"],
+    });
+
+    expect(dbState.insertCalls.at(-1)?.values).toMatchObject({
+      agencyId,
+      workspaceId: "44444444-4444-4444-8444-444444444444",
+      userId,
+      capability: "monthly_planning_copilot",
+      model: "MiniMax-M3",
+      inputTokens: 120,
+      outputTokens: 45,
+      requestId,
+      succeeded: true,
+      contextManifest: { categories: ["monthly_planning_session", "brand_profile"] },
+    });
   });
 });
 

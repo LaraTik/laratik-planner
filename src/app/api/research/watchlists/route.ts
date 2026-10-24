@@ -4,7 +4,7 @@ import { z } from "zod";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
 import { researchWatchlistMembers, researchWatchlists } from "@/lib/db/schema";
-import { getResearchContext } from "@/lib/research/context";
+import { getResearchContext, getResearchManagerContext } from "@/lib/research/context";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 
 const workspaceQuery = z.object({ workspace: z.string().trim().min(1).max(120) });
@@ -91,13 +91,8 @@ export async function POST(request: NextRequest) {
   const parsed = createSchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) return errorResponse("invalid_body", 400);
 
-  const ctx = await getResearchContext(parsed.data.workspaceSlug);
-  if (!ctx) return errorResponse("workspace_not_accessible", 403);
-  if (
-    !(await hasWorkspaceRole(ctx.actor, ctx.workspace.id, ["workspace_manager", "content_planner"]))
-  ) {
-    return errorResponse("forbidden", 403);
-  }
+  const ctx = await getResearchManagerContext(parsed.data.workspaceSlug);
+  if ("error" in ctx) return errorResponse(ctx.error, 403);
 
   const [watchlist] = await db
     .insert(researchWatchlists)

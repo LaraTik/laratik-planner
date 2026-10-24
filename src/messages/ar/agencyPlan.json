@@ -21,7 +21,8 @@
   "supportStatus": {
     "pending": "قيد الانتظار",
     "approved": "موافق عليها",
-    "rejected": "مرفوضة"
+    "rejected": "مرفوضة",
+    "expired": "منتهية"
   },
   "supportScopeMetadata": "البيانات الوصفية فقط",
   "supportScopeWorkspace": "مساحة العمل {prefix}…",
@@ -33,6 +34,33 @@
   "supportEmptyTitle": "لا توجد طلبات وصول دعم",
   "supportEmptyBody": "لم يقدم أي مدير منصة طلب وصول دعم لهذه الوكالة.",
   "supportRecentHeading": "القرارات الأخيرة",
+  "supportReviewTitle": "مراجعة وصول الدعم",
+  "supportReviewDescription": "راجع كل طلب دعم من المنصة لهذه الوكالة. الموافقات مؤقتة ومحددة النطاق ومسجلة في سجل التدقيق.",
+  "backToPlan": "العودة إلى الخطة والاستخدام",
+  "supportPendingHeading": "الطلبات قيد المراجعة ({count})",
+  "supportNoPendingTitle": "لا توجد طلبات تحتاج إلى مراجعة",
+  "supportNoPendingBody": "ستظهر هنا طلبات وصول الدعم الجديدة لهذه الوكالة.",
+  "supportRequestedAt": "قُدّم {date}",
+  "supportDurationHours": "{count} ساعة",
+  "supportReason": "سبب طلب الوصول",
+  "supportDecisionReason": "ملاحظة القرار",
+  "supportDecisionReasonPlaceholder": "وضّح سبب الموافقة على الطلب أو رفضه.",
+  "supportDecisionAllowDownloads": "السماح بالتنزيلات لهذه المنحة",
+  "supportDecisionApprove": "الموافقة على وصول مؤقت",
+  "supportDecisionReject": "رفض الطلب",
+  "supportDecisionSaving": "جارٍ إرسال القرار…",
+  "supportDecisionSuccess": {
+    "approved": "تمت الموافقة على الوصول. أصبحت المنحة المؤقتة نشطة الآن.",
+    "rejected": "رُفض الطلب. لم تُنشأ أي منحة وصول."
+  },
+  "supportDecisionErrors": {
+    "unauthorized": "تغيّر وصولك إلى الوكالة. حدّث الصفحة ثم أعد المحاولة.",
+    "invalid_input": "أدخل ملاحظة للقرار ثم أعد المحاولة.",
+    "not_found": "هذا الطلب غير متاح ضمن الوكالة النشطة.",
+    "already_decided": "سبق اتخاذ قرار بشأن هذا الطلب أو انتهت صلاحيته. حدّث الصفحة.",
+    "rate_limited": "أُجريت قرارات كثيرة. انتظر قليلًا ثم أعد المحاولة.",
+    "decision_failed": "تعذّر حفظ القرار. أعد المحاولة."
+  },
   "levels": {
     "healthy": "سليم",
     "warning": "تحذير",

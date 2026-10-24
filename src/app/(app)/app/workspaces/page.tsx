@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { Folder, Lightbulb, Plus, Send, AlertTriangle, Building } from "lucide-react";
 import { auth } from "@/lib/auth/config";
@@ -50,7 +51,9 @@ export default async function WorkspacesPage() {
   if (!actor) return null;
   const ctx = await resolveActiveAgencyContext({ actor });
   const agencyId = ctx?.agencyId ?? null;
-  if (!agencyId) return null;
+  // Platform administrators can reach the shell without an agency, but
+  // `/app/platform` itself has no page. Use the real platform landing route.
+  if (!agencyId) redirect("/app/platform/overview");
   const isAdmin = await isAgencyAdmin(actor, agencyId);
   const { t, code } = await tForActive();
   const now = new Date();

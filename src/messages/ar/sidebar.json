@@ -17,6 +17,7 @@
   "planningBoard": "لوحة",
   "planningCalendar": "تقويم",
   "planningMonthly": "التخطيط الشهري",
+  "aiAssistant": "مساعد الذكاء الاصطناعي",
   "trends": "رادار الترندات",
   "research": "الأبحاث",
   "approvals": "الموافقات",
@@ -43,7 +44,13 @@
     "archiving": "جارٍ الأرشفة…",
     "archiveSelected": "أرشفة المحدد",
     "archiveCount": "أرشفة ({count})",
-    "archiveFailed": "فشل الأرشفة"
+    "archiveFailed": "فشل الأرشفة",
+    "archiveErrors": {
+      "unauthenticated": "سجّل الدخول مجددًا لأرشفة هذه العناصر.",
+      "invalidSelection": "العناصر المحددة غير صالحة. حدّث الصفحة وحاول مرة أخرى.",
+      "forbidden": "ليست لديك صلاحية لأرشفة هذه العناصر.",
+      "failed": "تعذر أرشفة العناصر المحددة. حاول مرة أخرى."
+    }
   },
   "library": "المكتبة",
   "media": "الوسائط",
@@ -103,6 +110,7 @@
   "settingsGeneral": "عام",
   "settingsPlan": "الخطة والاستخدام",
   "settingsAiConfiguration": "إعدادات الذكاء الاصطناعي",
+  "settingsAiSkills": "مهارات المساعد",
   "settingsPlanningPacks": "حزم التخطيط",
   "settingsTrendSources": "مصادر الترندات",
   "settingsSocialAnalytics": "تحليلات التواصل الاجتماعي",

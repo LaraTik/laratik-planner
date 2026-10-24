@@ -139,7 +139,7 @@ export default async function ReportsPage() {
           <Badge variant="info">{historyForAgency.length}</Badge>
         </CardHeader>
         <p className="text-label text-fg-muted mb-4">{t("reports.historyBlurb")}</p>
-        <ReportHistoryList entries={historyForAgency} translator={t} />
+        <ReportHistoryList entries={historyForAgency} />
       </Card>
     </div>
   );

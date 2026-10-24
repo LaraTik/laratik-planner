@@ -51,13 +51,13 @@ export function DesignQueueBulkToolbar({
         workspaceId,
         contentItemIds: [...selected],
       });
-      if (result.error) {
-        setError(result.error);
+      if ("errorCode" in result) {
+        setError(t(`sidebar.designQueuePage.archiveErrors.${result.errorCode}`));
         return;
       }
       onArchived();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("sidebar.designQueuePage.archiveFailed"));
+    } catch {
+      setError(t("sidebar.designQueuePage.archiveFailed"));
     } finally {
       setPending(false);
     }

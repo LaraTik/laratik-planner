@@ -18,7 +18,7 @@ import { Card } from "@/components/ui/card";
 import { KpiTile } from "@/components/workspace/kpi-tile";
 import { PageHeader } from "@/components/workspace/page-header";
 import { ReviewsFilters } from "@/components/workspace/reviews-filters";
-import { ReviewRow, type ReviewRowItem } from "@/components/workspace/review-row";
+import { ReviewRow, type ReviewRowItem } from "@/features/content";
 
 type Gate = "content" | "creative_internal" | "creative_client";
 type SortKey = "requested_desc" | "due_asc" | "due_desc";

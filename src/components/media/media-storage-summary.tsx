@@ -47,8 +47,6 @@ export function MediaStorageSummary({
   const modeLabel = mode === "agency_owned" ? t("storage.ownedMode") : t("storage.managedMode");
   const bucketLabel = bucket ?? t("storage.notConfiguredShort");
 
-  const list = [modeLabel, bucketLabel, keyPrefix];
-
   const onOpenAutoFocus = (e: Event) => {
     // Keep focus on the trigger when the popover opens so keyboard
     // users can dismiss with Escape without first having to tab into
@@ -66,7 +64,8 @@ export function MediaStorageSummary({
         {t("media.storageSummaryLabel")}
       </span>
       <span className="min-w-0 truncate font-semibold" dir="ltr">
-        {list.join(" · ")}
+        {modeLabel} · {bucketLabel} ·{" "}
+        <span data-testid="media-storage-key-prefix">{keyPrefix}</span>
       </span>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>

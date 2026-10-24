@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth/config";
-import { exportContentItemsCsv } from "@/lib/exports/content-csv";
+import { exportContentItemsCsv } from "@/features/content/server";
 import { csvDisposition } from "@/lib/utils/csv";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 

@@ -99,6 +99,7 @@
     "system": "System event"
   },
   "agency": "Agency",
+  "activeAgencyLabel": "Current",
   "agencyNameLabel": "Name",
   "agencyAdminLabel": "Admin",
   "workspaceCount": "Workspaces",

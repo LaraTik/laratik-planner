@@ -15,8 +15,9 @@ import {
   type AiSettingsActionState,
 } from "./actions";
 import type { MonthlyUsage } from "@/lib/ai/feature-settings";
-import { ADMIN_FACING_CAPABILITIES, AI_PROVIDER } from "@/lib/ai/capabilities";
+import { ADMIN_FACING_CAPABILITIES, AI_PROVIDER, getAiModelAllowlist } from "@/lib/ai/capabilities";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { getAiModelDefinition } from "@/lib/ai/model-registry";
 
 const initial: AiSettingsActionState = {};
 
@@ -36,9 +37,12 @@ const initial: AiSettingsActionState = {};
 export function AiSettingsForm({
   initialEnabled,
   initialModel,
+  initialPermittedModels,
   initialCapabilities,
+  initialToolCallingEnabled,
   envConfigured,
   envModel,
+  envBaseUrl,
   envHasKey,
   providerKeyAvailable,
   lastTestAt,
@@ -47,9 +51,12 @@ export function AiSettingsForm({
 }: {
   initialEnabled: boolean;
   initialModel: string;
+  initialPermittedModels: string[];
   initialCapabilities: string[];
+  initialToolCallingEnabled: boolean;
   envConfigured: boolean;
   envModel: string;
+  envBaseUrl: string;
   envHasKey: boolean;
   // True when a provider key is available. This only gates the connection
   // test; the agency master switch remains editable without a key.
@@ -65,8 +72,8 @@ export function AiSettingsForm({
   const [testing, setTesting] = React.useState(false);
 
   const allowedModels = React.useMemo(
-    () => Array.from(new Set([envModel, "MiniMax-M3", "MiniMax-M2"])),
-    [envModel],
+    () => getAiModelAllowlist(envModel, envBaseUrl),
+    [envModel, envBaseUrl],
   );
 
   const onTest = async () => {
@@ -168,6 +175,62 @@ export function AiSettingsForm({
               </select>
             </div>
 
+            <fieldset className="space-y-2" data-testid="ai-permitted-models">
+              <legend className="text-label text-fg-primary font-semibold">
+                {t("agencyAi.form.permittedModels")}
+              </legend>
+              <p className="text-label text-fg-muted">
+                {t("agencyAi.form.permittedModelsDescription")}
+              </p>
+              <ul className="space-y-2">
+                {allowedModels.map((m) => {
+                  const id = `ai-permitted-model-${m.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+                  const initiallyAllowed = (
+                    initialPermittedModels.length ? initialPermittedModels : [initialModel]
+                  ).includes(m);
+                  return (
+                    <li
+                      key={m}
+                      className="border-border bg-surface-subtle flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] border p-3"
+                    >
+                      <Checkbox
+                        id={id}
+                        name="permittedModels"
+                        value={m}
+                        defaultChecked={initiallyAllowed}
+                        data-testid={`ai-permitted-model-${m}`}
+                      />
+                      <label htmlFor={id} className="text-label text-fg-primary cursor-pointer">
+                        {m}
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            </fieldset>
+
+            <div className="border-border bg-surface-subtle flex flex-wrap items-start justify-between gap-3 rounded-[var(--radius-control)] border p-3">
+              <div className="min-w-0">
+                <Label htmlFor="ai-tool-calling-enabled" className="text-body font-semibold">
+                  {t("agencyAi.form.toolCallingTitle")}
+                </Label>
+                <p className="text-label text-fg-muted mt-1 max-w-2xl">
+                  {t("agencyAi.form.toolCallingDescription")}
+                </p>
+                <p className="text-label text-warning mt-1 max-w-2xl">
+                  {t("agencyAi.form.toolCallingVerificationRequired")}
+                </p>
+              </div>
+              <Checkbox
+                id="ai-tool-calling-enabled"
+                name="toolCallingEnabled"
+                value="on"
+                defaultChecked={initialToolCallingEnabled}
+                disabled={!allowedModels.some((m) => getAiModelDefinition(m)?.toolCalling)}
+                data-testid="ai-tool-calling-toggle"
+              />
+            </div>
+
             <fieldset className="space-y-2">
               <legend className="text-title-card text-fg-primary font-semibold">
                 {t("agencyAi.form.capabilities")}
@@ -213,22 +276,22 @@ export function AiSettingsForm({
             </fieldset>
           </div>
 
-          {state.error ? (
+          {state.errorCode ? (
             <p
               role="alert"
               data-testid="ai-settings-error"
               className="text-body text-danger mt-4 font-semibold"
             >
-              {state.error}
+              {t(`agencyAi.actionErrors.${state.errorCode}`)}
             </p>
           ) : null}
-          {state.saved ? (
+          {state.savedCode ? (
             <p
               role="status"
               data-testid="ai-settings-saved"
               className="text-body text-success mt-4 font-semibold"
             >
-              {state.saved}
+              {t(`agencyAi.actionFeedback.${state.savedCode}`)}
             </p>
           ) : null}
 
@@ -276,14 +339,18 @@ export function AiSettingsForm({
             tone={lastTestOk === null ? "muted" : lastTestOk ? "success" : "danger"}
           />
         </dl>
-        {testState.error ? (
+        {testState.errorCode ? (
           <p role="alert" className="text-body text-danger mt-3 font-semibold">
-            {testState.error}
+            {t(`agencyAi.actionErrors.${testState.errorCode}`)}
           </p>
         ) : null}
-        {testState.saved ? (
+        {testState.savedCode ? (
           <p role="status" className="text-body text-success mt-3 font-semibold">
-            {testState.saved}
+            {testState.savedCode === "connection_ok" && testState.latencyMs != null
+              ? t("agencyAi.actionFeedback.connection_ok_with_latency", {
+                  latency: testState.latencyMs,
+                })
+              : t(`agencyAi.actionFeedback.${testState.savedCode}`)}
           </p>
         ) : null}
       </Card>

@@ -12,7 +12,7 @@ import {
 } from "./planning-contract";
 
 const InstructionPackInputSchema = z.object({
-  id: z.string().uuid().optional(),
+  id: z.string().guid().optional(),
   name: z.string().trim().min(2).max(160),
   sourceMarkdown: z.string().trim().min(1).max(100_000),
   manifest: PlanningInstructionPackManifestSchema,

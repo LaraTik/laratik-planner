@@ -61,6 +61,20 @@ describe("CI production-image smoke environment", () => {
     expect(buildSmoke).not.toContain("    services:");
   });
 
+  it("publishes release images only after a manual CI run on main passes smoke", () => {
+    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/ci.yml"), "utf8");
+    const buildSmokeStart = workflow.indexOf("  build-smoke:");
+    const trendsStart = workflow.indexOf("  trends-quality:", buildSmokeStart);
+    const buildSmoke = workflow.slice(buildSmokeStart, trendsStart);
+    const publishCondition =
+      "if: success() && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'";
+
+    expect(buildSmokeStart).toBeGreaterThan(-1);
+    expect(trendsStart).toBeGreaterThan(buildSmokeStart);
+    expect(buildSmoke.split(publishCondition)).toHaveLength(3);
+    expect(buildSmoke).not.toContain("github.event_name == 'push'");
+  });
+
   it("lets the integration runner own the normal migration before tests", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/ci.yml"), "utf8");
 
@@ -73,14 +87,13 @@ describe("CI production-image smoke environment", () => {
     expect(workflow.match(/check-smtp-cert\.sh --warn 30 --critical 14/g)).toHaveLength(1);
   });
 
-  it("keeps advisory work off routine pushes and makes E2E SHA selection explicit", () => {
+  it("keeps advisory work manual-only and makes E2E SHA selection explicit", () => {
     const workflow = readFileSync(
       resolve(process.cwd(), ".github/workflows/advisory-quality.yml"),
       "utf8",
     );
 
-    expect(workflow).not.toMatch(/\n  push:\n/);
-    expect(workflow).toContain("  schedule:");
+    expect(workflow).not.toMatch(/\n  (push|pull_request|schedule|workflow_run):\n/);
     expect(workflow).toContain("  workflow_dispatch:");
     expect(workflow).toContain("ref: ${{ github.sha }}");
     expect(workflow).not.toContain("Run coverage attempt 2 after failure");
@@ -134,14 +147,23 @@ describe("CI production-image smoke environment", () => {
     const dockerfile = readFileSync(resolve(process.cwd(), "Dockerfile"), "utf8");
     const compose = readFileSync(resolve(process.cwd(), "docker-compose.yml"), "utf8");
     const healthCheck = readFileSync(resolve(process.cwd(), "scripts/vps/health-check.sh"), "utf8");
+    const deployScript = readFileSync(resolve(process.cwd(), "scripts/deploy.sh"), "utf8");
 
     // The contract is "APP_VERSION must be set to the immutable SHA,
     // never to the mutable image tag". CI uses the shell's GITHUB_SHA;
-    // deploy resolves the requested ref to a commit before building.
-    // Shell quoting is intentional because actionlint/shellcheck must
-    // also accept the workflow's run blocks.
+    // Deploy resolves the requested ref to a commit, requires successful CI
+    // for that exact SHA, and uses the already-built image instead of rebuilding.
+    // Shell quoting is intentional because actionlint/shellcheck must also
+    // accept the workflow's run blocks.
     expect(ciWorkflow).toMatch(/--build-arg APP_VERSION="?\$GITHUB_SHA"?/);
-    expect(deployWorkflow).toContain("APP_VERSION=${{ needs.resolve.outputs.sha }}");
+    expect(deployWorkflow).toContain("Require successful CI for the selected commit");
+    expect(deployWorkflow).toContain(
+      'gh run list --repo "${GITHUB_REPOSITORY}" --workflow ci.yml --commit "${DEPLOY_SHA}"',
+    );
+    expect(deployWorkflow).toContain("DEPLOY_SHA: ${{ needs.resolve.outputs.sha }}");
+    expect(deployScript).toContain('[[ "$#" -ne 1 || ! "${1:-}" =~ ^[0-9a-fA-F]{40}$ ]]');
+    expect(deployScript).not.toContain('IMAGE_TAG="${1:-latest}"');
+    expect(deployWorkflow).not.toContain("APP_VERSION=");
     expect(dockerfile).toContain("ENV APP_VERSION=$APP_VERSION");
     expect(compose).not.toContain("APP_VERSION: ${IMAGE_TAG:-latest}");
     expect(healthCheck).toContain('EXPECTED_APP_VERSION="${EXPECTED_APP_VERSION:-}"');

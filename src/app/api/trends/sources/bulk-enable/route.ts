@@ -9,7 +9,7 @@ import { isAgencyAdmin } from "@/lib/auth/policy";
 import { captureError } from "@/lib/observability/sentry";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 import { publicProviderError } from "@/lib/security/public-error";
-import { TREND_SOURCE_CATALOG } from "@/lib/trends/source-catalog";
+import { TREND_SOURCE_CATALOG } from "@/features/trends";
 
 /**
  * POST /api/trends/sources/bulk-enable
@@ -81,6 +81,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "no_valid_keys" },
         { status: 400, headers: mutatingApiHeaders() },
+      );
+    }
+
+    const reviewRequired = validKeys.filter(
+      (key) =>
+        TREND_SOURCE_CATALOG.find((source) => source.key === key)?.tosClass === "review_required",
+    );
+    if (reviewRequired.length > 0) {
+      return NextResponse.json(
+        { error: "source_review_required", sources: reviewRequired },
+        { status: 409, headers: mutatingApiHeaders() },
       );
     }
 

@@ -192,7 +192,36 @@ describe("resetIdeaAction", () => {
       targetType: "content_item",
       targetId: IDEA_ID,
       outcome: "denied",
+      metadata: { error_message: "permission_denied" },
     });
+  });
+
+  it("stores a stable audit code when a persistence failure is unexpected", async () => {
+    platformAccessMock.requirePlatformPermission.mockResolvedValueOnce({});
+    dbMock.state.selectResults.push([
+      {
+        id: IDEA_ID,
+        title: "Spring sale — Instagram carousel",
+        workspaceId: WORKSPACE_ID,
+      },
+    ]);
+    workspaceContextMock.getAccessibleWorkspace.mockResolvedValueOnce({ id: WORKSPACE_ID });
+    dbMock.db.transaction.mockRejectedValueOnce(
+      new Error("postgres://planner:secret@example.test/planner_test: connection refused"),
+    );
+
+    const result = await resetIdeaAction("acme", undefined, makeFormData());
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: expect.stringMatching(/could not be deleted/i),
+    });
+    const audit = dbMock.state.insertCalls.at(-1)?.values as Record<string, unknown>;
+    expect(audit).toMatchObject({
+      outcome: "failed",
+      metadata: { error_message: "persistence_failure" },
+    });
+    expect(JSON.stringify(audit)).not.toContain("secret");
   });
 
   it("refuses cross-tenant formData (idea in a different workspace)", async () => {

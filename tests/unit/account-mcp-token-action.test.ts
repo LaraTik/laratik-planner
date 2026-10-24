@@ -3,9 +3,9 @@ import { MCP_TOKEN_SCOPES } from "@/lib/mcp/tokens";
 
 /**
  * The MCP token issue action is the only place a user can mint a scope, so
- * its input filter is an authorization boundary: whatever it drops is
- * silently replaced by the `content:read` fallback, and whatever it keeps
- * is a real grant.
+ * its input filter is an authorization boundary: every accepted scope is
+ * a real grant, so rejected or empty input must not turn into a different
+ * privilege grant.
  *
  * It once hardcoded `content:read | content:write` instead of consulting
  * `MCP_TOKEN_SCOPES`. Every `platform:diagnostics:*` scope the Account UI
@@ -91,16 +91,24 @@ describe("issueMcpTokenAction — scope filtering", () => {
     expect(mocks.issueMcpAccessToken.mock.calls[0]![0].scopes).toEqual([...MCP_TOKEN_SCOPES]);
   });
 
-  it("drops an unrecognised scope instead of granting it", async () => {
-    await issueMcpTokenAction(previous, form(["content:read", "platform:everything"]));
+  it("rejects an unrecognised scope instead of partially applying the selection", async () => {
+    const result = await issueMcpTokenAction(
+      previous,
+      form(["content:read", "platform:everything"]),
+    );
 
-    expect(mocks.issueMcpAccessToken.mock.calls[0]![0].scopes).toEqual(["content:read"]);
+    expect(mocks.issueMcpAccessToken).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ errorCode: "invalidTokenRequest" });
   });
 
-  it("falls back to content:read only when no valid scope was submitted", async () => {
-    await issueMcpTokenAction(previous, form(["platform:everything"]));
+  it.each([
+    ["unknown scope", ["platform:everything"]],
+    ["empty selection", []],
+  ] as const)("rejects %s instead of granting content:read", async (_label, scopes) => {
+    const result = await issueMcpTokenAction(previous, form([...scopes]));
 
-    expect(mocks.issueMcpAccessToken.mock.calls[0]![0].scopes).toEqual(["content:read"]);
+    expect(mocks.issueMcpAccessToken).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ errorCode: "invalidTokenRequest" });
   });
 
   it("does not mint anything without a session", async () => {

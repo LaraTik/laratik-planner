@@ -2,13 +2,14 @@
 import * as React from "react";
 import { useActionState } from "react";
 import { createColorAssetAction } from "./actions";
-import { useSuccessReset } from "@/lib/brand/use-success-reset";
+import { useSuccessReset } from "@/features/brand-kit";
 import { Card } from "@/components/ui/card";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { Input } from "@/components/ui/input";
 import { CharacterCountInput } from "@/components/workspace/character-count-input";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { isMissingTranslation } from "@/messages";
 
 /**
  * ColorForm — inline create form for the brand-kit color palette.
@@ -91,7 +92,7 @@ export function ColorForm({
   const t = tProp ?? localeT;
   const tr = (key: string, fallback: string) => {
     const value = t(key);
-    return value === key ? fallback : value;
+    return isMissingTranslation(value, key) ? fallback : value;
   };
   const [state, action] = useActionState(
     createColorAssetAction.bind(null, slug),

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemberList } from "@/app/(app)/app/users/member-list";
+import { toggleDeactivationAction } from "@/app/(app)/app/users/actions";
 
 vi.mock("@/components/i18n/locale-provider", () => ({
   useLocaleT: () => (key: string, params?: Record<string, string | number>) => {
@@ -8,6 +9,7 @@ vi.mock("@/components/i18n/locale-provider", () => ({
     if (key === "users.memberList.editAria") return `Edit ${params?.name}`;
     if (key === "users.memberList.deactivateAria") return `Deactivate ${params?.name}`;
     if (key === "users.memberList.reactivateAria") return `Reactivate ${params?.name}`;
+    if (key === "users.memberList.reactivateFailed") return "Could not reactivate member";
     return key;
   },
 }));
@@ -21,6 +23,7 @@ const t = (key: string, params?: Record<string, string | number>) => {
   if (key === "users.memberList.editAria") return `Edit ${params?.name}`;
   if (key === "users.memberList.deactivateAria") return `Deactivate ${params?.name}`;
   if (key === "users.memberList.reactivateAria") return `Reactivate ${params?.name}`;
+  if (key === "users.memberList.reactivateFailed") return "Could not reactivate member";
   return key;
 };
 
@@ -67,12 +70,10 @@ describe("MemberList — round-3 UI/UX", () => {
 
     const row = screen.getByTestId("users-member-row-u1");
     const chipList = within(row).getByTestId("users-member-roles-u1");
-    // The chip container holds up to 3 role chips (each wrapped in
-    // a `contents` `<li>`) plus an optional `+N` overflow Badge
-    // rendered as a direct child of the `<ul>`. We assert on the
-    // total rendered text so the test is robust against the wrapper
-    // choice (the production renderer uses Badge primitives whose
-    // final DOM node is a single `<span>`).
+    // Every direct child of the role list must remain a list item,
+    // including the overflow badge, so assistive technology gets a
+    // valid list structure when a member has more than three workspaces.
+    expect(within(chipList).getAllByRole("listitem")).toHaveLength(4);
     expect(chipList.textContent ?? "").toMatch(/\+1$/);
   });
 
@@ -166,5 +167,35 @@ describe("MemberList — round-3 UI/UX", () => {
       />,
     );
     expect(screen.getByTestId("users-empty-state")).toBeInTheDocument();
+  });
+
+  it("shows localized inline feedback when reactivation fails", async () => {
+    vi.mocked(toggleDeactivationAction).mockResolvedValueOnce({ errorCode: "reactivate_failed" });
+    render(
+      <MemberList
+        actorId="actor"
+        actorIsAgencyAdmin={true}
+        workspaces={[]}
+        rolesByUser={{}}
+        members={[
+          {
+            id: "u1",
+            name: "Ada",
+            email: "ada@example.com",
+            isAgencyAdmin: false,
+            status: "deactivated",
+            role: "editor",
+            joinedAt: "2026-01-01",
+          },
+        ]}
+        t={t}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("Reactivate Ada"));
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent("Could not reactivate member"),
+    );
   });
 });

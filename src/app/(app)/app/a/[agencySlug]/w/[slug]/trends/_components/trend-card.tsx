@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
-import { getSourceDefinition } from "@/lib/trends/source-catalog";
+import { getSourceDefinition } from "@/features/trends";
 import { formatTrendFreshness, trendLifecycleMessageKey } from "@/lib/trends/presentation";
 
 type TrendSignal = {

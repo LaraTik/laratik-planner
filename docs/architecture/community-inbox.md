@@ -58,6 +58,32 @@ service re-checks workspace access, capability, safety rules, and emergency
 stop immediately before dispatch, and uses a workspace-scoped deterministic
 idempotency key to prevent duplicate sends.
 
+## Web inbox, comments, and team routing
+
+The inbox list is workspace-scoped and displays the 25 newest conversations
+from a bounded set of the 100 most recent conversations. Selecting a row uses
+the `conversation` query parameter and loads up to 100 messages for that exact
+conversation. The list filters and search are URL-backed. Post comments links
+into the same selected-thread route so replies and assignments share one
+authorization and context path. Missing author names remain nullable and the
+UI explains that the provider did not supply a name rather than implying a
+local user is unknown.
+
+Team & routing currently supports manual assignment to active workspace
+members. The `assign_and_route` permission is checked on the server, and the
+assignee is revalidated as an active member of the same workspace. Assignment
+events are recorded in `community_event`; assigning a resolved, waiting, or
+spam conversation preserves that state. The page shows the latest 100
+conversations and active member workload counts within that window. Automated
+routing rule editing, SLA measurement, analytics, and automation activation
+are not implemented yet and must remain visibly unavailable.
+
+The emergency stop is manager-only and workspace-scoped. Its server action
+rechecks the Community access gates and `manage_settings` permission, changes
+only `communityInboxEmergencyStop`, and records a sanitized event in the same
+transaction. Resuming does not enable auto-send or skip the reply service's
+capability, workspace, safety, or human-review checks.
+
 AI Assist creates drafts only. Playbooks and knowledge must carry ownership,
 approval, revision, expiry, and stale-source state. Test Lab is simulation
 only. Controlled Auto and provider sending remain disabled until controlled

@@ -1,10 +1,7 @@
 import { redirect } from "next/navigation";
-import { and, eq, sql } from "drizzle-orm";
 import { Building2, Mail, ShieldCheck, User as UserIcon, Bell } from "lucide-react";
 import { auth } from "@/lib/auth/config";
-import { db } from "@/lib/db";
-import { agencyMemberships, agencies, users, workspaceMemberships } from "@/lib/db/schema";
-import { getPasswordState } from "@/lib/auth/profile";
+import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -16,11 +13,12 @@ import { NotificationPreferencesForm } from "./notification-preferences-form";
 import { ApplicationInfoCard } from "@/components/build-info/application-info-card";
 import { createBuildInfo } from "@/lib/build-info";
 import { serverEnv } from "@/lib/validation/env";
-import { getNotificationPreferencesForUser } from "@/lib/notifications/service";
+import { getNotificationPreferencesForUser } from "@/lib/notifications/preferences";
 import { listMcpAccessTokens } from "@/lib/mcp/tokens";
 import { McpAccessTokensCard } from "./mcp-access-tokens-card";
 import { ThemePreferenceForm } from "./theme-preference-form";
 import type { ThemePreference } from "@/lib/theme/preferences";
+import { loadAccountOverviewIdentity } from "@/features/account/server";
 
 /**
  * Account page — own profile, password, agency membership, sign out.
@@ -43,44 +41,15 @@ export default async function AccountPage() {
   if (!session?.user) redirect("/signin?error=AccessDenied");
   const userId = session.user.id;
 
-  // Read the user row + agency + workspace count + password state
-  // in parallel. `getPasswordState` is a small helper that returns
-  // { hasPassword } so the Password card can pick the right copy.
-  const [[profile], agencyRows, hasPassword, notificationPrefs, mcpTokens] = await Promise.all([
-    db
-      .select({
-        id: users.id,
-        email: users.email,
-        name: users.name,
-        displayName: users.displayName,
-        image: users.image,
-        locale: users.locale,
-        themePreference: users.themePreference,
-      })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1),
-    db
-      .select({
-        agencyId: agencies.id,
-        agencyName: agencies.name,
-        isAgencyAdmin: agencyMemberships.isAgencyAdmin,
-        membershipStatus: agencyMemberships.status,
-        workspaceCount: sql<number>`(
-          SELECT COUNT(*)::int
-          FROM ${workspaceMemberships} wm
-          WHERE wm.user_id = ${agencyMemberships.userId}
-            AND wm.status = 'active'
-        )`,
-      })
-      .from(agencyMemberships)
-      .innerJoin(agencies, eq(agencies.id, agencyMemberships.agencyId))
-      .where(and(eq(agencyMemberships.userId, userId), eq(agencyMemberships.status, "active")))
-      .limit(1),
-    getPasswordState(userId),
+  // Load identity/profile data once while unrelated preferences and account
+  // integrations resolve in parallel.
+  const [identity, notificationPrefs, mcpTokens, agencyContext] = await Promise.all([
+    loadAccountOverviewIdentity(userId),
     getNotificationPreferencesForUser(userId),
     listMcpAccessTokens(userId),
+    resolveActiveAgencyContext({ actor: { id: userId } }),
   ]);
+  const { profile, agencyRows, hasPassword } = identity;
 
   // `getPasswordState` returns null when the user row has vanished
   // (session is valid but the user was deleted between the JWT
@@ -93,7 +62,7 @@ export default async function AccountPage() {
       ? profile.themePreference
       : "system";
   const { t } = await tForActive();
-  const agency = agencyRows[0];
+  const activeAgency = agencyRows.find((agency) => agency.agencyId === agencyContext?.agencyId);
   const buildInfo = createBuildInfo({
     version: serverEnv.APP_VERSION,
     builtAt: serverEnv.APP_BUILD_AT,
@@ -115,12 +84,14 @@ export default async function AccountPage() {
             <Mail className="h-3.5 w-3.5" aria-hidden="true" />
             {profile.email}
           </span>
-          <span className="flex items-center gap-1.5">
-            <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-            <Badge variant={agency?.isAgencyAdmin ? "primary" : "default"}>
-              {agency?.isAgencyAdmin ? t("account.agencyAdmin") : t("account.member")}
-            </Badge>
-          </span>
+          {activeAgency ? (
+            <span className="flex items-center gap-1.5">
+              <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+              <Badge variant={activeAgency.isAgencyAdmin ? "primary" : "default"}>
+                {activeAgency.isAgencyAdmin ? t("account.agencyAdmin") : t("account.member")}
+              </Badge>
+            </span>
+          ) : null}
         </div>
         <ProfileForm
           values={{
@@ -157,9 +128,9 @@ export default async function AccountPage() {
           {t("account.password")}
         </CardTitle>
         <p className="text-body text-fg-muted mb-5">
-          {hasPassword.hasPassword ? t("account.passwordChange") : t("account.passwordSet")}
+          {hasPassword ? t("account.passwordChange") : t("account.passwordSet")}
         </p>
-        <PasswordForm hasPassword={hasPassword.hasPassword} />
+        <PasswordForm hasPassword={hasPassword} />
       </Card>
 
       <Card
@@ -179,19 +150,31 @@ export default async function AccountPage() {
           <Building2 className="h-4 w-4" aria-hidden="true" />
           {t("account.agency")}
         </CardTitle>
-        {agency ? (
-          <dl className="grid grid-cols-1 gap-2 sm:grid-cols-[8rem_1fr]">
-            <dt className="text-body text-fg-muted">{t("account.agencyNameLabel")}</dt>
-            <dd className="text-body text-fg-primary font-semibold">{agency.agencyName}</dd>
-            <dt className="text-body text-fg-muted">{t("account.agencyAdminLabel")}</dt>
-            <dd>
-              <Badge variant={agency.isAgencyAdmin ? "success" : "default"}>
-                {agency.isAgencyAdmin ? t("common.yes") : t("common.no")}
-              </Badge>
-            </dd>
-            <dt className="text-body text-fg-muted">{t("account.workspaceCount")}</dt>
-            <dd className="text-body text-fg-primary font-semibold">{agency.workspaceCount}</dd>
-          </dl>
+        {agencyRows.length > 0 ? (
+          <ul className="space-y-3">
+            {agencyRows.map((agency) => (
+              <li
+                key={agency.agencyId}
+                className="border-border flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border p-3"
+                data-testid="account-agency-membership"
+              >
+                <div className="min-w-0">
+                  <p className="text-body text-fg-primary font-semibold">{agency.agencyName}</p>
+                  <p className="text-label text-fg-muted mt-1">
+                    {t("account.workspaceCount")}: {agency.workspaceCount}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {agency.agencyId === agencyContext?.agencyId ? (
+                    <Badge variant="primary">{t("account.activeAgencyLabel")}</Badge>
+                  ) : null}
+                  <Badge variant={agency.isAgencyAdmin ? "success" : "default"}>
+                    {agency.isAgencyAdmin ? t("account.agencyAdminLabel") : t("account.member")}
+                  </Badge>
+                </div>
+              </li>
+            ))}
+          </ul>
         ) : (
           <p className="text-body text-fg-muted mt-2">{t("account.noAgencyYet")}</p>
         )}

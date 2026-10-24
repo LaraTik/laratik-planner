@@ -1,6 +1,6 @@
 "use server";
 
-import {} from "next/cache";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -12,29 +12,30 @@ import { workspaceBasePath } from "@/lib/urls";
 import { db } from "@/lib/db";
 import { contentItems } from "@/lib/db/schema";
 import {
-  QuickCreateSchema,
-  UpdateContentSchema,
+  updateFormatPayload,
+  applyResearchTeardownToFormatPayload,
+  ApplyResearchTeardownSchema,
+  transitionContent,
+  type WorkflowAction,
+  patchAudienceCopy,
+  updateAudienceCopy,
+  UpdateAudienceCopySchema,
   assignDesigner,
   AssignDesignerSchema,
   assignContentOwner,
   AssignContentOwnerSchema,
-  quickCreateContentItem,
-  transitionContent,
   claimAsDesigner,
+  ClaimAsDesignerError,
+  archiveContentItem,
+  restoreContentItem,
+  QuickCreateSchema,
+  quickCreateContentItem,
+  UpdateContentSchema,
   updateContentItem,
-  updateFormatPayload,
-  patchAudienceCopy,
-  updateAudienceCopy,
-  UpdateAudienceCopySchema,
-  type WorkflowAction,
   type UpdateContentInput,
   batchCreateContentItems,
   mergeAiDraftIntoBrief,
-  archiveContentItem,
-  restoreContentItem,
-  applyResearchTeardownToFormatPayload,
-  ApplyResearchTeardownSchema,
-} from "@/lib/content/service";
+} from "@/features/content/server";
 import {
   BatchClientRowSchema,
   BatchCreateSchema,
@@ -46,11 +47,16 @@ import {
   SubmitDeliverySchema,
   submitDelivery,
   DecideApprovalSchema,
+  ApprovalDecisionError,
   decideApproval,
   SetMediaRequiredSchema,
   setMediaRequired,
 } from "@/lib/deliveries/service";
-import { RecordPublicationSchema, recordPublication } from "@/lib/publishing/service";
+import {
+  RecordPublicationSchema,
+  PublicationRecordError,
+  recordPublication,
+} from "@/lib/publishing/service";
 import {
   listMetaPublicationCandidates,
   linkMetaPublication,
@@ -66,6 +72,8 @@ import {
   ResolveCommentSchema,
 } from "@/lib/discussions/service";
 import { actionFailure, fieldErrorsFromZod, type ActionState } from "@/lib/validation/action-state";
+import { logError } from "@/lib/observability/logger";
+import { DomainError } from "@/lib/content/workflow";
 
 /**
  * Per-action field maps (plan §4 — "Per-action field map").
@@ -103,6 +111,63 @@ type CreateCommentFields = "contentItemId" | "body" | "visibility" | "label";
 type UpdateFormatPayloadFields = "contentItemId" | "format" | "formatPayload";
 type UpdateAudienceCopyFields = "contentItemId" | "format" | "formatPayload";
 type ResolveCommentFields = "commentId" | "resolved";
+
+function workflowActionFailure<Field extends string>(
+  error: unknown,
+  event: string,
+): ActionState<Field> {
+  if (error instanceof DomainError) {
+    return actionFailure<Field>(error, "workflowError.failed", {
+      publicMessage: `workflowError.${error.code}`,
+    });
+  }
+  if (error instanceof ApprovalDecisionError) {
+    return actionFailure<Field>(error, "workflowError.failed", {
+      publicMessage: `workflowError.${error.code}`,
+    });
+  }
+  if (error instanceof PermissionDeniedError) {
+    return actionFailure<Field>(error, "workflowError.failed", {
+      publicMessage: "workflowError.unauthorized",
+    });
+  }
+  logError(event, { err: error });
+  return actionFailure<Field>(error, "workflowError.failed");
+}
+
+function publicationActionFailure<Field extends string>(error: unknown): ActionState<Field> {
+  if (error instanceof PublicationRecordError) {
+    return actionFailure<Field>(error, "publicationError.failed", {
+      publicMessage: `publicationError.${error.code}`,
+    });
+  }
+  if (error instanceof PermissionDeniedError) {
+    return actionFailure<Field>(error, "publicationError.failed", {
+      publicMessage: "publicationError.unauthorized",
+    });
+  }
+  logError("planning.publication_record_failed", { err: error });
+  return actionFailure<Field>(error, "publicationError.failed");
+}
+
+function contentMutationActionFailure<Field extends string>(
+  error: unknown,
+  event: string,
+  fallbackCode = "contentMutationError.failed",
+): ActionState<Field> {
+  if (error instanceof DomainError) {
+    return actionFailure<Field>(error, fallbackCode, {
+      publicMessage: `contentMutationError.${error.code}`,
+    });
+  }
+  if (error instanceof PermissionDeniedError) {
+    return actionFailure<Field>(error, fallbackCode, {
+      publicMessage: "contentMutationError.unauthorized",
+    });
+  }
+  logError(event, { err: error });
+  return actionFailure<Field>(error, fallbackCode);
+}
 
 /**
  * Resolve the workspace for a mutation.
@@ -157,7 +222,18 @@ export async function changeContentOwnerAction(input: {
   try {
     await assignContentOwner(actor, parsed.data);
   } catch (error) {
-    return actionFailure<AssignContentOwnerFields>(error, "The owner could not be changed.");
+    if (error instanceof DomainError) {
+      return actionFailure<AssignContentOwnerFields>(error, "ownerError.failed", {
+        publicMessage: `ownerError.${error.code}`,
+      });
+    }
+    if (error instanceof PermissionDeniedError) {
+      return actionFailure<AssignContentOwnerFields>(error, "ownerError.failed", {
+        publicMessage: "ownerError.forbidden",
+      });
+    }
+    logError("planning.content_owner_assignment_failed", { err: error });
+    return actionFailure<AssignContentOwnerFields>(error, "ownerError.failed");
   }
   return { ok: true };
 }
@@ -188,9 +264,11 @@ export async function quickCreateAction(
   try {
     id = await quickCreateContentItem(actor, parsed.data);
   } catch (error) {
-    return actionFailure<QuickCreateFields>(error, "The idea could not be created.");
+    return contentMutationActionFailure<QuickCreateFields>(error, "planning.content_create_failed");
   }
-  redirect(`${workspaceBasePath(workspace.agencySlug, workspaceSlug)}/planning/${id}?created=1`);
+  redirect(
+    `${workspaceBasePath(workspace.agencySlug, workspaceSlug)}/planning/${id}?created=1#overview`,
+  );
 }
 
 // ─── Update content item ──────────────────────────────────────────────
@@ -222,14 +300,17 @@ export async function updateContentItemAction(
       channelIds: parsed.data.channelIds,
     });
   } catch (error) {
-    return actionFailure<UpdateContentFields>(error, "The idea could not be saved.");
+    return contentMutationActionFailure<UpdateContentFields>(
+      error,
+      "planning.content_update_failed",
+    );
   }
   redirect(`${workspaceBasePath(workspace.agencySlug, workspaceSlug)}/planning/${contentItemId}`);
 }
 
 // ─── Apply AI draft ───────────────────────────────────────────────────
 const ApplyAiDraftSchema = z.object({
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
   draftText: z.string().min(1).max(4000),
   mode: z.enum(["insert", "replace"]),
 });
@@ -256,21 +337,31 @@ export async function applyAiDraftAction(input: {
   if (!parsed.success) {
     return fieldErrorsFromZod<ApplyAiDraftFields>(parsed.error);
   }
-  const { actor } = await requireWorkspaceContext(input.workspaceSlug);
-  const [item] = await db
-    .select({
-      id: contentItems.id,
-      title: contentItems.title,
-      format: contentItems.format,
-      brief: contentItems.brief,
-      plannedPublishAt: contentItems.plannedPublishAt,
-    })
-    .from(contentItems)
-    .where(eq(contentItems.id, parsed.data.contentItemId))
-    .limit(1);
-  if (!item) return { error: "Content item not found" };
-  const newBrief = mergeAiDraftIntoBrief(item.brief ?? "", parsed.data.draftText, parsed.data.mode);
+  const { actor, workspace } = await requireWorkspaceContext(input.workspaceSlug);
   try {
+    const [item] = await db
+      .select({
+        id: contentItems.id,
+        workspaceId: contentItems.workspaceId,
+        title: contentItems.title,
+        format: contentItems.format,
+        brief: contentItems.brief,
+        plannedPublishAt: contentItems.plannedPublishAt,
+      })
+      .from(contentItems)
+      .where(eq(contentItems.id, parsed.data.contentItemId))
+      .limit(1);
+    if (!item || item.workspaceId !== workspace.id) {
+      return contentMutationActionFailure(
+        new DomainError("not_found", "Content item not found"),
+        "planning.ai_draft_apply_failed",
+      );
+    }
+    const newBrief = mergeAiDraftIntoBrief(
+      item.brief ?? "",
+      parsed.data.draftText,
+      parsed.data.mode,
+    );
     await updateContentItem(actor, {
       contentItemId: item.id,
       title: item.title,
@@ -279,10 +370,13 @@ export async function applyAiDraftAction(input: {
       plannedPublishAt: item.plannedPublishAt,
       channelIds: undefined,
     });
+    return { ok: true, brief: newBrief };
   } catch (error) {
-    return actionFailure<ApplyAiDraftFields>(error, "The AI draft could not be applied.");
+    return contentMutationActionFailure<ApplyAiDraftFields>(
+      error,
+      "planning.ai_draft_apply_failed",
+    );
   }
-  return { ok: true, brief: newBrief };
 }
 
 // ─── Batch create ─────────────────────────────────────────────────────
@@ -312,15 +406,15 @@ export async function batchCreateAction(
       decoded = JSON.parse(rawRows);
     } catch {
       return {
-        error: "The imported rows are not valid JSON.",
-        fieldErrors: { rows: "Invalid rows" },
+        error: "batchAddError.invalidJson",
+        fieldErrors: { rows: "batchAddError.invalidJson" },
       };
     }
     const clientRows = z.array(BatchClientRowSchema).safeParse(decoded);
     if (!clientRows.success) {
       return {
-        error: "The imported rows are incomplete. Review the highlighted rows and try again.",
-        fieldErrors: { rows: "Invalid rows" },
+        error: "batchAddError.invalidRows",
+        fieldErrors: { rows: "batchAddError.invalidRows" },
       };
     }
     const invalidRows: number[] = [];
@@ -354,8 +448,10 @@ export async function batchCreateAction(
       };
     });
     if (invalidRows.length > 0) {
-      const message = `Rows ${invalidRows.join(", ")}: fix the highlighted errors before saving.`;
-      return { error: message, fieldErrors: { rows: message } };
+      return {
+        error: "batchAddError.invalidRows",
+        fieldErrors: { rows: "batchAddError.invalidRows" },
+      };
     }
   } else {
     const rows = parseBatchRows(rawRows);
@@ -365,8 +461,10 @@ export async function batchCreateAction(
       ),
     );
     if (invalidRows.length > 0) {
-      const message = `Rows ${invalidRows.map((row) => row.lineNumber).join(", ")}: fix the highlighted errors before saving.`;
-      return { error: message, fieldErrors: { rows: message } };
+      return {
+        error: "batchAddError.invalidRows",
+        fieldErrors: { rows: "batchAddError.invalidRows" },
+      };
     }
     items = rows.map((row) => ({
       title: row.title,
@@ -385,8 +483,8 @@ export async function batchCreateAction(
   const parsed = BatchCreateSchema.safeParse({ workspaceId: workspace.id, items });
   if (!parsed.success) {
     return {
-      error: "Review the batch rows and fix the highlighted errors.",
-      fieldErrors: { rows: parsed.error.issues[0]?.message ?? "Invalid rows" },
+      error: "batchAddError.invalidRows",
+      fieldErrors: { rows: "batchAddError.invalidRows" },
     };
   }
   try {
@@ -395,7 +493,11 @@ export async function batchCreateAction(
       items: parsed.data.items,
     });
   } catch (error) {
-    return actionFailure<BatchCreateFields>(error, "The batch could not be saved.");
+    return contentMutationActionFailure<BatchCreateFields>(
+      error,
+      "planning.batch_create_failed",
+      "batchAddError.failed",
+    );
   }
   redirect(
     `${workspaceBasePath(workspace.agencySlug, workspaceSlug)}/planning?batchCreated=${parsed.data.items.length}`,
@@ -413,8 +515,8 @@ export async function transitionAction(input: {
   const { actor } = await requireWorkspaceContext(input.workspaceSlug);
   if (!input.action) {
     return {
-      error: "Missing action",
-      fieldErrors: { action: "Choose an action" },
+      error: "workflowError.validation_failed",
+      fieldErrors: { action: "workflowError.validation_failed" },
     };
   }
   try {
@@ -426,15 +528,7 @@ export async function transitionAction(input: {
     });
     return { ok: true, from: result?.from, to: result?.to };
   } catch (error) {
-    // Return the error as a value rather than re-throwing. Next.js 16
-    // encodes thrown server-action errors as a hashed digest in the RSC
-    // response (content-type: text/x-component, `1:E{"digest":"…"}`),
-    // dropping the original message — the client then surfaces a generic
-    // minified React error instead of the action's real text. Returning
-    // a value keeps the message in the RSC payload. Matches the
-    // pattern already used by `applyAiDraftAction`, `submitDeliveryAction`,
-    // and `decideApprovalAction` in this file.
-    return actionFailure<TransitionFields>(error, "The workflow action failed.");
+    return workflowActionFailure<TransitionFields>(error, "planning.workflow_transition_failed");
   }
 }
 
@@ -447,7 +541,16 @@ export async function claimAction(input: {
   try {
     await claimAsDesigner(actor, input.contentItemId);
   } catch (error) {
-    return actionFailure(error, "The claim action failed.");
+    if (error instanceof ClaimAsDesignerError) {
+      return actionFailure(error, "claimError.failed", {
+        publicMessage: `claimError.${error.code}`,
+      });
+    }
+    if (error instanceof PermissionDeniedError) {
+      return actionFailure(error, "claimError.failed", { publicMessage: "claimError.forbidden" });
+    }
+    logError("planning.designer_claim_failed", { err: error });
+    return actionFailure(error, "claimError.failed");
   }
   return { ok: true };
 }
@@ -484,40 +587,48 @@ export async function assignDesignerAction(input: {
     return fieldErrorsFromZod<AssignDesignerFields>(parsed.error);
   }
   const { actor } = await requireWorkspaceContext(input.workspaceSlug);
-  const [item] = await db
-    .select({ status: contentItems.status })
-    .from(contentItems)
-    .where(eq(contentItems.id, parsed.data.contentItemId))
-    .limit(1);
-  if (!item || !["approved_for_design", "in_design"].includes(item.status)) {
-    return actionFailure<AssignDesignerFields>(
-      new Error("The item is no longer ready for designer assignment."),
-      "The assign action failed.",
-    );
-  }
   try {
+    const [item] = await db
+      .select({ status: contentItems.status })
+      .from(contentItems)
+      .where(eq(contentItems.id, parsed.data.contentItemId))
+      .limit(1);
+    if (!item) throw new DomainError("not_found", "Content item not found");
+    if (!["approved_for_design", "in_design"].includes(item.status)) {
+      throw new DomainError("invalid_transition", "Item is not ready for designer assignment");
+    }
     await assignDesigner(actor, parsed.data);
-  } catch (error) {
-    return actionFailure<AssignDesignerFields>(error, "The assign action failed.");
-  }
-  // A manager can assign before design starts or reassign while the
-  // item is already in design. Only the former needs the workflow
-  // transition; attempting it for an in-design item would reject a
-  // valid reassignment because the state machine has already moved.
-  if (item.status === "approved_for_design") {
-    try {
+    // A manager can assign before design starts or reassign while the
+    // item is already in design. Only the former needs the workflow
+    // transition; attempting it for an in-design item would reject a
+    // valid reassignment because the state machine has already moved.
+    if (item.status === "approved_for_design") {
       await transitionContent(actor, {
         contentItemId: parsed.data.contentItemId,
         action: "assign_designer",
       });
-    } catch (error) {
-      return actionFailure<AssignDesignerFields>(error, "The assign action failed.");
     }
+  } catch (error) {
+    return workflowActionFailure<AssignDesignerFields>(
+      error,
+      "planning.designer_assignment_failed",
+    );
   }
   return { ok: true };
 }
 
 // ─── Submit delivery ──────────────────────────────────────────────────
+/**
+ * Stable failure codes for the delivery submission.
+ *
+ * The action returns a CODE, never a sentence: AGENTS.md's bilingual
+ * contract requires the client boundary to translate, and an Arabic
+ * user must not read an English error. `notAssignedDesigner` is the
+ * case where a designer who is not the item's assignee tried to
+ * submit a delivery on it.
+ */
+export type SubmitDeliveryErrorCode = "notAssignedDesigner" | "updateFailed";
+
 export async function submitDeliveryAction(
   workspaceSlug: string,
   contentItemId: string,
@@ -542,7 +653,23 @@ export async function submitDeliveryAction(
       return { error: String(result.error) };
     }
   } catch (error) {
-    return actionFailure<SubmitDeliveryFields>(error, "The delivery could not be submitted.");
+    // The action returns a CODE, not a sentence: AGENTS.md's bilingual
+    // contract requires the client boundary to translate, and an Arabic
+    // user must not read an English error. The service distinguishes
+    // "you are not the designer this delivery belongs to" with a typed
+    // `PermissionDeniedError` carrying a stable action name; everything
+    // else shares `updateFailed`.
+    logError("content.submit_delivery.failed", {
+      workspaceSlug,
+      contentItemId,
+      err: error,
+    });
+    return {
+      error:
+        error instanceof PermissionDeniedError && error.action === "submit_delivery_not_assigned"
+          ? "notAssignedDesigner"
+          : "updateFailed",
+    };
   }
   return { ok: true };
 }
@@ -589,10 +716,10 @@ export async function setMediaRequiredAction(
     // the service's "not found" and status-guard paths throw plain
     // `Error`, and guessing between them by message would be a lie the
     // user then sees, so they share `updateFailed`.
-    console.error("[setMediaRequired] update failed", {
+    logError("content.set_media_required.failed", {
       workspaceSlug,
       contentItemId,
-      message: error instanceof Error ? error.message : String(error),
+      err: error,
     });
     return {
       ok: false,
@@ -621,7 +748,7 @@ export async function decideApprovalAction(input: {
   try {
     await decideApproval(actor, parsed.data);
   } catch (error) {
-    return actionFailure<DecideApprovalFields>(error, "The approval action failed.");
+    return workflowActionFailure<DecideApprovalFields>(error, "planning.approval_decision_failed");
   }
   // Publication outcomes change the workflow status rendered by the
   // planning detail page as well as the list. Revalidate the dynamic
@@ -659,7 +786,7 @@ export async function recordPublicationAction(input: {
   try {
     await recordPublication(actor, parsed.data);
   } catch (error) {
-    return actionFailure<RecordPublicationFields>(error, "The publication action failed.");
+    return publicationActionFailure<RecordPublicationFields>(error);
   }
   return { ok: true };
 }
@@ -819,7 +946,7 @@ export async function createCommentAction(
     }
   }
   await createComment(actor, parsed.data, structuredMentionIds);
-  void workspace;
+  revalidatePath(workspaceBasePath(workspace.agencySlug, workspace.slug), "layout");
   return { ok: true, mentionedUserIds: structuredMentionIds };
 }
 
@@ -828,7 +955,7 @@ export async function resolveCommentAction(input: {
   commentId: string;
   resolved: boolean;
 }): Promise<ActionState<ResolveCommentFields>> {
-  const { actor } = await requireWorkspaceContext(input.workspaceSlug);
+  const { actor, workspace } = await requireWorkspaceContext(input.workspaceSlug);
   const parsed = ResolveCommentSchema.safeParse({
     commentId: input.commentId,
     resolved: input.resolved,
@@ -837,6 +964,7 @@ export async function resolveCommentAction(input: {
     return fieldErrorsFromZod<ResolveCommentFields>(parsed.error);
   }
   await resolveComment(actor, parsed.data);
+  revalidatePath(workspaceBasePath(workspace.agencySlug, workspace.slug), "layout");
   return { ok: true };
 }
 
@@ -859,7 +987,7 @@ export async function resolveCommentAction(input: {
  * and writes the canonical shape.
  */
 const UpdateFormatPayloadFormSchema = z.object({
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
   format: z.enum([
     "static_post",
     "carousel",
@@ -884,10 +1012,7 @@ export async function updateFormatPayloadAction(
   try {
     formatPayload = JSON.parse(rawPayload);
   } catch {
-    return {
-      error: "Invalid formatPayload JSON",
-      fieldErrors: { formatPayload: "The format payload is not valid JSON." },
-    };
+    return { error: "contentMutationError.validation_failed" };
   }
   const parsed = UpdateFormatPayloadFormSchema.safeParse({
     contentItemId: formData.get("contentItemId"),
@@ -904,7 +1029,10 @@ export async function updateFormatPayloadAction(
       formatPayload: formatPayload as Record<string, unknown>,
     });
   } catch (e) {
-    return actionFailure<UpdateFormatPayloadFields>(e, "The format payload could not be saved.");
+    return contentMutationActionFailure<UpdateFormatPayloadFields>(
+      e,
+      "planning.format_payload_update_failed",
+    );
   }
   return { ok: true };
 }
@@ -929,9 +1057,9 @@ export async function applyResearchTeardownAction(input: {
     });
     return { ok: true, appliedFields };
   } catch (error) {
-    return actionFailure<ApplyResearchTeardownFields>(
+    return contentMutationActionFailure<ApplyResearchTeardownFields>(
       error,
-      "The research fields could not be applied.",
+      "planning.research_teardown_apply_failed",
     );
   }
 }
@@ -947,10 +1075,7 @@ export async function updateAudienceCopyAction(
   try {
     formatPayload = JSON.parse(String(formData.get("formatPayload") ?? "{}"));
   } catch {
-    return actionFailure<UpdateAudienceCopyFields>(
-      new Error("Invalid copy payload."),
-      "The copy could not be saved.",
-    );
+    return { error: "contentMutationError.validation_failed" };
   }
   const parsed = UpdateAudienceCopySchema.safeParse({
     contentItemId: formData.get("contentItemId"),
@@ -961,7 +1086,10 @@ export async function updateAudienceCopyAction(
   try {
     await updateAudienceCopy(actor, parsed.data);
   } catch (e) {
-    return actionFailure<UpdateAudienceCopyFields>(e, "The copy could not be saved.");
+    return contentMutationActionFailure<UpdateAudienceCopyFields>(
+      e,
+      "planning.audience_copy_update_failed",
+    );
   }
   return { ok: true };
 }
@@ -983,7 +1111,7 @@ export async function updateAudienceCopyAction(
  *   - hashtags (optional, repeated — one per tag)
  */
 const PatchAudienceCopyFormSchema = z.object({
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
   caption: z.string().max(2200).optional(),
   firstComment: z.string().max(2200).optional(),
 });
@@ -1022,7 +1150,10 @@ export async function patchAudienceCopyAction(
   try {
     await patchAudienceCopy(actor, patch);
   } catch (e) {
-    return actionFailure<PatchAudienceCopyFields>(e, "The copy could not be saved.");
+    return contentMutationActionFailure<PatchAudienceCopyFields>(
+      e,
+      "planning.audience_copy_patch_failed",
+    );
   }
   return { ok: true };
 }

@@ -15,6 +15,7 @@ import {
   workspaces,
 } from "@/lib/db/schema";
 import { db } from "@/lib/db";
+import type { ZodError } from "zod";
 import {
   createInvitation,
   deactivateUser,
@@ -53,7 +54,11 @@ export type InviteActionState = {
  * every business / infrastructure failure into an `{ error }` shape;
  * the client renders the message inline.
  */
-export type InvitationActionState = { error?: string; success?: boolean };
+export type InvitationActionState = {
+  error?: string;
+  errorCode?: "stale" | "resend_failed" | "revoke_failed";
+  success?: boolean;
+};
 
 function formatRateLimitRetry(seconds: number): string {
   if (seconds >= 3600) {
@@ -67,7 +72,7 @@ function formatRateLimitRetry(seconds: number): string {
   return `Too many invitations. Try again in ${seconds} second${seconds === 1 ? "" : "s"}.`;
 }
 
-function formatZodIssues(issues: { path: (string | number)[]; message: string }[]): {
+function formatZodIssues(issues: ZodError["issues"]): {
   error: string;
   fieldErrors: Record<string, string[]>;
 } {
@@ -182,18 +187,16 @@ export async function resendInviteAction(invitationId: string): Promise<Invitati
   try {
     await resendInvitation({ invitationId, agencyId, invitedBy: session.user.id });
   } catch (e) {
-    // resendInvitation throws plain `Error`s for two known business
-    // outcomes: the invitation no longer exists, or it's no longer
-    // pending (revoked / expired / accepted). Either way, the row the
-    // user clicked against is stale and the next render will refresh
-    // the list — surface the literal message verbatim so the user
-    // understands why the click didn't take effect. Sentry (when
-    // configured) still sees the error so an infrastructure failure
-    // (DB, SMTP) is distinguishable from the expected business outcomes.
+    // These two service messages are stable business outcomes; all other
+    // exception text may contain database or SMTP details and stays private.
+    if (
+      e instanceof Error &&
+      (e.message === "Invitation not found" || /^Cannot resend a \w+ invitation$/.test(e.message))
+    ) {
+      return { errorCode: "stale" };
+    }
     captureError("users.resendInvite", e);
-    return {
-      error: e instanceof Error && e.message ? e.message : "The invitation could not be resent.",
-    };
+    return { errorCode: "resend_failed" };
   }
   revalidatePath("/app/users");
   return { success: true };
@@ -214,9 +217,7 @@ export async function revokeInviteAction(invitationId: string): Promise<Invitati
     await revokeInvitation({ invitationId, agencyId });
   } catch (e) {
     captureError("users.revokeInvite", e);
-    return {
-      error: e instanceof Error && e.message ? e.message : "The invitation could not be revoked.",
-    };
+    return { errorCode: "revoke_failed" };
   }
   revalidatePath("/app/users");
   return { success: true };
@@ -246,7 +247,12 @@ export async function toggleDeactivationAction(userId: string, currentlyActive: 
       return { error: message };
     }
   } else {
-    await reactivateUser({ userId, agencyId, actorUserId: session.user.id });
+    try {
+      await reactivateUser({ userId, agencyId, actorUserId: session.user.id });
+    } catch (error) {
+      captureError("users.reactivateUser", error);
+      return { errorCode: "reactivate_failed" as const };
+    }
   }
   revalidatePath("/app/users");
   return { success: true };
@@ -512,6 +518,7 @@ export async function updateMemberRolesAction(
         metadata: {
           workspaceCount: grantByWorkspace.size,
           roleCount: totalRoles,
+          workspaceIds: Array.from(grantByWorkspace.keys()),
         },
       });
     });

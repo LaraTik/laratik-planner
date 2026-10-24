@@ -2,11 +2,13 @@
 import * as React from "react";
 import { useActionState } from "react";
 import { createPublishingRuleAction } from "./actions";
-import { useSuccessReset } from "@/lib/brand/use-success-reset";
+import { useSuccessReset } from "@/features/brand-kit";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
+import { FormActionError } from "@/components/forms/form-action-error";
 import { CharacterCountInput } from "@/components/workspace/character-count-input";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { isMissingTranslation } from "@/messages";
 
 /**
  * PublishingRuleForm — inline create form for the brand-kit
@@ -77,7 +79,7 @@ export function PublishingRuleForm({
   const t = tProp ?? localeT;
   const tr = (key: string, fallback: string) => {
     const value = t(key);
-    return value === key ? fallback : value;
+    return isMissingTranslation(value, key) ? fallback : value;
   };
   const [state, action] = useActionState(
     createPublishingRuleAction.bind(null, slug),
@@ -145,9 +147,9 @@ export function PublishingRuleForm({
       </FormField>
 
       {state?.error ? (
-        <p role="alert" aria-live="polite" className="text-label text-danger font-semibold">
+        <FormActionError ariaLive="polite" className="font-semibold">
           {state.error}
-        </p>
+        </FormActionError>
       ) : null}
 
       <div className="flex items-center justify-end">

@@ -28,7 +28,9 @@ const skipValidation =
   process.env.NEXT_PHASE === "phase-production-build" ||
   process.env.NEXT_PHASE === "phase-development-build";
 
-const optionalInDev = (schema: z.ZodTypeAny) => {
+const optionalInDev = <Schema extends z.ZodType>(
+  schema: Schema,
+): z.ZodOptional<Schema> | Schema => {
   if (skipValidation) return schema.optional();
   return process.env.NODE_ENV === "production" ? schema : schema.optional();
 };

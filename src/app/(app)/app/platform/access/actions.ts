@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { currentActor } from "@/lib/auth/current-actor";
+import { PermissionDeniedError } from "@/lib/auth/policy";
+import { logError } from "@/lib/observability/logger";
 import type { PlatformRole } from "@/lib/auth/platform-access-types";
 import {
   changePlatformRole,
@@ -17,6 +19,7 @@ export type PlatformAccessActionState = Readonly<{
   ok?: boolean;
   error?: string;
   code?: string;
+  errorCode?: "unexpected_failure";
   email?: string;
   role?: PlatformRole;
   unchanged?: boolean;
@@ -30,11 +33,15 @@ function validationError(issues: ReadonlyArray<{ path: PropertyKey[]; message: s
   return issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ");
 }
 
-function actionError(error: unknown): PlatformAccessActionState {
+function actionError(error: unknown, event: string): PlatformAccessActionState {
   if (error instanceof PlatformAccessServiceError) {
     return { error: error.message, code: error.code };
   }
-  return { error: "You do not have permission to change platform access." };
+  if (error instanceof PermissionDeniedError) {
+    return { error: "You do not have permission to change platform access." };
+  }
+  logError(event, { err: error });
+  return { errorCode: "unexpected_failure" };
 }
 
 export async function grantPlatformAccessAction(
@@ -59,7 +66,7 @@ export async function grantPlatformAccessAction(
       unchanged: result.unchanged,
     };
   } catch (error) {
-    return actionError(error);
+    return actionError(error, "platform_access.grant_failed");
   }
 }
 
@@ -80,7 +87,7 @@ export async function changePlatformRoleAction(
     revalidatePath("/app/platform/access");
     return { ok: true, role: result.role, unchanged: result.unchanged };
   } catch (error) {
-    return actionError(error);
+    return actionError(error, "platform_access.role_change_failed");
   }
 }
 
@@ -100,6 +107,6 @@ export async function revokePlatformAccessAction(
     revalidatePath("/app/platform/access");
     return { ok: true, role: result.role, unchanged: result.unchanged };
   } catch (error) {
-    return actionError(error);
+    return actionError(error, "platform_access.revoke_failed");
   }
 }

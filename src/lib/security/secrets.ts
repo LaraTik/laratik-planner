@@ -4,6 +4,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSy
 import { readFile as readFileAsync } from "node:fs/promises";
 import path from "node:path";
 import { serverEnv } from "@/lib/validation/env";
+import { logError, logWarn } from "@/lib/observability/logger";
 import { deriveDevKey } from "./dev-key";
 
 /**
@@ -140,8 +141,8 @@ export type KekStatus = {
   path?: string;
   /** ISO-8601 creation timestamp from the on-disk file, if present. */
   createdAt?: string;
-  /** Operator-facing message (e.g. "will be auto-generated on next save"). */
-  warning?: string;
+  /** Stable UI state; detailed filesystem errors stay on the server. */
+  warningCode?: "generate-on-save" | "unreadable" | "corrupt";
 };
 
 type FileKeyResult =
@@ -274,12 +275,11 @@ function readKey(version: number = CURRENT_KEY_VERSION): Buffer {
       const filePath = writeKekFileSync(newKey.toString("base64"));
       fileKeyCache = newKey;
       if (!loggedFileFallback) {
-        console.warn(
-          `[security.secrets] AI_SECRET_ENCRYPTION_KEY not set in environment. ` +
-            `Auto-generated KEK and persisted to ${filePath} (mode 0600). ` +
-            `BACK THIS FILE UP — losing it locks out all stored AI provider keys. ` +
-            `To override, set AI_SECRET_ENCRYPTION_KEY in the environment.`,
-        );
+        logWarn("security.secrets.kek_file_auto_generated", {
+          filePath,
+          fileMode: "0600",
+          backupRequired: true,
+        });
         loggedFileFallback = true;
       }
       return newKey;
@@ -296,10 +296,7 @@ function readKey(version: number = CURRENT_KEY_VERSION): Buffer {
   // 4. Dev / test fallback (preserved from prior behavior so tests
   //    remain hermetic — no leftover KEK file in test sandboxes).
   if (!loggedDevFallback) {
-    console.error(
-      "[security.secrets] AI_SECRET_ENCRYPTION_KEY is not set; using a derived dev key. " +
-        "DO NOT deploy this configuration.",
-    );
+    logError("security.secrets.dev_key_fallback", { deploymentAllowed: false });
     loggedDevFallback = true;
   }
   return deriveDevKey();
@@ -334,19 +331,14 @@ export async function getKekStatus(): Promise<KekStatus> {
     raw = await readFileAsync(filePath, "utf8");
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") {
-      return {
-        source: "auto-file",
-        path: filePath,
-        warning:
-          serverEnv.NODE_ENV === "production"
-            ? "Will be auto-generated on the first save — back the file up afterwards."
-            : "Will fall back to a derived dev key in dev/test (no file will be written).",
-      };
+      return serverEnv.NODE_ENV === "production"
+        ? { source: "auto-file", path: filePath, warningCode: "generate-on-save" }
+        : { source: "dev-fallback" };
     }
     return {
       source: "auto-file",
       path: filePath,
-      warning: `Unreadable: ${(e as Error).message}`,
+      warningCode: "unreadable",
     };
   }
 
@@ -357,8 +349,7 @@ export async function getKekStatus(): Promise<KekStatus> {
     return {
       source: "auto-file",
       path: filePath,
-      warning:
-        "File exists but is corrupt (invalid JSON) — it will NOT be auto-regenerated to avoid orphaning existing ciphertexts. Set AI_SECRET_ENCRYPTION_KEY to recover.",
+      warningCode: "corrupt",
     };
   }
 
@@ -375,8 +366,7 @@ export async function getKekStatus(): Promise<KekStatus> {
   return {
     source: "auto-file",
     path: filePath,
-    warning:
-      "File exists but is corrupt (wrong version or shape) — it will NOT be auto-regenerated to avoid orphaning existing ciphertexts. Set AI_SECRET_ENCRYPTION_KEY to recover.",
+    warningCode: "corrupt",
   };
 }
 

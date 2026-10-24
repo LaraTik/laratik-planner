@@ -20,7 +20,7 @@ import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { TrendsSettingsClient } from "./_components/trends-settings-client";
 import { DeleteTrendDataSection } from "./delete-trend-data-section";
-import { listEnabledSourceKeysForWorkspace } from "@/lib/trends/enabled-sources";
+import { listEnabledSourceKeysForWorkspace } from "@/features/trends/server";
 import { loadEnabledCapabilities } from "@/lib/ai/governance";
 import { workspaceBasePath } from "@/lib/urls";
 

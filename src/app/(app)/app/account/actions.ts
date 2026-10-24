@@ -13,10 +13,11 @@ import {
 import {
   setNotificationPreferencesForUser,
   NotificationKindSchemaValues,
-} from "@/lib/notifications/service";
+} from "@/lib/notifications/preferences";
 import { setUser } from "@/lib/observability/sentry";
 import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
 import { setPublicLocale } from "@/lib/i18n/cookie";
+import { logError } from "@/lib/observability/logger";
 import {
   issueMcpAccessToken,
   revokeMcpAccessToken,
@@ -98,6 +99,12 @@ export async function issueMcpTokenAction(
   const scopes = rawScopes.filter((scope): scope is McpTokenScope =>
     (MCP_TOKEN_SCOPES as readonly string[]).includes(scope),
   );
+  // Scope selection is a privilege grant. Reject tampered values and an
+  // empty selection instead of silently substituting `content:read` for a
+  // permission the user did not choose.
+  if (scopes.length !== rawScopes.length || scopes.length === 0) {
+    return { errorCode: "invalidTokenRequest" };
+  }
   if (!name || !Number.isInteger(durationDays) || ![30, 90, 365].includes(durationDays)) {
     return { errorCode: "invalidTokenRequest" };
   }
@@ -105,7 +112,7 @@ export async function issueMcpTokenAction(
     const issued = await issueMcpAccessToken({
       userId: session.user.id,
       name,
-      scopes: scopes.length > 0 ? scopes : ["content:read"],
+      scopes,
       expiresAt: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000),
     });
     revalidatePath("/app/account");
@@ -258,7 +265,7 @@ export async function setNotificationPreferencesAction(
       dailyDigest: formData.get("dailyDigest") === "on",
     });
   } catch (e) {
-    console.error("Failed to save notification preferences", e);
+    logError("account.notification_preferences.save_failed", { err: e });
     return { errorCode: "savePreferencesFailed" };
   }
   revalidatePath("/app/account");

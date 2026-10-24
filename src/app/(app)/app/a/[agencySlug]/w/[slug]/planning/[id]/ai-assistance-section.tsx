@@ -28,6 +28,7 @@ import {
 } from "@/lib/ai/capabilities";
 import { DiffPreview } from "@/components/ai/diff-preview";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { localizeActionError } from "@/components/forms/action-error-message";
 import { workspaceBasePath } from "@/lib/urls";
 
 /**
@@ -327,12 +328,20 @@ export function AiAssistanceSection({
         mode,
       });
       if (res.error) {
-        setApplyError(res.error);
+        setApplyError(
+          localizeActionError(
+            res.error,
+            t,
+            "contentMutationError.",
+            "contentDetail.contentMutationErrors",
+            t("contentDetail.contentMutationErrors.failed"),
+          ),
+        );
         return;
       }
       setApplied(mode);
-    } catch (e) {
-      setApplyError((e as Error).message);
+    } catch {
+      setApplyError(t("contentDetail.contentMutationErrors.failed"));
     } finally {
       setApplying(false);
     }

@@ -7,7 +7,7 @@ test.describe("Batch Add spreadsheet workflow", () => {
   }) => {
     await page.setViewportSize({ width: 1024, height: 900 });
     await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/planning/batch", { waitUntil: "networkidle" });
+    await page.goto("/app/a/test-agency/w/acme/planning/batch", { waitUntil: "networkidle" });
 
     const template = page.getByTestId("batch-template-example");
     await expect(template).toBeVisible();
@@ -39,7 +39,7 @@ test.describe("Batch Add spreadsheet workflow", () => {
 
   test("explains the next step after saving a batch", async ({ page }) => {
     await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/planning/batch");
+    await page.goto("/app/a/test-agency/w/acme/planning/batch");
 
     await page.getByRole("textbox", { name: "Title for row 1" }).fill("Batch completion test");
     await page.getByRole("combobox", { name: "Format for row 1" }).selectOption("static_post");
@@ -47,7 +47,7 @@ test.describe("Batch Add spreadsheet workflow", () => {
     await page.getByRole("textbox", { name: "Short brief for row 1" }).fill("A clear next step");
     await page.getByRole("button", { name: /Save all as drafts/i }).click();
 
-    await page.waitForURL(/\/app\/w\/acme\/planning\?batchCreated=1$/, {
+    await page.waitForURL(/\/app\/a\/test-agency\/w\/acme\/planning\?batchCreated=1$/, {
       timeout: 20_000,
       waitUntil: "load",
     });

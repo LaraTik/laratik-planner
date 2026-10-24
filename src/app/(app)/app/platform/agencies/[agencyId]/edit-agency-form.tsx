@@ -33,14 +33,7 @@ export function PlatformEditAgencyForm({
   initialLocale: string;
   initialTimezone: string;
 }) {
-  // useActionState returns a (prev, formData) => Promise<state>
-  // action. EditAgencyForm expects a (formData) => Promise<void>
-  // action. We bridge with a thin wrapper that drops the
-  // prev-state argument.
   const [state, dispatchWithPrev] = useActionState(platformEditAgencyAction, initial);
-  const formAction = (formData: FormData) => {
-    void dispatchWithPrev(formData);
-  };
   return (
     <EditAgencyForm
       initialName={initialName}
@@ -48,7 +41,7 @@ export function PlatformEditAgencyForm({
       initialLocale={initialLocale}
       initialTimezone={initialTimezone}
       testIdPrefix="platform-agency"
-      formAction={formAction}
+      formAction={dispatchWithPrev}
       actionState={state}
       hiddenFields={{ agencyId }}
     />

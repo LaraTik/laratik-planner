@@ -112,6 +112,7 @@ function renderTwoChannels({ channelBBoardId = "" }: { channelBBoardId?: string 
   return render(
     <LocaleProvider locale="en">
       <PublishPackageForm
+        recordPublicationAction={async () => ({})}
         workspaceId="44444444-4444-4444-8444-444444444444"
         workspaceSlug="acme"
         agencySlug="acme"

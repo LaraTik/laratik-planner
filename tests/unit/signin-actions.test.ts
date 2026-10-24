@@ -59,6 +59,19 @@ describe("sign-in actions", () => {
     });
   });
 
+  it("revalidates the callback supplied to the server action", async () => {
+    const formData = new FormData();
+    formData.set("email", "person@agency.com");
+    formData.set("password", "correct horse battery staple");
+
+    await signInWithPasswordAction("/\\evil.example/", formData);
+
+    expect(signInMock).toHaveBeenCalledWith(
+      "credentials",
+      expect.objectContaining({ redirectTo: "/app" }),
+    );
+  });
+
   it("redirects with a distinct code when the email has no account", async () => {
     precheckMock.mockResolvedValue({ outcome: "unknown_account" });
     const formData = new FormData();

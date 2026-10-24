@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
-import { createMediaShareCollection } from "@/lib/media/collection-service";
-import { MediaPermissionError } from "@/lib/media/service";
+import { createMediaShareCollection, MediaPermissionError } from "@/features/media/server";
 import { resolvePublicAppOrigin } from "@/lib/http/public-app-origin";
 import { clientEnv, serverEnv } from "@/lib/validation/env";
 
@@ -11,8 +10,8 @@ export const runtime = "nodejs";
 
 const Body = z.object({
   sourceType: z.enum(["delivery_version", "library_selection"]),
-  sourceId: z.string().uuid().optional(),
-  assetIds: z.array(z.string().uuid()).max(100).optional(),
+  sourceId: z.string().guid().optional(),
+  assetIds: z.array(z.string().guid()).max(100).optional(),
   title: z.string().trim().min(1).max(160),
 });
 

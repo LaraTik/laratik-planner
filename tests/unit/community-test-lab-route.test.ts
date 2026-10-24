@@ -14,9 +14,11 @@ const mocks = vi.hoisted(() => ({
   getActiveApiKey: vi.fn(),
   enforceAiBudget: vi.fn(),
   reconcileAiBudget: vi.fn(),
+  releaseAiBudgetReservation: vi.fn(),
+  recordAiUsageEvent: vi.fn(),
   getEffectiveEntitlement: vi.fn(),
   enforceRateLimit: vi.fn(),
-  recordUsage: vi.fn(),
+  captureError: vi.fn(),
   runCommunityTestLab: vi.fn(),
 }));
 
@@ -49,6 +51,8 @@ vi.mock("@/lib/ai", () => ({
   getActiveApiKey: mocks.getActiveApiKey,
   loadEnabledCapabilities: mocks.loadEnabledCapabilities,
   reconcileAiBudget: mocks.reconcileAiBudget,
+  releaseAiBudgetReservation: mocks.releaseAiBudgetReservation,
+  recordAiUsageEvent: mocks.recordAiUsageEvent,
 }));
 vi.mock("@/lib/community/ai-test-lab", async () => {
   const actual = await vi.importActual<typeof import("@/lib/community/ai-test-lab")>(
@@ -79,7 +83,7 @@ vi.mock("@/lib/security/rate-limit", () => ({ enforceRateLimit: mocks.enforceRat
 vi.mock("@/lib/security/headers", () => ({
   mutatingApiHeaders: () => ({ "cache-control": "no-store" }),
 }));
-vi.mock("@/lib/usage", () => ({ recordUsage: mocks.recordUsage }));
+vi.mock("@/lib/observability/sentry", () => ({ captureError: mocks.captureError }));
 vi.mock("@/lib/validation/env", () => ({ serverEnv: { MINIMAX_MODEL: "MiniMax-M3" } }));
 
 const { POST } = await import("@/app/api/community/test-lab/route");
@@ -127,7 +131,8 @@ beforeEach(() => {
   mocks.reconcileAiBudget.mockResolvedValue(undefined);
   mocks.getEffectiveEntitlement.mockResolvedValue({ maxOutputTokensPerRequest: 800 });
   mocks.enforceRateLimit.mockResolvedValue({ allowed: true });
-  mocks.recordUsage.mockResolvedValue(undefined);
+  mocks.releaseAiBudgetReservation.mockResolvedValue(true);
+  mocks.recordAiUsageEvent.mockResolvedValue(undefined);
   mocks.runCommunityTestLab.mockResolvedValue({
     providerUsed: true,
     result: {
@@ -198,6 +203,41 @@ describe("POST /api/community/test-lab", () => {
       }),
     );
     expect(mocks.reconcileAiBudget).toHaveBeenCalledOnce();
-    expect(mocks.insert).toHaveBeenCalledOnce();
+    expect(mocks.recordAiUsageEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        capability: "community_reply_drafts",
+        succeeded: true,
+        inputTokens: expect.any(Number),
+        outputTokens: 800,
+        requestId: "test-lab-1",
+      }),
+    );
+  });
+
+  it("releases reserved tokens when provider execution fails", async () => {
+    mocks.runCommunityTestLab.mockRejectedValue(new Error("provider detail"));
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(502);
+    expect(mocks.releaseAiBudgetReservation).toHaveBeenCalledWith({
+      agencyId: "agency-1",
+      inputTokens: expect.any(Number),
+      outputTokens: 800,
+    });
+    expect(mocks.captureError).not.toHaveBeenCalled();
+  });
+
+  it("keeps reconciled provider usage when later usage logging fails", async () => {
+    mocks.recordAiUsageEvent
+      .mockRejectedValueOnce(new Error("usage log unavailable"))
+      .mockResolvedValue(undefined);
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(502);
+    expect(mocks.reconcileAiBudget).toHaveBeenCalledOnce();
+    expect(mocks.releaseAiBudgetReservation).not.toHaveBeenCalled();
+    expect(mocks.recordAiUsageEvent).toHaveBeenCalledTimes(2);
   });
 });

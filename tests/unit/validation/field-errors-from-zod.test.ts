@@ -73,9 +73,20 @@ describe("fieldErrorsFromZod", () => {
 });
 
 describe("actionFailure", () => {
-  it("returns the error message from an Error", () => {
-    const out = actionFailure(new Error("boom"), "fallback");
-    expect(out.error).toBe("boom");
+  it("uses the safe fallback for an unclassified exception by default", () => {
+    const out = actionFailure(
+      new Error("postgres://planner:credential-shaped-secret@db.test/planner"),
+      "fallback",
+    );
+    expect(out.error).toBe("fallback");
+    expect(out.error).not.toContain("credential-shaped-secret");
+  });
+
+  it("allows a caller-classified public message", () => {
+    const out = actionFailure(new Error("internal diagnostic"), "fallback", {
+      publicMessage: "Not allowed",
+    });
+    expect(out.error).toBe("Not allowed");
   });
 
   it("returns the fallback for a non-Error value", () => {

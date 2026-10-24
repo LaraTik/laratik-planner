@@ -15,8 +15,8 @@ if (!process.env.TEST_DATABASE_URL) {
 }
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
 
-const sendEmailMock = vi.fn(async () => {
-  throw new Error("simulated SMTP failure");
+const sendEmailMock = vi.fn(async (): Promise<{ id: string } | null> => {
+  throw new Error("smtp://planner:credential-shaped-secret@mail.laratik.local");
 });
 vi.mock("@/lib/email", () => ({
   sendEmail: sendEmailMock,
@@ -132,7 +132,7 @@ describe("R6 — dispatchEmailOnce DLQ guard", () => {
     // First four ticks: the email delivery stays unprocessed,
     // emailAttemptCount climbs, and in-app state remains independent.
     for (let i = 1; i <= 4; i++) {
-      const { dispatchEmailOnce } = await import("@/lib/notifications/service");
+      const { dispatchEmailOnce } = await import("@/lib/notifications/email-dispatch");
       await dispatchEmailOnce();
       const [row] = await db
         .select({
@@ -149,7 +149,7 @@ describe("R6 — dispatchEmailOnce DLQ guard", () => {
 
     // Fifth tick: the per-recipient attempt count reaches 5 and the
     // delivery is marked processed with [poisoned].
-    const { dispatchEmailOnce } = await import("@/lib/notifications/service");
+    const { dispatchEmailOnce } = await import("@/lib/notifications/email-dispatch");
     await dispatchEmailOnce();
     const [poisoned] = await db
       .select({
@@ -163,7 +163,8 @@ describe("R6 — dispatchEmailOnce DLQ guard", () => {
     expect(poisoned?.processedAt).toBeNull();
     expect(poisoned?.emailProcessedAt).not.toBeNull();
     expect(poisoned?.attempt).toBe(5);
-    expect(poisoned?.lastError).toMatch(/^\[poisoned\] simulated SMTP failure$/);
+    expect(poisoned?.lastError).toBe("[poisoned] email_delivery_failed");
+    expect(poisoned?.lastError).not.toContain("credential-shaped-secret");
 
     // Sixth tick: dispatcher skips the row entirely (no attempt
     // bump, no extra sendEmail call).
@@ -172,5 +173,62 @@ describe("R6 — dispatchEmailOnce DLQ guard", () => {
     const after = sendEmailMock.mock.calls.length;
     expect(after).toBe(before);
     void sql;
+  });
+
+  it("sends a recipient email only once when two worker ticks overlap", async () => {
+    const { db } = await import("@/lib/db");
+    const { outboxEvents, notificationPreferences, notificationEmailDeliveries, users } =
+      await import("@/lib/db/schema");
+    const { eq } = await import("drizzle-orm");
+    const [user] = await db.select({ id: users.id }).from(users).limit(1);
+    if (!user) throw new Error("user seed failed");
+    await db.delete(notificationPreferences).where(eq(notificationPreferences.userId, user.id));
+    await db.insert(notificationPreferences).values({
+      userId: user.id,
+      kind: "assignment",
+      emailEnabled: true,
+    });
+    const [event] = await db
+      .insert(outboxEvents)
+      .values({
+        eventType: "assignment",
+        aggregateType: "content_item",
+        aggregateId: user.id,
+        payload: { userId: user.id, title: "Concurrent email", body: "Send once" },
+      })
+      .returning();
+    if (!event) throw new Error("outbox seed failed");
+
+    let releaseSend!: () => void;
+    let signalStarted!: () => void;
+    const sendStarted = new Promise<void>((resolve) => {
+      signalStarted = resolve;
+    });
+    const allowSendToFinish = new Promise<void>((resolve) => {
+      releaseSend = resolve;
+    });
+    sendEmailMock.mockImplementationOnce(async () => {
+      signalStarted();
+      await allowSendToFinish;
+      return { id: "concurrent-send-1" };
+    });
+
+    const { dispatchEmailOnce } = await import("@/lib/notifications/email-dispatch");
+    const firstTick = dispatchEmailOnce();
+    await sendStarted;
+    const secondResult = await dispatchEmailOnce();
+    expect(secondResult.processed).toBe(0);
+    expect(sendEmailMock).toHaveBeenCalledTimes(1);
+
+    releaseSend();
+    const firstResult = await firstTick;
+    expect(firstResult.processed).toBe(1);
+    expect(firstResult.sent).toBe(1);
+    expect(sendEmailMock).toHaveBeenCalledTimes(1);
+    const [delivery] = await db
+      .select({ processedAt: notificationEmailDeliveries.processedAt })
+      .from(notificationEmailDeliveries)
+      .where(eq(notificationEmailDeliveries.outboxEventId, event.id));
+    expect(delivery?.processedAt).not.toBeNull();
   });
 });
