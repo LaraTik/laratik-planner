@@ -42,7 +42,9 @@ function escapeCell(value: unknown): string {
 export function rowsToCsv<T>(rows: T[], columns: CsvColumn<T>[]): string {
   const header = columns.map((c) => escapeCell(c.header)).join(",");
   const lines = rows.map((row) => columns.map((c) => escapeCell(c.get(row))).join(","));
-  return [header, ...lines].join("\r\n") + "\r\n";
+  // Excel needs the UTF-8 BOM to reliably detect Arabic and other Unicode
+  // content when opening a CSV directly.
+  return `\uFEFF${[header, ...lines].join("\r\n")}\r\n`;
 }
 
 /** Build a Content-Disposition header value for an inline download. */
