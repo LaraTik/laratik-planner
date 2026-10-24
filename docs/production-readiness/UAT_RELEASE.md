@@ -1,6 +1,6 @@
 # Production UAT and release verdict
 
-> **Current status — 2026-10-24: NOT READY TO DEPLOY.** This file describes the §23 30-step **UAT** gate, which is independent from the **deploy** gate in `PRODUCTION_READINESS_TRACKER.md`. Both gates must pass for `READY`; either failing blocks release. The Workspace AI Assistant's local test and migration evidence is recorded, but its separated-account journey, MiniMax model/tool and privacy UAT, production backup/rollback proof, and recorded independent PR approval are still outstanding. The historical 2026-08-21 readiness note below is superseded by this current status.
+> **Current status — 2026-10-24: NOT READY TO DEPLOY.** This file describes the §23 30-step **UAT** gate, which is independent from the **deploy** gate in `PRODUCTION_READINESS_TRACKER.md`. Both gates must pass for `READY`; either failing blocks release. Local verification evidence is current through application SHA `68a63d5a43773deb43e4e7773b3f543bd51fc923` and is recorded in `TEST_EVIDENCE.md`. The Workspace AI Assistant's separated-account journey, MiniMax model/tool and privacy UAT, production backup/rollback proof, and recorded independent PR approval are still outstanding. The historical 2026-08-21 readiness note below is superseded by this current status.
 
 ## Two-gate summary
 

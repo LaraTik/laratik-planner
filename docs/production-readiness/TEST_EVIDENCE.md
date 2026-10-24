@@ -1,5 +1,22 @@
 # Test and coverage evidence
 
+## Workspace AI Assistant — exact-code local release verification — 2026-10-24
+
+Exact clean application code SHA: `68a63d5a43773deb43e4e7773b3f543bd51fc923`.
+This is a validation-only code change requiring evidence-backed findings,
+recommendations, and proposed changes. It changes no database schema or
+migration. On this exact clean commit:
+
+| Check                             | Result                                                                                                                                                                                                                                                        |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                     | Pass: formatting, lint, typecheck, 617 unit files / 5,301 tests, and production build.                                                                                                                                                                        |
+| Full PostgreSQL integration suite | Pass: all 50 integration files, including Workspace Assistant 12/12, on disposable `planner_test`; no files skipped.                                                                                                                                          |
+| Release state                     | PR #44 is still open. Independent approval is not recorded on the PR. Full browser release coverage, MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback remain open. This evidence does not authorize merge or deployment. |
+
+The documentation-only synchronization commit that follows retains this
+application SHA as its code evidence. No application code or migration is
+changed by that documentation update.
+
 ## Workspace AI Assistant — release candidate full local verification — 2026-10-24
 
 Exact clean application code SHA: `3c43f49b6e15bc131b62032536d28d665a340ac0`.
