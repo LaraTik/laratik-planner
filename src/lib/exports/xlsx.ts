@@ -22,6 +22,31 @@ export interface XlsxWorkbookSheet {
   rightToLeft?: boolean;
   freezeRows?: number;
   autoFilter?: boolean;
+  wrapText?: boolean;
+}
+
+/** Convert an instant to an Excel serial using the workspace wall clock. */
+export function excelDateTime(value: Date, timezone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+    numberingSystem: "latn",
+  })
+    .formatToParts(value)
+    .reduce<Record<string, number>>((result, part) => {
+      if (part.type !== "literal") result[part.type] = Number(part.value);
+      return result;
+    }, {});
+  const utcMillis = Date.UTC(parts.year!, parts.month! - 1, parts.day!);
+  const excelEpochMillis = Date.UTC(1899, 11, 30);
+  const dayFraction = ((parts.hour! * 60 + parts.minute!) * 60 + parts.second!) / 86_400;
+  return (utcMillis - excelEpochMillis) / 86_400_000 + dayFraction;
 }
 
 /**
@@ -134,7 +159,7 @@ const workbookStyles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF3525CD"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF241A8A"/><bgColor indexed="64"/></patternFill></fill></fills>
 <borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left/><right/><top/><bottom style="thin"><color rgb="FFD9DCE8"/></bottom><diagonal/></border></borders>
 <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-<cellXfs count="8">
+<cellXfs count="16">
 <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
 <xf numFmtId="0" fontId="1" fillId="2" borderId="1" applyFont="1" applyFill="1" applyBorder="1"/>
 <xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>
@@ -143,6 +168,14 @@ const workbookStyles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <xf numFmtId="0" fontId="1" fillId="2" borderId="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" readingOrder="2"/></xf>
 <xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment horizontal="right" readingOrder="2"/></xf>
 <xf numFmtId="0" fontId="2" fillId="3" borderId="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" readingOrder="2"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf>
+<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf>
+<xf numFmtId="0" fontId="2" fillId="3" borderId="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment horizontal="right" readingOrder="2" wrapText="1" vertical="top"/></xf>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" readingOrder="2" wrapText="1" vertical="top"/></xf>
+<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment horizontal="right" readingOrder="2" wrapText="1" vertical="top"/></xf>
+<xf numFmtId="0" fontId="2" fillId="3" borderId="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="right" readingOrder="2" wrapText="1" vertical="top"/></xf>
 </cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
 
 function worksheetXml(sheet: XlsxWorkbookSheet): string {
@@ -151,6 +184,7 @@ function worksheetXml(sheet: XlsxWorkbookSheet): string {
   const titleRows = new Set(sheet.titleRows ?? []);
   const dateColumns = new Set(sheet.dateColumns ?? []);
   const rtlStyleOffset = sheet.rightToLeft ? 4 : 0;
+  const wrapStyleOffset = sheet.wrapText ? 8 : 0;
   const rowXml = sheet.rows
     .map((row, rowIndex) => {
       const rowStyle = titleRows.has(rowIndex) ? 3 : headerRows.has(rowIndex) ? 1 : 0;
@@ -158,13 +192,14 @@ function worksheetXml(sheet: XlsxWorkbookSheet): string {
         .map((value, columnIndex) => {
           const reference = `${columnName(columnIndex)}${rowIndex + 1}`;
           if (value === null || value === "") {
-            return `<c r="${reference}" s="${rowStyle + rtlStyleOffset}"/>`;
+            return `<c r="${reference}" s="${rowStyle + rtlStyleOffset + wrapStyleOffset}"/>`;
           }
           if (typeof value === "number" && Number.isFinite(value)) {
-            const style = (dateColumns.has(columnIndex) ? 2 : rowStyle) + rtlStyleOffset;
+            const style =
+              (dateColumns.has(columnIndex) ? 2 : rowStyle) + rtlStyleOffset + wrapStyleOffset;
             return `<c r="${reference}" s="${style}" t="n"><v>${value}</v></c>`;
           }
-          return `<c r="${reference}" s="${rowStyle + rtlStyleOffset}" t="inlineStr"><is><t xml:space="preserve">${xmlEscape(String(value))}</t></is></c>`;
+          return `<c r="${reference}" s="${rowStyle + rtlStyleOffset + wrapStyleOffset}" t="inlineStr"><is><t xml:space="preserve">${xmlEscape(String(value))}</t></is></c>`;
         })
         .join("");
       return `<row r="${rowIndex + 1}">${cells}</row>`;
