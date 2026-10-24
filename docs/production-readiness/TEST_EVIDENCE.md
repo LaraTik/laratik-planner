@@ -4012,3 +4012,32 @@ manual GitHub checks, independent review, external MiniMax model/tool and
 data-processing verification, separated-account human UAT, and production
 backup/rollback evidence are still required before M3.8 can be marked verified
 or the production deployment can proceed.
+
+### 2026-10-24 — exact code SHA and manual CI result
+
+The clean code commit `149b5d643d18ca617aa7d4e197dfe9ed6c9fc0c4` was tested
+after rebasing onto the then-current `main`. Local `pnpm verify` passed
+formatting, lint, typecheck, all 616 unit files / 5,295 tests, and the
+production build. The disposable PostgreSQL 16 migration drill passed all five
+scenarios, the pre-push affected unit/integration suite passed, and the focused
+Workspace AI Assistant Chromium suite passed 7/7 (English, Arabic/RTL, mobile,
+axe, prompt/knowledge governance, references, and streaming).
+
+Manual authoritative GitHub CI run
+[`40060982061`](https://github.com/LaraTik/laratik-planner/actions/runs/40060982061)
+passed every job on that SHA: quality/integration/audit, migration drill,
+workflow/Dockerfile/shell linters, SMTP certificate, Trend sidecar, Docker app
+and migrator builds, and container health smoke. The production dependency
+audit found zero high or critical advisories (two low and seven moderate).
+
+This evidence verifies the code commit; the subsequent readiness-note-only
+commit does not change application code. The full browser/visual release matrix
+remains incomplete because this host exhausted its dev-server memory. The
+MiniMax API privacy policy effective 2026-03-30 describes U.S. data-center
+storage/processing and retention for as long as necessary or legally permitted,
+without a fixed prompt/response retention window. Legal/privacy approval and a
+model-specific live tool smoke are still required, as are independent review,
+separated-account human UAT, and production backup/rollback evidence. M3.8 is
+not verified and production deployment is not approved.
+
+Policy reference: [MiniMax API Privacy Policy](https://platform.minimax.io/protocol/privacy-policy).
