@@ -2,17 +2,18 @@ name: CI
 
 # Authoritative release-gate workflow. Run it only when an operator
 # explicitly dispatches it; a green run does not deploy production.
-# Every required release contract must run here:
+# GitHub deploy gates; the full integration suite is a mandatory local
+# pre-push gate (ADR 0020), not a GitHub Actions step:
 #
 #   1. format, lint, typecheck, and unit correctness
-#   2. integration + migration drill
+#   2. migration drill
 #   3. production build + Docker smoke
 #   4. zero critical/high production audit findings
 #   5. SMTP cert probe (deploy-blocker)
 #   6. workflow / Dockerfile / shell linters (deploy-blocker)
 #   7. Trend sidecar boot and unit suite
 #
-# Local hooks remain the fast feedback loop, but CI repeats the static
+# Local pre-push runs the full integration suite. CI repeats the static
 # and unit gates authoritatively. Coverage and browser checks run only
 # when the independent advisory workflow is dispatched.
 on:
@@ -34,7 +35,7 @@ jobs:
     # Local hooks provide fast feedback; these same checks run here so
     # deploy eligibility never depends on a developer machine or hook
     # configuration.
-    name: Quality, integration, audit
+    name: Quality, migration, audit
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -53,40 +54,11 @@ jobs:
           --health-timeout 3s
           --health-retries 10
 
-      # Mailpit catches every email the integration tests send
-      # (invitation, magic-link, password reset) on 1025 SMTP and
-      # exposes them on 8025 HTTP for debug. Without it, SMTP at
-      # localhost:1025 (the env below) refuses every connection and
-      # the §23 journey fails at step 6 (invite 5 members). The
-      # mirror of the service in `docker-compose.dev.yml`.
-      mailpit:
-        # Pinned to v1.27.4 (latest stable). zizmor rejects `latest` and
-        # floating minor tags (e.g. v1.27) per its unpinned-images
-        # audit. Keep the comment in `docker-compose.dev.yml` in sync.
-        image: axllent/mailpit:v1.27.4@sha256:df6c2541907e1be6fac21f509927cf6ed771617a1f4b361ef66d97bd05593d2d
-        ports:
-          - 1025:1025
-          - 8025:8025
-        env:
-          MP_MAX_MESSAGES: "5000"
-          MP_SMTP_AUTH_ACCEPT_ANY: "1"
-          MP_SMTP_AUTH_ALLOW_INSECURE: "1"
-        options: >-
-          --health-cmd "wget -qO- http://localhost:8025/api/v1/info >/dev/null 2>&1 || exit 1"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-
     env:
       DATABASE_URL: postgresql://planner:planner_ci@localhost:5432/planner_test
       AUTH_SECRET: ci_secret_only_not_for_production_xxxxxxxxxxxxxxxx
       AUTH_URL: http://localhost:3000
       AUTH_TRUST_HOST: "true"
-      SMTP_HOST: localhost
-      SMTP_PORT: 1025
-      SMTP_USER: ci
-      SMTP_PASSWORD: ci-only
-      SMTP_FROM: "ci <ci@planner.test>"
       TEST_DATABASE_URL: postgresql://planner:planner_ci@localhost:5432/planner_test
 
     steps:
@@ -135,10 +107,6 @@ jobs:
 
       - name: Migration drill
         run: pnpm migration-drill
-        timeout-minutes: 20
-
-      - name: Integration tests
-        run: pnpm test:integration
         timeout-minutes: 20
 
       # The `--audit-level high` is deliberate and matches the contract in

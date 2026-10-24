@@ -119,6 +119,8 @@ rollback on failure` without any manual Docker commands.
 From your **local** machine:
 
 ```bash
+# Before pushing code to main, complete and record the full local integration
+# suite for the exact SHA (the pre-push hook runs it automatically).
 git push origin main
 # No GitHub Actions workflow starts from this push.
 gh workflow run ci.yml --ref main
@@ -435,18 +437,20 @@ Use `pnpm test:area <domain>` when you want to check one domain deliberately.
 Its browser path runs Chromium and only adds affected accessibility or visual
 selectors. Shared or unknown changes escalate to full relevant coverage.
 
-Pre-push runs affected unit and integration checks for the pushed commit range,
-not the staging index, so a normal push after committing cannot silently skip
-those checks. It does not run E2E. Run `pnpm test:affected -- --layer browser`
-for normal local browser feedback or `pnpm test:e2e:release` for a release
-candidate. `SKIP_INTEGRATION=1` and `git push --no-verify` remain explicit
-escape hatches, and CI remains authoritative.
+Pre-push runs affected unit checks for the pushed commit range, then the full
+integration suite against the disposable database. It does not run E2E. The
+integration run is required locally and must be recorded at the exact SHA;
+GitHub CI does not run it (ADR 0020). Run
+`pnpm test:affected -- --layer browser` for normal local browser feedback or
+`pnpm test:e2e:release` for a release candidate.
 
 #### Local integration setup
 
-The pre-push hook selects affected integration tests on the pushed range.
-CI still runs the complete integration suite as the deploy-gate audit, so
-local selection is fast feedback and CI remains the authoritative result.
+The pre-push hook runs the complete integration suite on every code push.
+This local gate replaces the former GitHub integration step; CI still runs
+the migration drill and the other deploy gates. Record the exact clean SHA,
+command, and result in `docs/production-readiness/TEST_EVIDENCE.md` before
+merging.
 
 The integration runner requires a disposable Postgres database that
 contains the substring `test` or `ci` in the URL
@@ -550,8 +554,7 @@ other workflows do not start a run. The 5-browser matrix and the visual run
 are local or explicit release-candidate checks:
 
 ```yaml
-# .github/workflows/ci.yml  (deploy-gate, post 2026-08-26 plan)
-- run: pnpm test:integration
+# .github/workflows/ci.yml (GitHub deploy gates; full integration is local)
 - run: pnpm audit --prod
 - run: pnpm build
 - run: docker build ...
@@ -561,8 +564,9 @@ are local or explicit release-candidate checks:
 ```
 
 ```bash
-# Local pre-push (automatic, affected unit + integration only)
-pnpm test:affected -- --push --layer core
+# Local pre-push (automatic, affected unit checks + full integration suite)
+pnpm test:affected -- --push --layer unit
+pnpm test:integration
 
 # Local E2E feedback (explicit)
 pnpm test:affected -- --layer browser

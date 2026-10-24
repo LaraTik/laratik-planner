@@ -65,8 +65,10 @@ export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5432/pl
 psql "$TEST_DATABASE_URL" -tAc 'select current_database()'
 ```
 
-Run `NODE_ENV=test pnpm migration-drill` and `pnpm test:integration` before
-browser checks. The `test:e2e:isolated`, `test:e2e:critical`, and `test:visual`
+Run `NODE_ENV=test pnpm migration-drill` and `pnpm test:integration` locally
+before pushing code. The full integration suite is a local release gate and
+is not run in GitHub Actions (ADR 0020). The `test:e2e:isolated`,
+`test:e2e:critical`, and `test:visual`
 scripts all use `scripts/run-e2e-tests.ts`; it refuses non-test URLs, applies
 migrations, and injects deterministic test-only Auth.js secrets. Never point
 `TEST_DATABASE_URL` at `planner` or a production database.
@@ -215,9 +217,9 @@ in one pass or extract code only to reduce file length.
 - ✅ Every migration must be registered in `src/lib/db/migrations/meta/_journal.json`, target the exact table names in the Drizzle schema, and include forward, compatibility, backup, rollback, from-zero, and upgrade evidence. A successful build does not prove that a migration runs.
 - ✅ Record verification against the exact clean commit SHA. If the branch advances or becomes dirty after verification, rerun the affected gates before calling the work complete.
 - ✅ Pre-commit hook catches lint/format/typecheck/unit-test issues early — keep it fast by keeping its scope tight (lint-staged on staged files, `vitest related` on staged sources, sentinel-driven `tsc --noEmit`). Skip with `git commit --no-verify` or `SKIP_TYPECHECK=1` for WIP / hotfixes.
-- ✅ Pre-push hook runs affected unit/integration checks for the pushed range; it does not run E2E. Use `pnpm test:affected -- --layer browser` for local affected E2E and `pnpm test:e2e:release` for the strict full browser + visual release-candidate check. All GitHub Actions workflows are manual-only; dispatch the required checks against the reviewed ref. Skip with `git push --no-verify`, `SKIP_PREPUSH=1`, or `SKIP_INTEGRATION=1` for trivial pushes.
+- ✅ Pre-push hook runs affected unit checks and the full `pnpm test:integration` suite locally for code pushes; docs-only changes do not need database tests. It does not run E2E. Use `pnpm test:affected -- --layer browser` for local affected E2E and `pnpm test:e2e:release` for the strict full browser + visual release-candidate check. All GitHub Actions workflows are manual-only; dispatch the required CI checks against the reviewed ref. Integration validation must be recorded locally at the exact clean SHA; GitHub CI does not run it. See ADR 0020.
 - ✅ Always merge finished work to `main` — review, commit, push after `pnpm verify`, the local pre-merge E2E checklist, and any required manually dispatched GitHub checks are complete. No half-finished work sits in the local working tree or on a stale local branch. Production deployment requires a separate manual dispatch of the deploy workflow.
-- ✅ CI is authoritative — local git hooks are optional and never replace CI
+- ✅ CI is authoritative for GitHub-run gates; the full PostgreSQL integration suite is a required local pre-push gate and must be recorded at the exact clean SHA. Neither replaces the other.
 - ✅ Keep the remote Planner MCP current on every change: update the implementation, `docs/api/mcp.md`, `docs/api/README.md`, `docs/api/mcp-evaluation.xml`, affected bilingual Account UI copy, tests, and production-readiness evidence together. Follow [`docs/operations/mcp-maintenance.md`](docs/operations/mcp-maintenance.md); never ship a new tool, scope, error, or transport behavior with stale client documentation.
 - ✅ Staging before production: not yet (single-environment for v1, see Goal 14)
 - ✅ Disk hygiene before deploy: ensure VPS `/` is < 70% (use the vps-ops `disk-cleanup.sh apply` if needed)

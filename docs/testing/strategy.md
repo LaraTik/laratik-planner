@@ -8,7 +8,8 @@ authoritative release gates, then dispatch `Deploy` separately when the
 operator is ready to deploy. Dispatch `Advisory quality` with `critical`
 for targeted checks or `release-candidate` for the full coverage and browser
 matrix. No successful workflow automatically starts another workflow.
-See ADR 0013 for the gate split and ADR 0019 for the manual-trigger decision.
+See ADR 0013 for the browser/coverage split, ADR 0019 for the manual-trigger
+decision, and ADR 0020 for local integration validation.
 
 | Gate                                                        | Where                                                                                          | Required for deploy     | Release-candidate |
 | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------- | ----------------- |
@@ -17,8 +18,8 @@ See ADR 0013 for the gate split and ADR 0019 for the manual-trigger decision.
 | Typecheck (`pnpm typecheck`)                                | `.github/workflows/ci.yml` + `.husky/pre-commit` (sentinel-driven)                             | ✅ (CI + pre-commit)    | ✅                |
 | Full unit suite (`pnpm test:unit`)                          | `.github/workflows/ci.yml`                                                                     | ✅ (CI)                 | ✅                |
 | Affected unit selection on staged changes                   | `.husky/pre-commit`                                                                            | ✅ (pre-commit)         | ✅                |
-| Affected unit/integration selection on pushed changes       | `.husky/pre-push` → `pnpm test:affected -- --push --layer core`                                | ✅ (local feedback)     | ✅                |
-| Integration + migration drill (`pnpm test:integration`)     | `ci.yml` `unit-quality` `Integration tests` (authoritative full run)                           | ✅ (CI)                 | ✅                |
+| Affected unit selection on pushed changes                   | `.husky/pre-push` → `pnpm test:affected -- --push --layer unit`                                | ✅ (local)              | ✅                |
+| Full integration suite (`pnpm test:integration`)            | `.husky/pre-push` (full disposable-Postgres suite; exact-SHA evidence required)                | ✅ (local)              | ✅                |
 | Migration drill (`pnpm migration-drill`)                    | `ci.yml` `unit-quality` `Migration drill` + release checklist                                  | ✅                      | ✅                |
 | Targeted E2E (Chromium functional)                          | `advisory-quality.yml` on explicit critical dispatch + `pnpm test:affected -- --layer browser` | ❌ (advisory)           | ✅                |
 | Full 5-browser matrix (`pnpm test:e2e:isolated`)            | `advisory-quality.yml` release-candidate dispatch + `pnpm test:e2e:release`                    | ❌ (advisory)           | ✅                |
@@ -34,14 +35,17 @@ See ADR 0013 for the gate split and ADR 0019 for the manual-trigger decision.
 | SMTP cert probe (deploy-blocker)                            | `ci.yml` → `check-smtp-cert`                                                                   | ✅                      | ✅                |
 | Workflow / Dockerfile / shell linters                       | `ci.yml` → `lint-meta`                                                                         | ✅                      | ✅                |
 
-`CI` enforces the authoritative deploy-critical subset: full unit and
-integration tests, production build + Docker image + GHCR push
+`CI` enforces the authoritative GitHub-run deploy gates: full unit tests,
+migration drill, production build + Docker image + GHCR push
 (platform-specific + the single source of the production image as of
 2026-08-28), audit (needs the full dep graph), SMTP cert probe (talks to a
 real production endpoint), and the workflow + Dockerfile + shell linters.
 
-Format, lint, typecheck, and affected unit/integration checks provide local
-feedback; CI repeats the complete unit and integration gates authoritatively.
+Format, lint, typecheck, and affected unit checks provide local feedback; CI
+repeats the static and full unit gates authoritatively. The complete PostgreSQL
+integration suite runs locally before each code push and is required evidence
+for merge; GitHub CI does not run it. A local pass never replaces the other
+GitHub gates.
 Local E2E is explicit: `pnpm test:affected -- --layer browser` is the normal
 development loop and `pnpm test:e2e:release` is the release-candidate check.
 An explicit critical advisory dispatch runs targeted Chromium against the

@@ -51,12 +51,14 @@ describe("pre-push test database environment", () => {
     expect(output).toContain(`TEST_DATABASE_URL=${override}`);
   });
 
-  it("uses the affected core runner instead of full suites or browser tests", () => {
+  it("runs affected unit checks and the full integration suite locally", () => {
     const output = runHook();
 
-    expect(output).toContain("mock pnpm: test:affected -- --push --layer core");
-    expect(output).not.toContain("test:unit");
-    expect(output).not.toContain("test:integration");
+    expect(output).toContain("mock pnpm: test:affected -- --push --layer unit");
+    expect(output).toContain("mock pnpm: test:integration");
+    expect(output.indexOf("test:affected -- --push --layer unit")).toBeLessThan(
+      output.indexOf("test:integration"),
+    );
     expect(output).not.toContain("test:e2e");
   });
 });

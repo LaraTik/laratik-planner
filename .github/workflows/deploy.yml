@@ -2,8 +2,10 @@ name: Deploy
 
 # Deploy runs only after an operator explicitly dispatches this workflow.
 # CI success does not automatically deploy production. As of the 2026-08-26 CI-minimization
-# plan, CI runs the irreducible deploy-gate (integration,
+# plan, CI runs the deploy-gate (unit quality, migration drill,
 # audit, build, Docker smoke, SMTP-cert probe, workflow linters).
+# The full integration suite must pass locally on the exact release SHA;
+# see docs/testing/strategy.md and ADR 0020.
 # Coverage and browser validation run independently in
 # `.github/workflows/advisory-quality.yml`; they never control this
 # workflow. The operator manually chooses when to deploy.

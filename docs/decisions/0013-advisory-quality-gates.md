@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — 2026-09-09
+Accepted — 2026-09-09; integration-gate placement superseded by ADR 0020
 
 ## Context
 
