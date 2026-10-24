@@ -124,10 +124,10 @@ export async function changeLifecycleAction(formData: FormData): Promise<void> {
 export async function changePlanAction(formData: FormData): Promise<void> {
   const actor = await currentActor();
   if (!actor) throw new Error("Sign in is required");
-  const agencyId = z.string().uuid().parse(formData.get("agencyId"));
+  const agencyId = z.string().guid().parse(formData.get("agencyId"));
   await changeAgencyPlanAsPlatform(actor, {
     agencyId,
-    planTemplateId: z.string().uuid().parse(formData.get("planTemplateId")),
+    planTemplateId: z.string().guid().parse(formData.get("planTemplateId")),
     overrides: overridesFromForm(formData),
     reason: z.string().trim().min(3).max(500).parse(formData.get("reason")),
   });

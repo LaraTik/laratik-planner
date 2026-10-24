@@ -9,11 +9,11 @@ import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 
-const querySchema = z.object({ workspace: z.string().min(1), boardId: z.string().uuid() });
+const querySchema = z.object({ workspace: z.string().min(1), boardId: z.string().guid() });
 const mutationSchema = z.object({
   workspaceSlug: z.string().min(1),
-  boardId: z.string().uuid(),
-  signalId: z.string().uuid(),
+  boardId: z.string().guid(),
+  signalId: z.string().guid(),
 });
 
 async function getContext(slug: string) {

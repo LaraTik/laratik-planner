@@ -138,6 +138,103 @@ describe("chat", () => {
     expect(body.max_tokens).toBe(1024);
     expect(body.temperature).toBe(0.7);
   });
+
+  it("sends reasoning effort only for MiniMax M3.1 Flash", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ content: [], usage: {} }),
+    });
+    const ai = await loadAi();
+    await ai.chat({
+      model: "MiniMax-M3.1-Flash",
+      reasoningEffort: "high",
+      messages: [{ role: "user", content: "Review" }],
+      apiKey: "sk-1234",
+    });
+    const flashBody = JSON.parse(
+      (fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string,
+    );
+    expect(flashBody.output_config).toEqual({ effort: "high" });
+
+    for (const effort of ["xhigh", "max"] as const) {
+      fetchMock.mockClear();
+      await ai.chat({
+        model: "MiniMax-M3.1-Flash",
+        reasoningEffort: effort,
+        messages: [{ role: "user", content: "Review" }],
+        apiKey: "sk-1234",
+      });
+      const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
+      expect(body.output_config).toEqual({ effort });
+    }
+
+    fetchMock.mockClear();
+    await ai.chat({
+      model: "MiniMax-M3",
+      reasoningEffort: "high",
+      messages: [{ role: "user", content: "Review" }],
+      apiKey: "sk-1234",
+    });
+    const m3Body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(m3Body).not.toHaveProperty("output_config");
+  });
+
+  it("streams visible response deltas, meters tokens, and discards thinking blocks", async () => {
+    const frames = [
+      { type: "message_start", message: { usage: { input_tokens: 12 } } },
+      {
+        type: "content_block_delta",
+        delta: { type: "thinking_delta", thinking: "private reasoning" },
+      },
+      { type: "content_block_delta", delta: { type: "text_delta", text: '{"answer":' } },
+      { type: "content_block_delta", delta: { type: "text_delta", text: '"done"}' } },
+      { type: "message_delta", usage: { output_tokens: 5 } },
+    ];
+    const encoder = new TextEncoder();
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const frame of frames) {
+          controller.enqueue(
+            encoder.encode(`event: ${frame.type}\ndata: ${JSON.stringify(frame)}\n\n`),
+          );
+        }
+        controller.close();
+      },
+    });
+    fetchMock.mockResolvedValueOnce({ ok: true, status: 200, body });
+    const ai = await loadAi();
+    const visibleDeltas: string[] = [];
+    const result = await ai.chatStream(
+      {
+        model: "MiniMax-M3.1-Flash",
+        reasoningEffort: "high",
+        messages: [
+          { role: "system", content: "system" },
+          { role: "user", content: "Review" },
+        ],
+        apiKey: "sk-1234",
+      },
+      (delta) => visibleDeltas.push(delta),
+    );
+
+    expect(result).toEqual({
+      content: '{"answer":"done"}',
+      inputTokens: 12,
+      outputTokens: 5,
+      model: "MiniMax-M3.1-Flash",
+    });
+    expect(visibleDeltas.join("")).toBe('{"answer":"done"}');
+    expect(visibleDeltas.join("")).not.toContain("private reasoning");
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      model: "MiniMax-M3.1-Flash",
+      stream: true,
+      output_config: { effort: "high" },
+      system: "system",
+      messages: [{ role: "user", content: "Review" }],
+    });
+  });
 });
 
 describe("draftCaption", () => {

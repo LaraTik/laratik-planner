@@ -1,11 +1,12 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { activityEvents, contentItemChannels, contentItems, workspaces } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { DomainError } from "@/lib/content/workflow";
 import { parseFormatPayload, type ContentFormat } from "@/lib/format-payload/schemas";
 import { recordMaterialityEvent } from "@/lib/publishing/materiality";
+import { recordMaterialityEventInTx } from "@/lib/publishing/materiality";
 import { reconcileContentItemMediaFolders } from "@/lib/media/planning-folder-lifecycle";
 import {
   assertWorkspaceChannelSelection,
@@ -27,12 +28,13 @@ export const UpdateContentSchema = z.object({
   ]),
   brief: z.string().max(2000).optional().default(""),
   plannedPublishAt: z.coerce.date(),
-  channelIds: z.array(z.string().uuid()).optional(),
+  channelIds: z.array(z.string().guid()).optional(),
   /** Optional structured creative payload, validated against the item's format. */
   formatPayload: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type UpdateContentInput = z.infer<typeof UpdateContentSchema>;
+export type ContentUpdateTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export const UPDATEABLE_STATUSES = ["draft", "changes_requested"] as const;
 export const DESIGNER_EDITABLE_STATUSES = ["in_design", "changes_requested"] as const;
@@ -48,22 +50,34 @@ export async function updateContentItem(
     plannedPublishAt: Date;
     channelIds: string[] | undefined;
     formatPayload?: Record<string, unknown>;
+    /** Internal AI proposal fence. Reject when the reviewed revision has changed. */
+    expectedRevision?: number;
+    /** Internal transaction sharing for an atomic proposal apply. */
+    transaction?: ContentUpdateTransaction;
   },
 ): Promise<void> {
-  const [item] = await db
+  const executor = input.transaction ?? db;
+  const itemQuery = executor
     .select({
       id: contentItems.id,
       workspaceId: contentItems.workspaceId,
       status: contentItems.status,
       agencyId: workspaces.agencyId,
+      prevTitle: contentItems.title,
+      prevBrief: contentItems.brief,
       prevFormat: contentItems.format,
       prevPlannedPublishAt: contentItems.plannedPublishAt,
+      revision: contentItems.revision,
     })
     .from(contentItems)
     .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
     .where(eq(contentItems.id, input.contentItemId))
     .limit(1);
+  const [item] = input.transaction ? await itemQuery.for("update") : await itemQuery;
   if (!item) throw new DomainError("not_found", "Content item not found");
+  if (input.expectedRevision !== undefined && item.revision !== input.expectedRevision) {
+    throw new DomainError("conflict", "The content item changed after this preview was created.");
+  }
 
   await requirePolicy(
     hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager", "content_planner"]),
@@ -94,18 +108,30 @@ export async function updateContentItem(
       ? undefined
       : parseFormatPayload(input.format as ContentFormat, input.formatPayload);
 
-  await db.transaction(async (tx) => {
-    await tx
-      .update(contentItems)
-      .set({
-        title: input.title,
-        format: input.format,
-        brief: input.brief,
-        ...(storedFormatPayload ? { formatPayload: storedFormatPayload } : {}),
-        plannedPublishAt: input.plannedPublishAt,
-        updatedAt: new Date(),
-      })
-      .where(eq(contentItems.id, input.contentItemId));
+  const updateInTransaction = async (tx: ContentUpdateTransaction) => {
+    const conditions = [eq(contentItems.id, input.contentItemId)];
+    if (input.expectedRevision !== undefined) {
+      conditions.push(eq(contentItems.revision, input.expectedRevision));
+    }
+    const update = tx.update(contentItems).set({
+      title: input.title,
+      format: input.format,
+      brief: input.brief,
+      ...(storedFormatPayload ? { formatPayload: storedFormatPayload } : {}),
+      plannedPublishAt: input.plannedPublishAt,
+      updatedAt: new Date(),
+    });
+    if (input.expectedRevision !== undefined) {
+      const [updated] = await update.where(and(...conditions)).returning({ id: contentItems.id });
+      if (!updated) {
+        throw new DomainError(
+          "conflict",
+          "The content item changed after this preview was created.",
+        );
+      }
+    } else {
+      await update.where(and(...conditions));
+    }
 
     if (input.channelIds !== undefined) {
       await tx
@@ -121,37 +147,67 @@ export async function updateContentItem(
       }
     }
 
-    await tx.insert(activityEvents).values({
-      workspaceId: item.workspaceId,
-      contentItemId: item.id,
-      actorId: actor.id,
-      kind: "content_updated",
-      summary: `Updated idea: ${input.title}`,
-      beforeData: { status: item.status },
-      afterData: {
+    if (input.expectedRevision !== undefined) {
+      await recordMaterialityEventInTx(
+        tx,
+        {
+          actor,
+          contentItemId: input.contentItemId,
+          resource: drift ? "schedule" : "audience_copy",
+          beforeValue: {
+            title: item.prevTitle,
+            brief: item.prevBrief,
+            format: item.prevFormat,
+            plannedPublishAt: item.prevPlannedPublishAt.toISOString(),
+          },
+          afterValue: {
+            title: input.title,
+            brief: input.brief,
+            format: input.format,
+            plannedPublishAt: input.plannedPublishAt.toISOString(),
+          },
+          reasonCode: drift ? "schedule.update" : "audience_copy.update",
+        },
+        { id: item.id, workspaceId: item.workspaceId },
+      );
+    } else {
+      await tx.insert(activityEvents).values({
+        workspaceId: item.workspaceId,
+        contentItemId: item.id,
+        actorId: actor.id,
+        kind: "content_updated",
+        summary: `Updated idea: ${input.title}`,
+        beforeData: { status: item.status },
+        afterData: {
+          title: input.title,
+          format: input.format,
+          ...(storedFormatPayload
+            ? { formatPayloadKeys: Object.keys(storedFormatPayload).sort() }
+            : {}),
+        },
+      });
+    }
+  };
+
+  if (input.transaction) await updateInTransaction(input.transaction);
+  else await db.transaction(updateInTransaction);
+
+  if (input.expectedRevision === undefined) {
+    await recordMaterialityEvent({
+      actor,
+      contentItemId: input.contentItemId,
+      resource: drift ? "schedule" : "audience_copy",
+      beforeValue: null,
+      afterValue: {
         title: input.title,
         format: input.format,
-        ...(storedFormatPayload
-          ? { formatPayloadKeys: Object.keys(storedFormatPayload).sort() }
-          : {}),
+        plannedPublishAt: input.plannedPublishAt.toISOString(),
       },
+      reasonCode: drift ? "schedule.update" : "audience_copy.update",
     });
-  });
+  }
 
-  await recordMaterialityEvent({
-    actor,
-    contentItemId: input.contentItemId,
-    resource: drift ? "schedule" : "audience_copy",
-    beforeValue: null,
-    afterValue: {
-      title: input.title,
-      format: input.format,
-      plannedPublishAt: input.plannedPublishAt.toISOString(),
-    },
-    reasonCode: drift ? "schedule.update" : "audience_copy.update",
-  });
-
-  if (drift) {
+  if (drift && !input.transaction) {
     try {
       await reconcileContentItemMediaFolders({
         actor,

@@ -43,7 +43,7 @@ const createSchema = z.object({
 });
 const deleteSchema = z.object({
   workspaceSlug: z.string().trim().min(1).max(120),
-  id: z.string().uuid(),
+  id: z.string().guid(),
 });
 
 async function context(slug: string) {

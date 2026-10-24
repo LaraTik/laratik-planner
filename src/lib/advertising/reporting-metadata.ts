@@ -12,7 +12,7 @@ export const advertisingTaxonomyLabelTypeSchema = z.enum([
 
 export const advertisingTagInputSchema = z.object({
   workspace: z.string().min(1),
-  accountId: z.string().uuid(),
+  accountId: z.string().guid(),
   entityType: advertisingEntityTypeSchema,
   entityId: z.string().trim().min(1).max(255),
   labelType: advertisingTaxonomyLabelTypeSchema,

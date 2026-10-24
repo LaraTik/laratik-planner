@@ -37,8 +37,8 @@ import {
  * not by this service).
  */
 export const SavePlatformPayloadInputSchema = z.object({
-  contentItemId: z.string().uuid(),
-  socialChannelId: z.string().uuid(),
+  contentItemId: z.string().guid(),
+  socialChannelId: z.string().guid(),
   payload: PlatformPayloadSchema,
   /**
    * Optimistic-concurrency token: the `content_item_channels.updated_at`
@@ -69,14 +69,14 @@ export type SavePlatformPayloadInput = z.infer<typeof SavePlatformPayloadInputSc
  * collaborator may have saved one of them in between.
  */
 export const SavePlatformPayloadBatchEntrySchema = z.object({
-  socialChannelId: z.string().uuid(),
+  socialChannelId: z.string().guid(),
   payload: PlatformPayloadSchema,
   expectedUpdatedAt: z.string().datetime().nullable(),
 });
 export type SavePlatformPayloadBatchEntry = z.infer<typeof SavePlatformPayloadBatchEntrySchema>;
 
 export const SavePlatformPayloadBatchInputSchema = z.object({
-  contentItemId: z.string().uuid(),
+  contentItemId: z.string().guid(),
   entries: z.array(SavePlatformPayloadBatchEntrySchema).min(1).max(25),
 });
 export type SavePlatformPayloadBatchInput = z.infer<typeof SavePlatformPayloadBatchInputSchema>;
@@ -93,8 +93,8 @@ export type BatchChannelResult =
     };
 
 export const FinalCopyApprovalInputSchema = z.object({
-  contentItemId: z.string().uuid(),
-  socialChannelId: z.string().uuid(),
+  contentItemId: z.string().guid(),
+  socialChannelId: z.string().guid(),
   approved: z.boolean(),
 });
 export type FinalCopyApprovalInput = z.infer<typeof FinalCopyApprovalInputSchema>;

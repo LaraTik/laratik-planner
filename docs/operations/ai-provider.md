@@ -9,6 +9,21 @@ The system has two parallel surfaces for the AI provider key:
 - **Per-agency managed secret** — the `ai_provider_secret` table (migration `0013_ai_provider_secret`). One row per agency. The plaintext key is encrypted at rest with AES-256-GCM via the platform `SOCIAL_TOKEN_ENCRYPTION_KEY`-style helper. The agency admin sets the key in the UI; the key is shown to the admin exactly once and is never persisted in plaintext. Source: `src/lib/ai/provider-secret.ts`.
 - **Global env-var fallback** — the `MINIMAX_API_KEY` / `MINIMAX_BASE_URL` / `MINIMAX_MODEL` env vars (validated by `src/lib/validation/env.ts:100-102`). The global key is the default for every agency that has not configured a managed secret. The `ai_feature_setting.key_source` column records which surface the agency uses (`'environment'` or `'managed_secret'`).
 
+For the default Anthropic-compatible Messages API, the agency model selector
+offers `MiniMax-M3` and `MiniMax-M3.1-Flash` (plus the deployment's explicitly
+configured `MINIMAX_MODEL`). MiniMax documents M2 models for its standard API,
+not this Anthropic-compatible endpoint, so M2 is not selectable through this
+transport. Verify model and subscription-key eligibility in controlled UAT
+before enabling a model-specific feature such as tool use.
+
+`src/lib/ai/model-registry.ts` is the Planner capability registry for the two
+documented Anthropic-compatible models. It records streaming, tool calling,
+reasoning-effort, modality, structured-output, and suitability metadata for
+request validation and UI controls. It describes adapter/API compatibility;
+it does not prove that a specific agency subscription key has access to a
+model or feature. Keep tool calling disabled until restricted account UAT
+passes, and do not fill unknown context/output limits with assumed values.
+
 The read path in `/api/ai/generate` checks the agency's `key_source`: if `'managed_secret'`, it decrypts the row from `ai_provider_secret`; if `'environment'`, it reads the global env var. A missing managed secret AND a missing env var returns `503` (the user sees "AI is not configured").
 
 ## 2. Per-agency managed-key rotation

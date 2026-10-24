@@ -9,7 +9,7 @@ import { decideSupportAccessRequest, SupportAccessError } from "@/lib/support";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 const DecisionFormSchema = z.object({
-  requestId: z.string().uuid(),
+  requestId: z.string().guid(),
   decision: z.enum(["approved", "rejected"]),
   reason: z.string().trim().min(3).max(2000),
   grantDownloads: z.boolean(),

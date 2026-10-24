@@ -156,7 +156,7 @@ const finalizeProfileSchema = z.object({
 });
 
 const finalizeSelectionSchema = z.object({
-  connectionId: z.string().uuid(),
+  connectionId: z.string().guid(),
   profiles: z.array(finalizeProfileSchema).min(1).max(50),
 });
 

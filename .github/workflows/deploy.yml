@@ -2,15 +2,18 @@ name: Deploy
 
 # Deploy runs only after an operator explicitly dispatches this workflow.
 # CI success does not automatically deploy production. As of the 2026-08-26 CI-minimization
-# plan, CI runs the irreducible deploy-gate (integration,
+# plan, CI runs the deploy-gate (unit quality, migration drill,
 # audit, build, Docker smoke, SMTP-cert probe, workflow linters).
+# The full integration suite must pass locally on the exact release SHA;
+# see docs/testing/strategy.md and ADR 0020.
 # Coverage and browser validation run independently in
 # `.github/workflows/advisory-quality.yml`; they never control this
 # workflow. The operator manually chooses when to deploy.
 #
 # CI builds, smoke-tests, and publishes the immutable SHA-tagged app and
-# migrator images. This workflow verifies CI succeeded for the exact selected
-# SHA, verifies those images exist, then deploys them. It does not rebuild.
+# migrator images from `main`. This workflow verifies CI succeeded for the
+# dispatched `main` SHA, verifies those images exist, then deploys them. It
+# does not rebuild. Dispatches from other refs skip all jobs.
 #
 # See `docs/testing/strategy.md` (Release gates) and
 # `docs/operations/runbook.md` (CI vs. local E2E) for the full
@@ -18,11 +21,6 @@ name: Deploy
 
 on:
   workflow_dispatch:
-    inputs:
-      ref:
-        description: "Git ref (branch/tag/sha) to deploy. Defaults to the latest main."
-        required: false
-        default: "main"
 
 concurrency:
   group: deploy
@@ -32,6 +30,7 @@ permissions: {}
 
 jobs:
   resolve:
+    if: github.ref == 'refs/heads/main'
     name: Resolve deployment commit
     runs-on: ubuntu-latest
     permissions:
@@ -39,11 +38,10 @@ jobs:
     outputs:
       sha: ${{ steps.resolve.outputs.sha }}
     steps:
-      - name: Checkout requested ref
+      - name: Checkout dispatched main commit
         uses: actions/checkout@v4
         with:
-          # Manual dispatch can select a branch, tag, or SHA through inputs.ref.
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Resolve checked-out commit
@@ -53,6 +51,7 @@ jobs:
           printf 'sha=%s\n' "$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   deploy:
+    if: github.ref == 'refs/heads/main'
     name: Deploy to laratik-vps
     runs-on: ubuntu-latest
     needs: resolve

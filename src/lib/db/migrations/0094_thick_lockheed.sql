@@ -1,0 +1,2 @@
+ALTER TABLE "workspace_assistant_conversation" ADD COLUMN "mode" text DEFAULT 'ask' NOT NULL;--> statement-breakpoint
+ALTER TABLE "workspace_assistant_conversation" ADD CONSTRAINT "workspace_assistant_conversation_mode_valid" CHECK ("workspace_assistant_conversation"."mode" IN ('ask', 'plan', 'apply'));

@@ -123,7 +123,12 @@ export function SignInOptions({
           </div>
 
           <div className="text-label text-fg-secondary flex min-h-11 items-center gap-2.5">
-            <Checkbox id="signin-remember" name="remember" value="on" className="cursor-pointer" />
+            <Checkbox
+              id="signin-remember"
+              name="remember"
+              value="on"
+              className="h-6 w-6 cursor-pointer"
+            />
             <label htmlFor="signin-remember" className="cursor-pointer">
               {copy.rememberMe}
             </label>

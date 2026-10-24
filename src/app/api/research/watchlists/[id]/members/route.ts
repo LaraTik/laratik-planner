@@ -13,18 +13,18 @@ import { mutatingApiHeaders } from "@/lib/security/headers";
 
 const bodySchema = z.object({
   workspaceSlug: z.string().trim().min(1).max(120),
-  accountId: z.string().uuid(),
+  accountId: z.string().guid(),
 });
 const reorderSchema = z.object({
   workspaceSlug: z.string().trim().min(1).max(120),
   mode: z.literal("reorder"),
-  accountIds: z.array(z.string().uuid()).min(1).max(100),
+  accountIds: z.array(z.string().guid()).min(1).max(100),
 });
 const transferSchema = z.object({
   workspaceSlug: z.string().trim().min(1).max(120),
   mode: z.enum(["move", "copy"]),
-  accountId: z.string().uuid(),
-  targetWatchlistId: z.string().uuid(),
+  accountId: z.string().guid(),
+  targetWatchlistId: z.string().guid(),
 });
 
 function errorResponse(error: string, status: number) {

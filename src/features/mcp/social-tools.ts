@@ -8,7 +8,7 @@ import type { McpTokenScope } from "@/lib/mcp/tokens";
 import { z } from "zod";
 
 type SocialToolDependencies = McpToolResultHelpers & {
-  workspaceId: z.ZodType<string, z.ZodTypeDef, string>;
+  workspaceId: z.ZodString;
   requireScope: (context: McpContext, scope: McpTokenScope) => void;
   requireWorkspace: (
     context: McpContext,

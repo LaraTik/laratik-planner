@@ -30,8 +30,8 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const Body = z.object({
-  accountId: z.string().uuid(),
-  workspaceId: z.string().uuid(),
+  accountId: z.string().guid(),
+  workspaceId: z.string().guid(),
   since: z.string().date(),
   until: z.string().date(),
 });

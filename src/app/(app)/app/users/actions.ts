@@ -15,6 +15,7 @@ import {
   workspaces,
 } from "@/lib/db/schema";
 import { db } from "@/lib/db";
+import type { ZodError } from "zod";
 import {
   createInvitation,
   deactivateUser,
@@ -71,7 +72,7 @@ function formatRateLimitRetry(seconds: number): string {
   return `Too many invitations. Try again in ${seconds} second${seconds === 1 ? "" : "s"}.`;
 }
 
-function formatZodIssues(issues: { path: (string | number)[]; message: string }[]): {
+function formatZodIssues(issues: ZodError["issues"]): {
   error: string;
   fieldErrors: Record<string, string[]>;
 } {

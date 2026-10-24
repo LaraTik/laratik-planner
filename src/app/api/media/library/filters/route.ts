@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const Query = z.object({
-  agencyId: z.string().uuid(),
-  workspaceId: z.string().uuid().optional(),
+  agencyId: z.string().guid(),
+  workspaceId: z.string().guid().optional(),
 });
 
 /**

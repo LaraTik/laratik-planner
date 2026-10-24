@@ -281,7 +281,7 @@ function resolveGracePolicy(
  * empty-row branch without touching the DB.
  */
 export const EffectiveEntitlementInputSchema = z.object({
-  agencyId: z.string().uuid(),
+  agencyId: z.string().guid(),
   entitlement: AgencyEntitlementRowSchema.nullable().optional(),
 });
 

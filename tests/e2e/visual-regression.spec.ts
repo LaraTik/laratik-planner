@@ -35,12 +35,14 @@ import { setupTrendsLiveState } from "./stitch-state-helpers";
  *   2. **Responsive matrix** — one screenshot per canonical and app-only
  *      surface at the viewports
  *      selected by `viewportsForSurface()`: non-planning surfaces use
- *      360 / 768 / 1440, Research, Workspace AI, workspace Settings,
- *      workspace Media, and Advertising Reporting use 375 / 768 / 1024 / 1280 / 1440, while
+ *      360 / 768 / 1440, Research, Workspace AI settings, Workspace AI assistant,
+ *      workspace Settings, workspace Media, and Advertising Reporting use
+ *      375 / 768 / 1024 / 1280 / 1440, while
  *      planning surfaces use 375 / 768 / 1024 / 1440.
- *      The current matrix covers 20 canonical and 53 app-only surfaces
- *      (236 English responsive baselines, plus five each for Research,
- *      Workspace AI, Workspace Settings, and Workspace Media Arabic/RTL). The
+ *      The current matrix covers 20 canonical and 54 app-only surfaces
+ *      (241 English responsive baselines, plus five each for Research,
+ *      Workspace AI settings, Workspace AI assistant, Workspace Settings,
+ *      and Workspace Media Arabic/RTL). The
  *      `operational-states` evidence group is not a route and is
  *      reviewed directly against the captured PNG/HTML. App-only surfaces
  *      are regression references for the shipped UI, not Stitch targets.
@@ -131,7 +133,9 @@ function sessionOptionsFor(entry: StitchCase): {
         }
       : {}),
     ...(entry.route === "/app/w/acme/trends" ? { enableTrendRadar: true } : {}),
-    ...(entry.route === "/app/agency-settings/ai" ? { agencyAiFixture: true } : {}),
+    ...(entry.route === "/app/agency-settings/ai" || entry.route === "/app/w/acme/ai-assistant"
+      ? { agencyAiFixture: true }
+      : {}),
   };
 }
 
@@ -721,6 +725,47 @@ test.describe("visual regression (Workspace AI Arabic RTL)", () => {
       );
     }
   });
+
+  test("workspace AI assistant renders Arabic RTL across the full responsive matrix", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    const seedLike = await bootstrapTestSession(page, {
+      email: "visual-workspace-ai-arabic@laratik.local",
+      locale: "ar",
+      agencyAiFixture: true,
+      visualFixture: true,
+    });
+    const resolved = resolveStitchRoute("/app/w/acme/ai-assistant", seedLike);
+    await page.setViewportSize({
+      width: FULL_RESPONSIVE_VIEWPORTS[0]!.width,
+      height: FULL_RESPONSIVE_VIEWPORTS[0]!.height,
+    });
+    await page.goto(resolved);
+    await page.waitForLoadState("domcontentloaded");
+    await waitForStableDom(page, "/app/w/acme/ai-assistant", 30_000);
+
+    for (const viewport of FULL_RESPONSIVE_VIEWPORTS) {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+      await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+      await expect(
+        page.getByRole("heading", { name: "مساعد الذكاء الاصطناعي لمساحة العمل", level: 1 }),
+      ).toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+        `Workspace AI assistant Arabic RTL overflows at ${viewport.width}px`,
+      ).toBe(true);
+      await assertNoCriticalA11y(page, `Workspace AI assistant Arabic RTL @ ${viewport.width}px`);
+      await applyMask(page);
+      await expect(page).toHaveScreenshot(
+        ["arabic", `workspace-ai-assistant-${viewport.name}.png`],
+        { fullPage: true, maxDiffPixelRatio: 0.01 },
+      );
+    }
+  });
 });
 
 test.describe("visual regression (Agency AI Arabic RTL)", () => {
@@ -755,6 +800,41 @@ test.describe("visual regression (Agency AI Arabic RTL)", () => {
       await assertNoCriticalA11y(page, `Agency AI Arabic RTL @ ${viewport.width}px`);
       await applyMask(page);
       await expect(page).toHaveScreenshot(["arabic", `agency-ai-settings-${viewport.name}.png`], {
+        fullPage: true,
+        maxDiffPixelRatio: 0.01,
+      });
+    }
+  });
+
+  test("assistant skill governance is translated and responsive", async ({ page }) => {
+    test.setTimeout(120_000);
+    await bootstrapTestSession(page, {
+      locale: "ar",
+      agencyAiFixture: true,
+      visualFixture: true,
+    });
+
+    for (const viewport of FULL_RESPONSIVE_VIEWPORTS) {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.goto("/app/agency-settings/ai/skills");
+      await page.waitForLoadState("domcontentloaded");
+      await waitForStableDom(page, "/app/agency-settings/ai/skills", 30_000);
+      await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+      await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+      await expect(page.getByRole("heading", { name: "مهارات المساعد", level: 1 })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "إنشاء مهارة أو مراجعتها" })).toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+        `Assistant skill governance Arabic RTL overflows at ${viewport.width}px`,
+      ).toBe(true);
+      await assertNoCriticalA11y(
+        page,
+        `Assistant skill governance Arabic RTL @ ${viewport.width}px`,
+      );
+      await applyMask(page);
+      await expect(page).toHaveScreenshot(["arabic", `agency-ai-skills-${viewport.name}.png`], {
         fullPage: true,
         maxDiffPixelRatio: 0.01,
       });

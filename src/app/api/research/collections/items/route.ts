@@ -11,9 +11,9 @@ import { mutatingApiHeaders } from "@/lib/security/headers";
 
 const itemSchema = z.object({
   workspaceSlug: z.string().trim().min(1).max(120),
-  collectionId: z.string().uuid(),
+  collectionId: z.string().guid(),
   itemKind: z.enum(["bookmark", "teardown"]),
-  itemId: z.string().uuid(),
+  itemId: z.string().guid(),
 });
 
 async function context(workspaceSlug: string) {

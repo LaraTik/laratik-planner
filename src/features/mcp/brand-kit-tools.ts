@@ -31,7 +31,7 @@ import { PermissionDeniedError } from "@/lib/auth/policy";
 import { logError } from "@/lib/observability/logger";
 
 type BrandKitDependencies = McpToolResultHelpers & {
-  workspaceId: z.ZodType<string, z.ZodTypeDef, string>;
+  workspaceId: z.ZodString;
   requireWorkspace: (context: McpContext, id: string) => Promise<unknown>;
   requireScope: (context: McpContext, scope: McpTokenScope) => void;
 };
