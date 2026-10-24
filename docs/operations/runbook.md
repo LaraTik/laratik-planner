@@ -571,7 +571,10 @@ pnpm test:integration
 # Local E2E feedback (explicit)
 pnpm test:affected -- --layer browser
 
-# Local release-candidate checklist (full five-browser + visual matrix)
+# Local normal-change check (affected Chromium contracts)
+pnpm test:affected -- --layer browser
+
+# For release candidates or broad shared-surface changes:
 pnpm test:e2e:release
 ```
 

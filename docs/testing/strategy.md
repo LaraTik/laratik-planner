@@ -50,10 +50,14 @@ integration suite runs locally before each code push and is required evidence
 for merge; GitHub CI does not run it. A local pass never replaces the other
 GitHub gates.
 Local E2E is explicit: `pnpm test:affected -- --layer browser` is the normal
-development loop and `pnpm test:e2e:release` is the release-candidate check.
-An explicit critical advisory dispatch runs targeted Chromium against the
-selected ref; the full browser and visual matrices run only by
-release-candidate dispatch.
+development and pre-merge check. Add bilingual, accessibility, and visual
+checks for each touched screen. Run `pnpm test:e2e:release` for release
+candidates and changes to shared app-shell, auth, localization, or other broad
+surfaces. An explicit critical advisory dispatch runs targeted Chromium on
+`main`; the full browser and visual matrices run only by release-candidate
+dispatch. Every required result must be recorded against the exact clean SHA.
+A resource failure is incomplete evidence, never a pass; rerun affected checks
+without concurrent access to the disposable test database.
 
 `advisory-quality.yml` uploads coverage, Playwright, visual-diff, and
 structured JSON result artifacts. Persistent failures update one deduplicated
