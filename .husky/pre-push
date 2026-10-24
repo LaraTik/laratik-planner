@@ -1,14 +1,16 @@
 #!/usr/bin/env sh
-# Pre-push hook — affected unit + integration feedback before a push.
+# Pre-push hook — affected unit and integration checks for pushed commits.
 #
-# Full unit, integration, migration, build, audit, and browser gates remain
-# authoritative in CI. Local E2E is available explicitly through
-# `pnpm test:affected -- --layer browser` or `pnpm test:e2e:release`.
+# CI covers static/unit, migration, build, audit, and operational gates.
+# Run the full integration suite once for a release candidate (ADR 0021), not
+# for every small fix or push.
+# Local E2E is available through `pnpm test:affected -- --layer browser` or
+# `pnpm test:e2e:release`.
 #
 # Skip when you know what you're doing:
 #   git push --no-verify
 #   SKIP_PREPUSH=1 git push
-#   SKIP_INTEGRATION=1 git push  (unit checks only)
+# Docs-only pushes do not need database tests.
 
 set -e
 
@@ -78,12 +80,6 @@ if [ "$PUSH_HAS_TESTABLE_CHANGE" -eq 0 ]; then
   exit 0
 fi
 
-PUSH_LAYER=core
-if [ -n "$SKIP_INTEGRATION" ]; then
-  echo "⏭ integration selection disabled (SKIP_INTEGRATION=1)"
-  PUSH_LAYER=unit
-fi
-
-printf '\n▶ affected unit/integration tests for pushed ranges:\n\n'
+printf '\n▶ affected unit and integration tests for pushed ranges:\n\n'
 AFFECTED_PUSH_RANGES="$PUSH_RANGES" \
-  pnpm test:affected -- --push --layer "$PUSH_LAYER"
+  pnpm test:affected -- --push --layer core
