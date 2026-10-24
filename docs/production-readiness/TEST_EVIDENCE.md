@@ -1,5 +1,22 @@
 # Test and coverage evidence
 
+## Workspace AI Assistant — release candidate full local verification — 2026-10-24
+
+Exact clean application code SHA: `3c43f49b6e15bc131b62032536d28d665a340ac0`.
+The pre-push fallback on this SHA ran both complete local suites against the
+disposable `planner_test` database. It ran the full unit suite because the
+changed hook contract test had not yet been added to test ownership. The
+subsequent test-selection-only commit `7e7df4beb6cd9e809efb0fad42a7ac9ad91eea64`
+adds that ownership mapping; it does not change application runtime code or
+migrations.
+
+| Check                                | Result                                                                                                                                                                                                                                           |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm verify`                        | Pass: format, lint, typecheck, 617 unit files / 5,300 tests, and production build.                                                                                                                                                               |
+| Full PostgreSQL integration suite    | Pass on `planner_test`, including Workspace Assistant integration 12/12. No integration tests were skipped.                                                                                                                                      |
+| Focused test-selection mapping check | Pass on `7e7df4b`: architecture area, 4 files / 51 tests; no integration files selected.                                                                                                                                                         |
+| Release state                        | PR #44 remains open and requires independent approval. The full release browser matrix, MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback remain open. This evidence does not authorize merge or deployment. |
+
 ## Workspace AI Assistant — incomplete provider usage reconciliation — 2026-10-24
 
 Exact clean code SHA: `8d6d92cf754e19ed00cf223a7c3722f7eb3ae1ab`.
