@@ -36,7 +36,8 @@ ENV APP_BUILD_AT=$APP_BUILD_AT
 ENV DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN pnpm build
+# Keep the V8 heap bounded; Next's worker count is capped at two in next.config.ts.
+RUN NODE_OPTIONS=--max-old-space-size=3072 pnpm build
 
 # ─── Migration runner ───────────────────────────────────────────────────────
 # Kept separate from the runtime image so production migrations have the

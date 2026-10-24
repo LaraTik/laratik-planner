@@ -2,17 +2,20 @@
 
 ## Release gates
 
-Review and release verification happen locally. GitHub hosts source, PR
-discussion, and the merge to `main`; GitHub Actions are not a required or
-normal step. Do not dispatch Actions for branch checks or routine releases.
-Run the applicable gates on the exact candidate SHA, record the results in
-the production-readiness evidence, obtain the independent review, then merge
-and push. Build and publish the immutable production images locally and
-invoke the VPS deployment from the local operator machine. See ADR 0019 for
-the no-automatic-workflow decision and ADR 0021 for the local release
-contract. See [`../operations/local-test-speed-plan.md`](../operations/local-test-speed-plan.md)
-for focused local checks on each change and the staged plan for safely
-speeding up the full integration suite.
+Review and release evidence happen locally. GitHub Actions remain manual-only
+and main-only: do not dispatch workflows for branches or pull requests. Run
+the applicable gates on the exact candidate SHA, record results in the
+production-readiness evidence, obtain the independent review, then merge and
+push. After merge, manually dispatch CI on `main` to run its quality, unit,
+migration, audit, image-build, and smoke jobs and publish the exact SHA-tagged
+images. The full PostgreSQL integration suite remains a local release gate
+and is not run by GitHub Actions. Once CI succeeds for the same SHA, manually
+dispatch Deploy on `main`; it verifies the run and both image tags before
+invoking the VPS deployment. See ADR 0019 for manual-only triggers, ADR 0021
+for local review/evidence, and ADR 0022 for the main-only hosted build/deploy
+path. See [`../operations/local-test-speed-plan.md`](../operations/local-test-speed-plan.md)
+for focused local checks and the staged plan for safely speeding up the full
+integration suite.
 
 | Gate                                                     | Local command / evidence                                                     | Required for deploy      | Release-candidate |
 | -------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------ | ----------------- |
@@ -24,9 +27,9 @@ speeding up the full integration suite.
 | Full browser and visual matrix                           | `pnpm test:e2e:release`                                                      | ✅ for release candidate | ✅                |
 | Accessibility and bilingual UI evidence                  | Local EN/AR, LTR/RTL a11y and viewport checks from this strategy and tracker | ✅ for affected UI       | ✅                |
 | Production dependency audit                              | `pnpm audit --prod --audit-level high`                                       | ✅                       | ✅                |
-| Docker build and liveness smoke                          | Local Docker build + `/api/health/live` smoke                                | ✅                       | ✅                |
-| GHCR app and migrator images                             | Local Docker Buildx push tagged with the full commit SHA                     | ✅                       | ✅                |
-| VPS backup, migration, deploy, health check and rollback | Local operator invokes `scripts/deploy.sh` over SSH; follow the runbook      | ✅                       | ✅                |
+| Docker build and liveness smoke                          | Main-only manual CI `build-smoke` job                                        | ✅                       | ✅                |
+| GHCR app and migrator images                             | Main-only manual CI Buildx push tagged with the full commit SHA              | ✅                       | ✅                |
+| VPS backup, migration, deploy, health check and rollback | Main-only manual Deploy workflow; follow the runbook                         | ✅                       | ✅                |
 | SMTP certificate and workflow/container/shell checks     | Run locally; see the runbook and tracker                                     | ✅                       | ✅                |
 
 `pnpm verify` is the baseline, not the complete release evidence. Database

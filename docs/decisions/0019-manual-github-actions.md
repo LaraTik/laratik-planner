@@ -2,7 +2,8 @@
 
 ## Status
 
-Superseded for review and release by ADR 0021 — 2026-10-24
+Superseded for review by ADR 0021 and for main-only hosted image build/deploy
+by ADR 0022 — 2026-10-24
 
 ## Context
 
@@ -15,16 +16,16 @@ chain where one automatic event can fan out into additional work.
 
 Every repository workflow uses `workflow_dispatch` as its only trigger.
 This historical decision removed automatic branch, PR, schedule, and chained
-workflow runs. ADR 0021 further moves normal review, verification, image
-publication, and deployment to the local operator machine. The manual
-workflows remain for exceptional maintenance or recovery only.
+workflow runs. ADR 0021 moves review and verification to the local operator
+machine; ADR 0022 selects the manually dispatched `main` image build and
+deployment path. Branch and pull-request dispatches remain forbidden.
 
 ## Consequences
 
 - Pushes, pull requests, schedules, and workflow completion consume no Actions
   minutes by themselves.
-- Normal review, checks, image builds, deployment, and release tagging happen
-  locally under ADR 0021; these workflows are not dispatched for them.
+- Normal review and required local checks remain local under ADR 0021. Image
+  publication and deployment use the explicit main-only dispatches in ADR 0022.
 - Branch protection records the independent review and protects `main`; it
   does not require a GitHub Actions status check.
 - Production deployment uses the local operator path and retains the VPS

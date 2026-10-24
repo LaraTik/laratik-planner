@@ -91,18 +91,18 @@ When a section header in this runbook carries an M-tag, that tag is the contract
 
 11. Set up Google OAuth: in Google Cloud Console, add `https://planner.laratik.com/api/auth/callback/google` as an authorized redirect URI, then set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env` and `docker compose up -d app`.
 12. Set up Mailcow mailbox `no-reply@planner.laratik.com` (Mailcow admin → Mailboxes → Add), then set `SMTP_PASSWORD` in `.env` and `docker compose up -d app`.
-13. **Optional legacy workflow credentials**: the `ghcr.io/laratik/laratik-planner{-migrator}` images are private. The normal release path authenticates to GHCR locally and the VPS deploy account uses its read-only GHCR login. `GHCR_PAT` and `GHCR_USER` repository secrets are only needed if an operator intentionally uses the legacy GitHub Deploy workflow:
+13. **GitHub Deploy workflow credentials**: the `ghcr.io/laratik/laratik-planner{-migrator}` images are private. Configure the following repository secrets for the manually dispatched, main-only Deploy workflow: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_PAT`, and `GHCR_USER`. `GHCR_PAT` must be a fine-grained token with `read:packages` access for the LaraTik packages; the workflow CI image publisher uses its job-scoped `GITHUB_TOKEN` with `packages:write`.
     ```bash
     # 1. https://github.com/settings/tokens?type=beta → Generate new token
     #    • Resource owner: LaraTik
     #    • Repository access: Public repositories (read) + LaraTik org (read:packages)
     #    • No other scopes needed
     #    • No expiration (or 1 year + a calendar reminder)
-    # 2. Save the PAT to a local file, then:
+    # 2. Save the PAT to a local file, then configure the repository secrets:
     gh secret set GHCR_PAT  --repo LaraTik/laratik-planner < ~/.ssh/<pat-file>
     gh secret set GHCR_USER --repo LaraTik/laratik-planner --body "MHDNEZAM"
     ```
-    The PAT must be kept secret — it grants read:packages on the LaraTik org. Rotate on the same cadence as the deploy SSH key (see Rotation).
+    The PAT must be kept secret — it grants `read:packages` on LaraTik. Rotate on the same cadence as the deploy SSH key (see Rotation). The deploy workflow uses the `production` environment and its configured GitHub deployment controls.
 14. First sign-in: visit `https://planner.laratik.com/signin`, sign in with Google, then go to `/setup` and enter the agency name + slug + `BOOTSTRAP_SETUP_TOKEN`.
 
 ## Local review, release, and deployment
@@ -116,10 +116,32 @@ disposable-database integration and migration checks when required; run the
 affected browser, EN/AR accessibility, and visual checks for touched UI. A
 release candidate also runs `pnpm test:e2e:release` and the exact tracker gates.
 
-After local review passes, merge the change into `main` and push `main`. Build
-and publish immutable app and migrator images from that exact SHA using local
-Docker Buildx, then invoke the existing transactional deployment script over
-SSH. Never deploy `latest`, a branch name, or a short SHA.
+After local review passes, merge the change into `main` and push `main`. For a
+release, manually dispatch **CI** with `main` selected. CI runs its main-only
+quality, unit, migration, audit, image-build and smoke jobs, then publishes
+immutable app and migrator images tagged with that exact `main` SHA. The full
+Postgres integration suite remains a local release gate and is not run in
+GitHub Actions. Once CI succeeds and both SHA tags exist, manually dispatch
+**Deploy** with `main` selected; it verifies successful CI and the image tags
+before invoking the existing transactional VPS deployment. Never dispatch a
+branch/PR ref or deploy `latest`, a branch name, or a short SHA.
+
+Before a local Docker build used for reproduction or recovery, check the
+active Buildx VM's memory. This repo's Next production build caps build workers
+at two and V8 heap at 3 GiB. A previous 8 GiB Docker VM still failed after
+raising the heap alone because the process also needs memory for Next workers,
+BuildKit, and native compiler processes. On the 48 GiB operator host, allocate
+12 GiB to Docker Desktop when possible; do not keep raising the V8 heap as a
+substitute for limiting parallelism or increasing the VM allocation.
+
+```bash
+docker info --format 'Builder={{.Driver}} Memory={{.MemTotal}} CPUs={{.NCPU}}'
+```
+
+If this reports less than 8 GiB, increase Docker Desktop's memory before
+building. If BuildKit reports `cannot allocate memory`, stop other builds,
+check the VM allocation, and retry after increasing it; do not prune volumes
+or stop unrelated application/database containers as a memory workaround.
 
 From the **local** machine, confirm the tree is clean and select the full SHA:
 
@@ -129,9 +151,9 @@ DEPLOY_SHA="$(git rev-parse HEAD)"
 git show -s --format='%H %s' "$DEPLOY_SHA"
 ```
 
-Log in to GHCR locally with an account that can publish the two LaraTik
-packages. Build and push both images for the VPS platform. Build timestamps are
-metadata; the commit SHA is the immutable deployment identity.
+The following local build path is reserved for recovery when the manually
+dispatched CI build is unavailable. Build timestamps are metadata; the commit
+SHA is the immutable deployment identity.
 
 ```bash
 docker login ghcr.io
@@ -263,7 +285,7 @@ ssh laratik-vps 'cd /opt/laratik-planner && docker compose up -d app'
 | `SMTP_PASSWORD`               | Mailcow admin                 | Same as above.                                                                                                                                                                                                                                                                                  |
 | `SOCIAL_TOKEN_ENCRYPTION_KEY` | `.env` on VPS                 | Re-wrap every `agency_social_dek` row from the old KEK to the new KEK, then swap. The per-agency DEKs are unchanged; only the platform KEK is rotated. See the **Platform KEK rotation** section below for the exact script. The env var is **optional at boot** (M4.5 — per-agency DEK model). |
 | Meta/TikTok app secret        | Provider console + agency UI  | Rotate the secret in the provider console, then replace it at `/app/agency-settings/social/providers` and run **Test credentials**. Existing connection envelopes remain separate; reconnect only if the provider invalidates the grant.                                                        |
-| Image                         | GHCR                          | Automatic on `main` push. Old tags pruned via `docker image prune` (see disk hygiene below).                                                                                                                                                                                                    |
+| Image                         | GHCR                          | Manually dispatched CI on `main` publishes immutable SHA tags; manually dispatched Deploy verifies and deploys that exact SHA. Old tags pruned via `docker image prune` (see disk hygiene below).                                                                                               |
 | LE cert                       | Traefik (vps-ops)             | Auto-renewed by Traefik; check with `ssh laratik-vps 'sudo bash /root/gitops/scripts/ops/check-certs.sh 30'`.                                                                                                                                                                                   |
 
 ## Disk hygiene
@@ -528,14 +550,16 @@ touchable.
 3. They do not bypass authorization in production — they simply do not exist.
 4. They never accept or return secrets; the seed uses the same Drizzle inserts the real bootstrap path uses.
 
-### Legacy GitHub Actions workflows
+### Manual GitHub Actions release path
 
-GitHub Actions are not part of the normal branch review or release process.
-Do not dispatch these workflows for routine feature checks, image publication,
-deployment, or release tagging. Use the local commands and exact-SHA evidence
-described in the testing strategy and this runbook. The workflow files remain
-available only for exceptional maintenance or recovery and must not be treated
-as the authoritative release record.
+GitHub Actions remain manual-only and main-only. Local review, `pnpm verify`,
+the full integration suite, and all change-specific release evidence must be
+complete before merge. For an approved release, dispatch CI on `main`; its
+build-smoke job publishes the app and migrator images for the checked-out
+`main` SHA. Then dispatch Deploy on `main` for that same SHA. The deploy job
+requires successful CI and verifies both private GHCR image tags before SSH
+deployment. Integration tests do not run in GitHub Actions. Never dispatch a
+feature branch or PR ref.
 
 ```yaml
 # .github/workflows/ci.yml  (deploy-gate, post 2026-08-26 plan)
@@ -996,22 +1020,22 @@ GitHub protects the `main` source history and records the independent PR
 review. Verification and deployment are local per ADR 0021; do not require a
 GitHub Actions status check for merge or deployment.
 
-| Surface                  | Setting                                                                                      | Where                                      |
-| ------------------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| `main` branch            | Require 1 review from `@LaraTik/laratik-planner-maintainers`                                 | Branch protection rules                    |
-| `main` branch            | Require linear history (no merge commits)                                                    | Branch protection rules                    |
-| `main` branch            | No force-push                                                                                | Branch protection rules                    |
-| `main` branch            | No branch deletion                                                                           | Branch protection rules                    |
-| `main` branch            | Require CODEOWNERS review on touched paths (via `.github/CODEOWNERS`)                        | Branch protection rules                    |
-| `main` branch            | No required Actions status checks; exact-SHA local evidence is reviewed before merge         | Branch protection rules                    |
-| `production` environment | Not used by the local deployment path; retain only for legacy workflow recovery              | Environments → production                  |
-| Repository secrets       | Not required for the local release path; legacy workflow secrets may be removed after review | Settings → Secrets and variables → Actions |
-| Secret rotation          | GHCR PAT, VPS SSH key: every 90 days (see `OPS-001` evidence)                                | Calendar reminder                          |
-| Workflow file            | Top-level `permissions: contents: read` (default deny; legacy workflows only)                | GitHub Actions configuration               |
-| `deploy.yml` job         | Legacy recovery tooling; not used for routine releases                                       | `deploy.yml` deploy job                    |
-| `lint-meta` job          | Run applicable linters locally before release                                                | `ci.yml` lint-meta job definitions         |
+| Surface                  | Setting                                                                                           | Where                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `main` branch            | Require 1 review from `@LaraTik/laratik-planner-maintainers`                                      | Branch protection rules                    |
+| `main` branch            | Require linear history (no merge commits)                                                         | Branch protection rules                    |
+| `main` branch            | No force-push                                                                                     | Branch protection rules                    |
+| `main` branch            | No branch deletion                                                                                | Branch protection rules                    |
+| `main` branch            | Require CODEOWNERS review on touched paths (via `.github/CODEOWNERS`)                             | Branch protection rules                    |
+| `main` branch            | No required Actions status checks; exact-SHA local evidence is reviewed before merge              | Branch protection rules                    |
+| `production` environment | Used only by the manually dispatched Deploy workflow; configure any required production approvals | Environments → production                  |
+| Repository secrets       | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_PAT`, `GHCR_USER` for manual Deploy                  | Settings → Secrets and variables → Actions |
+| Secret rotation          | GHCR PAT, VPS SSH key: every 90 days (see `OPS-001` evidence)                                     | Calendar reminder                          |
+| Workflow file            | Top-level `permissions: contents: read` (default deny; legacy workflows only)                     | GitHub Actions configuration               |
+| `deploy.yml` job         | Main-only manual deployment, gated on successful CI and immutable image tags                      | `deploy.yml` deploy job                    |
+| `lint-meta` job          | Run applicable linters locally before release                                                     | `ci.yml` lint-meta job definitions         |
 
-These rules are set in the GH web UI; the in-repo artifacts (`CODEOWNERS`, `dependabot.yml`, `zizmor.yml`, top-level `permissions:` blocks) only enforce what they can. Configure branch review/history protection and secret handling on a fresh repo. The production Actions environment is legacy because normal deployment starts locally.
+These rules are set in the GH web UI; the in-repo artifacts (`CODEOWNERS`, `dependabot.yml`, `zizmor.yml`, top-level `permissions:` blocks) only enforce what they can. Configure branch review/history protection, production approvals, and secret handling on a fresh repo. The workflow does not add a required Actions status check to `main`.
 
 ### Code-side enforcement already in place
 
