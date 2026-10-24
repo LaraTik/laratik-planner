@@ -25,6 +25,14 @@ the documentation-only branch head was `e626cff6`.
 | Focused five-project Assistant browser run | Chromium passed the 7 Assistant cases. Firefox launch failed before test execution on this macOS host: `sandbox_extension_issue_file_to_process: Operation not permitted`, followed by Playwright's 180-second launch timeout. No Firefox assertion result is claimed.                                                                                                                                    |
 | PR / release state                         | PR #44 is open with no independent review. GitHub `main` protection is active: PR required, one approval from someone other than the latest pusher, stale approvals dismissed, conversations resolved, linear history, and no force-push/delete. Main-only CI, MiniMax account/model/tool and privacy verification, separated-account UAT, production backup/rollback, and deployment remain outstanding. |
 
+### Migration drill — exact clean SHA `e8d779f2d757628fd309db9b24271b7533456e6c`
+
+Command: `TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test NODE_ENV=test pnpm migration-drill`.
+Result: pass on the disposable PostgreSQL 16 database, all five scenarios:
+from-zero migration (103/103), skipped-migration repair, in-place upgrade,
+backup/restore (103 ledger rows restored), and failed-migration abort. The
+drill drops and recreates only the guarded `planner_test` database.
+
 The focused checks demonstrate the changed Assistant experience. They do not
 replace the full release-candidate matrix or independent and external
 production-readiness gates. Do not merge or deploy on this evidence alone.
