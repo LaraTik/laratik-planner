@@ -18,7 +18,7 @@ clean commit and an independent reviewer has checked it.
 - Comment operations may be released independently when their own capability
   and UAT evidence passes.
 - Webhooks and expanded conversation history remain `Unknown` by design while
-  polling is the operational path.
+  bounded manual sync is the operational path.
 - AI Test Lab, AI draft generation, autonomous sending, and utility-message
   templates are separate gates; none may be inferred from this checklist.
 
@@ -220,10 +220,10 @@ and a behavioral assertion; screenshots alone are not release evidence.
 ```text
 pnpm exec vitest run tests/unit/community-production-contract.test.ts tests/unit/community-permissions.test.ts tests/unit/community-meta-capability-probe.test.ts tests/unit/community-provider.test.ts
 TEST_DATABASE_URL=postgresql://…/planner_test pnpm test:integration
-pnpm exec playwright test tests/e2e/community-inbox-a11y.spec.ts --project=chromium --project=mobile-chrome
+pnpm test:e2e:isolated -- tests/e2e/community-inbox-audit.spec.ts --project=chromium --project=firefox --project=webkit --project=mobile-chrome --project=mobile-safari
 pnpm migration-drill
 ```
 
-The last three commands remain required work until the repository has a
-dedicated Community fixture and the external Meta operator has completed the
-UAT rows above.
+The dedicated Community audit fixture uses synthetic conversations in a disposable
+test database. Its browser results do not replace the external Meta UAT rows
+above. Run the full `pnpm test:e2e:release` gate before merge.

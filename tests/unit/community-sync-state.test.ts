@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { advanceSyncCursor, type CommunitySyncKind } from "@/lib/community/sync-state";
+import {
+  advanceSyncCursor,
+  classifyCommunitySyncResult,
+  type CommunitySyncKind,
+} from "@/lib/community/sync-state";
 
 describe("community sync cursors", () => {
   it.each<CommunitySyncKind>(["comments", "private_messages"])(
@@ -27,5 +31,17 @@ describe("community sync cursors", () => {
     expect(
       advanceSyncCursor("private_messages", "not-a-date", [new Date("2026-10-18T12:03:00Z")]),
     ).toBe("2026-10-18T12:03:00.000Z");
+  });
+});
+
+describe("community sync result feedback", () => {
+  it.each([
+    [{ ok: false }, "failure"],
+    [{ ok: true, readChannels: 0, failures: [] }, "failure"],
+    [{ ok: true, readChannels: 0, failures: ["permission_denied"] }, "failure"],
+    [{ ok: true, readChannels: 1, failures: ["permission_denied"] }, "partial"],
+    [{ ok: true, readChannels: 1, failures: [] }, "success"],
+  ] as const)("classifies provider coverage without inventing success", (result, expected) => {
+    expect(classifyCommunitySyncResult(result)).toBe(expected);
   });
 });

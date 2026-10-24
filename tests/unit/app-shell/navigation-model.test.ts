@@ -242,6 +242,9 @@ describe("buildWorkspaceNavigation", () => {
     expect(community?.kind).toBe("expandable");
     if (community?.kind === "expandable") {
       expect(community.children).toHaveLength(13);
+      expect(community.children.find((child) => child.key === "community-overview")).toMatchObject({
+        exact: true,
+      });
       const childHrefs = community.children
         .filter((child) => child.kind === "link")
         .map((child) => child.href);
