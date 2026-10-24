@@ -32,6 +32,7 @@ permissions:
 
 jobs:
   unit-quality:
+    if: github.ref == 'refs/heads/main'
     # Local hooks provide fast feedback; these same checks run here so
     # deploy eligibility never depends on a developer machine or hook
     # configuration.
@@ -134,6 +135,7 @@ jobs:
   # `docs/decisions/0013-advisory-quality-gates.md` for the rationale.
 
   build-smoke:
+    if: github.ref == 'refs/heads/main'
     name: Build, Docker image, health smoke, GHCR push
     runs-on: ubuntu-latest
     needs: [unit-quality, trends-quality]
@@ -310,6 +312,7 @@ jobs:
         timeout-minutes: 5
 
   trends-quality:
+    if: github.ref == 'refs/heads/main'
     # Build the sidecar's test-only target so the tests run against the same
     # Python and production dependency graph that the runtime image uses.
     # The target is not published; build-smoke depends on this job so a
@@ -329,6 +332,7 @@ jobs:
         timeout-minutes: 25
 
   check-smtp-cert:
+    if: github.ref == 'refs/heads/main'
     # Gates deploys on the production SMTP cert not being within 14
     # days of expiry. Why this is a deploy-gate job: the moment the cert
     # expires, every Nodemailer send (invitation resend, magic-link
@@ -393,6 +397,7 @@ jobs:
         timeout-minutes: 1
 
   lint-meta:
+    if: github.ref == 'refs/heads/main'
     # Static-analysis linters for the deploy chain itself. Runs in
     # parallel with the heavier unit-quality + build-smoke jobs. Every
     # finding that escapes into `main` is a deploy-time surprise (or a

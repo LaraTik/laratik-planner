@@ -1013,22 +1013,22 @@ The bell counter is the user's primary signal that something needs their attenti
 
 The deploy chain is gated in two places: the `ci.yml` workflow (which is code) and the GitHub repository's protection rules (which are configured in the GH UI, not in code). This section is the canonical reference so a new maintainer can reproduce the production posture from a fresh checkout + the runbook.
 
-| Surface                  | Setting                                                                                         | Where                                      |
-| ------------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| `main` branch            | Require CI green (`.github/workflows/ci.yml`) before merge; dispatch CI manually for the commit | Branch protection rules                    |
-| `main` branch            | Require 1 review from `@LaraTik/laratik-planner-maintainers`                                    | Branch protection rules                    |
-| `main` branch            | Require linear history (no merge commits)                                                       | Branch protection rules                    |
-| `main` branch            | No force-push                                                                                   | Branch protection rules                    |
-| `main` branch            | No branch deletion                                                                              | Branch protection rules                    |
-| `main` branch            | Require CODEOWNERS review on touched paths (via `.github/CODEOWNERS`)                           | Branch protection rules                    |
-| `production` environment | Require 1 approval from `@LaraTik/laratik-planner-maintainers`                                  | Environments → production                  |
-| `production` environment | No wait timer (deploys are time-bounded; the CI gate is the wait)                               | Environments → production                  |
-| `production` environment | Restrict to `main` branch only                                                                  | Environments → production                  |
-| Repository secrets       | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_PAT`, `GHCR_USER`                                  | Settings → Secrets and variables → Actions |
-| Secret rotation          | GHCR PAT, VPS SSH key: every 90 days (see `OPS-001` evidence)                                   | Calendar reminder                          |
-| Workflow file            | Top-level `permissions: contents: read` (default deny)                                          | All 3 workflows                            |
-| `deploy.yml` job         | `permissions: contents: read, packages: read`                                                   | `deploy.yml` deploy job                    |
-| `lint-meta` job          | Required for deploy (errors fail the gate)                                                      | `ci.yml` lint-meta job                     |
+| Surface                  | Setting                                                                                                                             | Where                                      |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `main` branch            | Require local exact-SHA release evidence and one independent maintainer review before merge; dispatch CI only after merge on `main` | Branch protection / release checklist      |
+| `main` branch            | Require 1 review from `@LaraTik/laratik-planner-maintainers`                                                                        | Branch protection rules                    |
+| `main` branch            | Require linear history (no merge commits)                                                                                           | Branch protection rules                    |
+| `main` branch            | No force-push                                                                                                                       | Branch protection rules                    |
+| `main` branch            | No branch deletion                                                                                                                  | Branch protection rules                    |
+| `main` branch            | Require CODEOWNERS review on touched paths (via `.github/CODEOWNERS`)                                                               | Branch protection rules                    |
+| `production` environment | Require 1 approval from `@LaraTik/laratik-planner-maintainers`                                                                      | Environments → production                  |
+| `production` environment | No wait timer (deploys are time-bounded; the CI gate is the wait)                                                                   | Environments → production                  |
+| `production` environment | Restrict to `main` branch only                                                                                                      | Environments → production                  |
+| Repository secrets       | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_PAT`, `GHCR_USER`                                                                      | Settings → Secrets and variables → Actions |
+| Secret rotation          | GHCR PAT, VPS SSH key: every 90 days (see `OPS-001` evidence)                                                                       | Calendar reminder                          |
+| Workflow file            | Top-level `permissions: contents: read` (default deny)                                                                              | All 3 workflows                            |
+| `deploy.yml` job         | `permissions: contents: read, packages: read`                                                                                       | `deploy.yml` deploy job                    |
+| `lint-meta` job          | Required for deploy (errors fail the gate)                                                                                          | `ci.yml` lint-meta job                     |
 
 These rules are set in the GH web UI; the in-repo artifacts (`CODEOWNERS`, `dependabot.yml`, `zizmor.yml`, top-level `permissions:` blocks) only enforce what they can. The branch-protection + environment-protection + secret-rotation rules must be configured manually on a fresh repo.
 

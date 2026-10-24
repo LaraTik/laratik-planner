@@ -3,9 +3,12 @@
 ## Release gates
 
 All GitHub Actions workflows are manual-only: push, pull request, schedule,
-and workflow-completion events do not start runs. Dispatch `CI` for the
-authoritative release gates, then dispatch `Deploy` separately when the
-operator is ready to deploy. Dispatch `Advisory quality` with `critical`
+and workflow-completion events do not start runs. CI, advisory, deploy, and
+release jobs are guarded to run only when dispatched from `main`; feature
+branches are reviewed and validated locally before merge. Dispatch `CI` on
+`main` for the authoritative release gates and image build, then dispatch
+`Deploy` on `main` separately when the operator is ready to deploy. Dispatch
+`Advisory quality` on `main` with `critical`
 for targeted checks or `release-candidate` for the full coverage and browser
 matrix. No successful workflow automatically starts another workflow.
 See ADR 0013 for the browser/coverage split, ADR 0019 for the manual-trigger
