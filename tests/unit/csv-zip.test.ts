@@ -40,7 +40,7 @@ describe("rowsToCsv", () => {
       columns,
     );
     const [header, row] = csv.split("\r\n");
-    expect(header).toBe("id,title,status,published_at,brief");
+    expect(header).toBe("\uFEFFid,title,status,published_at,brief");
     expect(row).toBe("1,Hello,draft,2026-08-30T10:00:00.000Z,first");
   });
 
@@ -81,7 +81,17 @@ describe("rowsToCsv", () => {
 
   it("returns just the header (plus CRLF) for an empty row set", () => {
     const csv = rowsToCsv<Row>([], columns);
-    expect(csv).toBe("id,title,status,published_at,brief\r\n");
+    expect(csv).toBe("\uFEFFid,title,status,published_at,brief\r\n");
+  });
+
+  it("preserves Arabic text and prefixes the UTF-8 BOM for spreadsheet apps", () => {
+    const csv = rowsToCsv(
+      [{ title: "إطلاق الحملة" }],
+      [{ header: "العنوان", get: (row) => row.title }],
+    );
+
+    expect(csv.startsWith("\uFEFF")).toBe(true);
+    expect(Buffer.from(csv, "utf8").toString("utf8")).toBe("\uFEFFالعنوان\r\nإطلاق الحملة\r\n");
   });
 });
 

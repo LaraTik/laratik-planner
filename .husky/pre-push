@@ -1,10 +1,11 @@
 #!/usr/bin/env sh
-# Pre-push hook — affected local checks for the pushed code range.
+# Pre-push hook — affected unit and integration checks for pushed commits.
 #
-# GitHub Actions are not part of the routine branch release path. Run the full
-# integration suite once for a release candidate, not for every small push.
-# See docs/operations/local-test-speed-plan.md for focused checks and release
-# evidence. Browser changes can use `pnpm test:affected -- --layer browser`.
+# CI covers static/unit, migration, build, audit, and operational gates.
+# Run the full integration suite once for a release candidate (ADR 0021), not
+# for every small fix or push.
+# Local E2E is available through `pnpm test:affected -- --layer browser` or
+# `pnpm test:e2e:release`.
 #
 # Skip when you know what you're doing:
 #   git push --no-verify
@@ -79,6 +80,6 @@ if [ "$PUSH_HAS_TESTABLE_CHANGE" -eq 0 ]; then
   exit 0
 fi
 
-printf '\n▶ affected core checks for pushed ranges:\n\n'
+printf '\n▶ affected unit and integration tests for pushed ranges:\n\n'
 AFFECTED_PUSH_RANGES="$PUSH_RANGES" \
   pnpm test:affected -- --push --layer core

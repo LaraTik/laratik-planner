@@ -3,36 +3,39 @@
 ## Release gates
 
 Review and release verification happen locally. GitHub hosts source, PR
-discussion, and the merge to `main`; Actions do not run for branch checks or
-routine releases. Verify the exact candidate SHA locally, record evidence,
-obtain independent approval, then merge and push. Build and publish immutable
-production images locally and invoke the VPS deployment from the operator
-machine. See ADR 0019 and ADR 0020 for local release policy, and
-[`../operations/local-test-speed-plan.md`](../operations/local-test-speed-plan.md)
-for focused checks during implementation and safe full-suite optimization.
+discussion, and the merge to `main`; GitHub Actions are not a required or
+normal step. Do not dispatch Actions for branch checks or routine releases.
+Run the applicable gates on the exact candidate SHA, record the results in
+the production-readiness evidence, obtain the independent review, then merge
+and push. Build and publish the immutable production images locally and
+invoke the VPS deployment from the local operator machine. See ADR 0019 for
+the no-automatic-workflow decision and ADR 0021 for the local release
+contract. See [`../operations/local-test-speed-plan.md`](../operations/local-test-speed-plan.md)
+for focused local checks on each change and the staged plan for safely
+speeding up the full integration suite.
 
-| Gate                                                 | Where                                                                       | Required for deploy      | Release-candidate |
-| ---------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------ | ----------------- |
-| Format, lint, typecheck, full unit, production build | `pnpm verify`                                                               | ✅                       | ✅                |
-| Affected unit/integration checks                     | Local pre-commit/pre-push hooks                                             | ✅ (feedback)            | ✅                |
-| Full integration suite                               | `TEST_DATABASE_URL=... pnpm test:integration` against disposable PostgreSQL | ✅                       | ✅                |
-| Migration drill                                      | `pnpm migration-drill` against disposable PostgreSQL                        | ✅ when DB changes       | ✅                |
-| Targeted browser E2E                                 | `pnpm test:affected -- --layer browser`                                     | ✅ for affected UI       | ✅                |
-| Full browser and visual matrix                       | `pnpm test:e2e:release`                                                     | ✅ for release candidate | ✅                |
-| Accessibility and bilingual UI evidence              | Local EN/AR, LTR/RTL checks from this strategy and tracker                  | ✅ for affected UI       | ✅                |
-| Production dependency audit                          | `pnpm audit --prod --audit-level high`                                      | ✅                       | ✅                |
-| Docker build and liveness smoke                      | Local Docker build + `/api/health/live` smoke                               | ✅                       | ✅                |
-| GHCR app and migrator images                         | Local Docker Buildx push tagged with the full commit SHA                    | ✅                       | ✅                |
-| VPS backup, migration, deployment, health, rollback  | Local operator invokes `scripts/deploy.sh` over SSH                         | ✅                       | ✅                |
-| SMTP certificate and workflow/container/shell checks | Run locally; see the operations runbook                                     | ✅                       | ✅                |
+| Gate                                                     | Local command / evidence                                                     | Required for deploy      | Release-candidate |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------ | ----------------- |
+| Format, lint, typecheck, unit, production build          | `pnpm verify`                                                                | ✅                       | ✅                |
+| Affected unit/integration checks                         | Local pre-commit/pre-push hooks                                              | ✅ (feedback)            | ✅                |
+| Full integration suite                                   | `TEST_DATABASE_URL=... pnpm test:integration` against disposable PostgreSQL  | ✅                       | ✅                |
+| Migration drill                                          | `pnpm migration-drill` against disposable PostgreSQL                         | ✅ when DB changes       | ✅                |
+| Targeted browser E2E                                     | `pnpm test:affected -- --layer browser`                                      | ✅ for affected UI       | ✅                |
+| Full browser and visual matrix                           | `pnpm test:e2e:release`                                                      | ✅ for release candidate | ✅                |
+| Accessibility and bilingual UI evidence                  | Local EN/AR, LTR/RTL a11y and viewport checks from this strategy and tracker | ✅ for affected UI       | ✅                |
+| Production dependency audit                              | `pnpm audit --prod --audit-level high`                                       | ✅                       | ✅                |
+| Docker build and liveness smoke                          | Local Docker build + `/api/health/live` smoke                                | ✅                       | ✅                |
+| GHCR app and migrator images                             | Local Docker Buildx push tagged with the full commit SHA                     | ✅                       | ✅                |
+| VPS backup, migration, deploy, health check and rollback | Local operator invokes `scripts/deploy.sh` over SSH; follow the runbook      | ✅                       | ✅                |
+| SMTP certificate and workflow/container/shell checks     | Run locally; see the runbook and tracker                                     | ✅                       | ✅                |
 
-`pnpm verify` is the baseline, not the complete release evidence. Run the full
-integration suite once for a release candidate, not on every push. Database
-changes also require the migration drill. User-facing changes require affected
-browser, accessibility, and visual checks; release candidates require the
-full browser and visual matrix. Record command, date, exact clean SHA, exit
-code, and result summary in the production-readiness evidence. Actions remain
-available for exceptional recovery only; their results are not a release gate.
+`pnpm verify` is the baseline, not the complete release evidence. Database
+changes also require the migration drill. User-facing or localized changes
+require affected browser, accessibility, and visual checks. Release
+candidates require the full browser and visual matrix. Record command, date,
+exact clean SHA, exit code, and result summary in the evidence bundle. The
+Actions workflows remain available only for exceptional maintenance or
+recovery; their output is neither required nor a substitute for local gates.
 
 ## Test layers
 
@@ -87,10 +90,6 @@ see at the same time never share a hue while a palette slot sits unused.
   default heap threshold. CI and lower-memory hosts keep their existing limit.
   `LARATIK_E2E_MAX_OLD_SPACE_SIZE` can set an explicit heap size in MiB; an
   existing `NODE_OPTIONS` heap setting takes precedence.
-- If a large release-candidate run still hits Next.js's 80% dev-heap restart,
-  `LARATIK_E2E_DISABLE_DEV_MEMORY_RESTART=1` disables that restart for the test
-  process only. Use it only on a host with enough available memory and monitor
-  the run; the default restart remains enabled for normal development.
 - Required tests may not use conditional assertions or configuration-based skips.
 - E2E support routes return 404 in production.
 - Dynamic visual values must be masked before baseline comparison.

@@ -3,12 +3,6 @@
 **Status:** Adopted for the development loop; safe full-suite parallelization is
 planned and is not enabled yet.
 
-**Measured baseline (2026-10-24):** the full configured PostgreSQL integration
-run took about 18 minutes on the local PostgreSQL 16 disposable database. The
-runner starts one `pnpm`/Vitest process per file, and Vitest reports each file's
-duration. Treat this as a machine-specific baseline; compare future runs on the
-same host and database setup.
-
 ## Fast feedback for each change
 
 Do not rerun the full PostgreSQL suite for every small fix. Select the narrowest
@@ -57,16 +51,14 @@ evidence against the exact clean SHA.
 
 1. **Keep the fast path.** Maintain the affected-test manifest and module
    ownership map so a code change selects its unit and relevant integration
-   coverage. Directly changed test files must also appear in an area's
-   `unitFiles`; an unowned test intentionally escalates to the full unit suite.
-   Unknown or shared changes must conservatively select more tests.
-2. **Capture a timing baseline.** Add runner-level per-file and total wall-clock
-   timings, including migration and process startup. Keep the current 18-minute
-   observation as the comparison point for this host.
-3. **Reduce serial process overhead.** Prototype one Vitest invocation with
-   explicit sequential file execution. Compare its result and runtime with the
-   current runner over repeated clean database runs; retain the existing runner
-   unless order, cleanup, and isolation remain identical.
+   coverage. Unknown or shared changes must conservatively select more tests.
+2. **Measure the slow files.** Add per-file duration summaries to the runner and
+   identify slow fixture setup, redundant migration work, and avoidable
+   subprocess startup. Optimize the slowest measured costs first.
+3. **Remove process startup safely.** Prototype a single Vitest invocation with
+   one worker and explicit sequential file execution. Compare the full results
+   with the current runner over repeated clean database runs; keep the existing
+   runner unless order, cleanup, and concurrency behavior remain identical.
 4. **Parallelize only with database isolation.** If profiling still justifies
    it, create a migrated PostgreSQL template and give each worker a separate
    cloned database. Add a small capped worker count only after repeated runs
@@ -83,6 +75,6 @@ evidence against the exact clean SHA.
 - The pre-push hook remains bounded to the pushed range and never starts a full
   integration run implicitly.
 - The full integration suite reports per-file and total duration, stays
-  deterministic, and completes materially faster than the ~18-minute local
-  baseline before replacing the current serial runner.
+  deterministic, and completes materially faster before replacing the current
+  serial runner.
 - No test becomes skipped or loses assertions as part of the speed work.

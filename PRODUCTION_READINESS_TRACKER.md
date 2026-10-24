@@ -32,7 +32,8 @@
 > been updated to Next.js 16.4.2 and Sentry 10.76.2. Local `pnpm verify`
 > passed (606 unit files / 5,226 tests and production build); the production
 > audit now has no high or critical findings (two moderate remain). A fresh
-> exact-clean commit CI run and manual deployment are still required.
+> exact-clean-SHA local release evidence and local deployment are still
+> required. Per ADR 0021, do not dispatch GitHub Actions for this release.
 
 > **2026-10-23 Planning XLSX export — implementation checkpoint, SHA `dd91e0ef46677ceba75e4f89e4de8fb39ad995ee`** — Planning now offers a localized XLSX export with displayed/current/next/custom date ranges, current-filter or all-item scope, and Summary + Schedule sheets. `pnpm verify` passed (606 unit files / 5,226 tests and production build). The affected browser gate escalated to the full matrix and stopped before launch because `TEST_DATABASE_URL` is unset; the Docker Desktop endpoint did not respond. EN/AR browser, accessibility, responsive/visual checks and independent review remain open. This checkpoint is **Implemented**, not **Tested/Verified**; see `docs/production-readiness/TEST_EVIDENCE.md`.
 
