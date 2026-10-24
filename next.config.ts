@@ -14,6 +14,8 @@ const nextConfig: NextConfig = {
   // the matrix without recycling the server.
   experimental: {
     devMemoryThresholdRestart: process.env.LARATIK_E2E_DISABLE_DEV_MEMORY_RESTART !== "1",
+    // Bound production-build parallelism on memory-limited Docker/CI builders.
+    cpus: 2,
   },
 
   // Native modules that must not be bundled by webpack.
