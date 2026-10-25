@@ -1,5 +1,17 @@
 # Test and coverage evidence
 
+## Workspace AI Assistant release-candidate diagnostic recheck — 2026-10-25
+
+Exact checked-out SHA: `5111bc93550b5a42b90fd4c926994b443285441b`.
+This was a focused retry of the two previously reproducible, non-assistant
+Chromium cases. It made no application-code changes.
+
+| Check                                                                                                                                                                                                    | Result                                                                                                                                                                                                                                                                                                                                                   |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test pnpm test:e2e:isolated -- --project=chromium --grep 'planning URL filters narrow the list and survive view changes | creates a named watchlist and assigns a source account'`                                                                                                                                                                                                                                                                                                 | 1 passed, 1 failed. Research teardown passed. The planning filter still failed to show the canonical item. |
+| Planning fixture diagnosis                                                                                                                                                                               | The dev seed schedules the canonical item at `Date.now() + 7 days`; the test URLs omit `month`. On the 2026-10-25 run, the seeded item fell in November, outside the default October planning view. The assertion remains useful; the fixture month and requested month need to be aligned.                                                              |
+| Release state                                                                                                                                                                                            | This is a pre-existing E2E fixture/query mismatch outside the Assistant implementation. Full browser/device and visual release coverage, independent review, live MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback evidence remain open. PR #48 is still a draft and no GitHub checks or deployment were triggered. |
+
 ## Planning XLSX release build-memory follow-up — exact local verification — 2026-10-24
 
 Exact clean application SHA: `c035cfd38e2da6f3b9f3c438d51d79899d9561ab`.
