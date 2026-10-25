@@ -1,5 +1,31 @@
 # Migration and deployment evidence
 
+## Workspace AI Assistant production deployment — 2026-10-25
+
+The user-authorized, risk-accepted PR #48 release was squash-merged as main
+SHA `1bfc9e324813d08a4ac43453165af808631ff1b6`. Main-only CI run
+[40175655084](https://github.com/LaraTik/laratik-planner/actions/runs/40175655084)
+passed and published the exact-SHA app and migrator images. Deploy run
+[40176949683](https://github.com/LaraTik/laratik-planner/actions/runs/40176949683)
+passed its exact-SHA checks and production deployment.
+
+Before applying migration `0103_workspace_assistant_language_pinning`, the
+workflow created and verified
+`/var/backups/laratik-planner/planner-20261025-083222.sql.gz` (5.3 MB). The
+production migration step completed successfully. The app health check passed
+after the startup retry; the public endpoint then returned `ok: true`, version
+`1bfc9e3`, with PostgreSQL/schema/storage checks ready. The running VPS
+container uses image
+`ghcr.io/laratik/laratik-planner:1bfc9e324813d08a4ac43453165af808631ff1b6`.
+
+The local disposable PostgreSQL 16 migration drill passed all five scenarios,
+including applying 104/104 migrations from zero and backup/restore of the
+ledger. Production backup creation and forward migration are evidenced here;
+production restore and rollback have **not** been drilled and remain open.
+This risk-accepted deployment does not mark the release `READY`; see
+[`UAT_RELEASE.md`](./UAT_RELEASE.md) and
+[`TEST_EVIDENCE.md`](./TEST_EVIDENCE.md).
+
 ## Workspace AI Assistant migration release-candidate status — 2026-10-24
 
 The Assistant schema and migration files are unchanged from exact clean SHA
