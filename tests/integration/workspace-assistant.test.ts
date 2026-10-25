@@ -156,6 +156,55 @@ describe("Workspace AI Assistant session privacy and prompt governance", () => {
     expect(await db.select().from(schema.workspaceAssistantMessages)).toEqual([]);
   });
 
+  it("defaults conversation replies to Arabic and persists explicit language and pin state", async () => {
+    const arabicConversation = await assistant.createAssistantConversation(
+      { id: workspaceManagerA.id },
+      workspaceAId,
+      "Arabic default",
+    );
+    const englishConversation = await assistant.createAssistantConversation(
+      { id: workspaceManagerA.id },
+      workspaceAId,
+      "English override",
+      "ask",
+      "en",
+    );
+
+    expect(arabicConversation).toMatchObject({ responseLocale: "ar", pinnedAt: null });
+    expect(englishConversation).toMatchObject({ responseLocale: "en", pinnedAt: null });
+
+    expect(
+      await assistant.updateAssistantConversation(
+        { id: workspaceManagerA.id },
+        workspaceAId,
+        englishConversation.id,
+        { responseLocale: "en", pinned: true },
+      ),
+    ).toBe(true);
+    expect(
+      await assistant.getAssistantConversation(
+        { id: workspaceManagerA.id },
+        workspaceAId,
+        englishConversation.id,
+      ),
+    ).toMatchObject({ responseLocale: "en" });
+
+    expect(
+      await assistant.listAssistantConversations({ id: workspaceManagerA.id }, workspaceAId),
+    ).toEqual([
+      expect.objectContaining({
+        id: englishConversation.id,
+        responseLocale: "en",
+        pinnedAt: expect.any(Date),
+      }),
+      expect.objectContaining({
+        id: arabicConversation.id,
+        responseLocale: "ar",
+        pinnedAt: null,
+      }),
+    ]);
+  });
+
   it("isolates private/workspace prompts and requires agency-admin publication", async () => {
     const privatePrompt = await assistant.createAssistantPrompt(
       { id: plannerA.id },

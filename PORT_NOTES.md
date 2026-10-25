@@ -222,3 +222,35 @@ remain external approval gates.
 
 Approval: product request in the 2026-09-22 implementation task; direct Meta
 publishing remains explicitly out of scope.
+
+## Workspace AI Assistant conversation workspace (2026-10-25)
+
+The requested Arabic-first workspace copilot refresh adds an explicit
+per-conversation response language and pin ordering to session metadata. New
+sessions default to Arabic regardless of interface locale; English is stored
+only after an explicit choice. A database check limits the saved value to the
+supported locales. Existing sessions migrate with an Arabic default. Pinning
+changes only ordering metadata and does not change ownership or access scope.
+
+Reason: the product request distinguishes interface language from assistant
+response language and calls for a compact conversation return path. The current
+layout placed prompts and knowledge before the chat and rendered response text
+without structure.
+
+Impact: migration `0103_workspace_assistant_language_pinning` adds
+`response_locale` and `pinned_at`; it is additive and has a direct rollback.
+The UI moves prompt and knowledge management into an on-demand panel, adds
+Markdown display/copy/regenerate, separates findings from recommendations,
+and makes activity and evidence collapsible. Transcript messages remain in
+browser memory only. Existing authorization, proposal preview, and explicit
+apply confirmation rules remain in force.
+
+Security/data implications: no transcript, provider content, or new user data
+is stored. The language setting is scoped by the existing owner/workspace
+session lookup. Response-language conflicts are rejected before provider use.
+The migration changes no existing content or proposal records.
+
+Approval requirement: the product owner requested and authorized this
+feature/redesign. The independent production-readiness reviewer and the
+existing MiniMax/privacy, separated-account, browser/device, migration, and
+backup/rollback gates must still pass before merge or deployment.

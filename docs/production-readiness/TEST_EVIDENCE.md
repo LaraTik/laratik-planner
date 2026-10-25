@@ -1,5 +1,146 @@
 # Test and coverage evidence
 
+## Workspace AI Assistant full release-candidate recheck — exact clean code SHA — 2026-10-25
+
+Exact tested code SHA: `13f5129d7828507e3b8259604d33803b6d3bfaae` (PR #48).
+This run used the already-pushed, clean feature-branch commit. No application
+code changed during verification.
+
+| Check                                                          | Result                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Full Chromium E2E (`pnpm test:e2e:release`, browser phase)     | Failed: 296 passed, 6 failed, 1 skipped out of 303 in 27.1 minutes. All 9 Workspace AI Assistant cases passed. Failures: workspace settings page load timed out; agency switch from a workspace page timed out; authenticated Arabic shell did not show the expected “إضافة دفعة” heading; platform overview KPI assertion failed; social analytics page load timed out; first-login redirect stayed on `/set-password` until timeout. |
+| Full visual matrix (`pnpm test:visual`)                        | Interrupted after 12/272 cases because five screenshot comparisons had already failed. Seven passed and five mismatched: workspace planning, workspace settings, agency AI settings, platform overview, and workspace brand kit. No snapshots were updated. This is incomplete evidence, not a pass.                                                                                                                                   |
+| Full disposable-Postgres integration (`pnpm test:integration`) | Passed, exit 0, on the candidate checkout SHA `6aaa2f84a53c9acbaffac425937eea88a3cd4a1a`; includes Workspace Assistant integration coverage (13/13).                                                                                                                                                                                                                                                                                   |
+| Migration drill (`pnpm migration-drill`)                       | Passed all five scenarios on PostgreSQL 16, applying 104/104 migrations from zero and validating repair, in-place upgrade, backup/restore, and failed-migration abort.                                                                                                                                                                                                                                                                 |
+| Focused Workspace Assistant Arabic/RTL visual                  | Passed previously on the unchanged application code across all five viewport widths, including overflow and critical accessibility assertions.                                                                                                                                                                                                                                                                                         |
+| Release state                                                  | User-authorized, risk-accepted merge/deploy is in progress. The full browser and visual gates remain failed/incomplete; PR #48 has no GitHub review decision or checks recorded; MiniMax model/tool/privacy UAT and separated-account UAT remain open. This does not make the release `READY` or the gates passed. Exact-SHA CI/images, provider preflight, migration backup, health, and rollback controls remain required.           |
+
+The browser failures are outside the Assistant’s nine passing journeys except
+for the general Arabic-shell assertion. Page-load failures showed only the
+notification region in the captured page snapshot during the run; the
+first-login failure repeatedly navigated to `/set-password` rather than leaving
+that route. The platform KPI assertion requires its own follow-up because the
+run captured a failure but did not retain a useful diagnostic excerpt in this
+evidence note.
+
+Commands:
+
+```sh
+NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test pnpm test:e2e:release
+NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test pnpm test:visual
+```
+
+## Explicit user authorization to merge and deploy — 2026-10-25
+
+The user directed that explicit requests to merge or deploy should be treated
+as authorization and asked to proceed with PR #48. This authorizes a
+risk-accepted release despite the failed/incomplete E2E and visual gates and
+the missing GitHub review decision. It does not mark those gates as passed or
+complete the outstanding MiniMax privacy/model/tool and separated-account UAT.
+The application contains migration `0103_workspace_assistant_language_pinning`;
+its migration drill passed all five scenarios against disposable PostgreSQL
+16, including from-zero 104/104, repair, in-place upgrade, backup/restore with
+104 ledger rows, and failed-migration abort. The full disposable-Postgres
+integration suite also passed (exit 0), including Workspace Assistant
+integration coverage 13/13. Live data-processing behavior for
+the MiniMax provider remains unverified. The production Deploy workflow's
+exact-SHA CI/image verification, provider preflight, pre-migration backup,
+readiness, and rollback controls remain required.
+
+## Workspace AI Assistant browser recheck — exact clean checkout SHA — 2026-10-25
+
+Exact checked-out SHA: `cfd47e9af496ab9c478bd62adac636d6819b938a` (PR #48).
+The application code is unchanged from `784e427fd7f8750a878d10852dbcc6fae1c6fe90`;
+this checkout adds the evidence-only commit `cfd47e9`.
+
+| Check                              | Result                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Workspace Assistant Chromium suite | Passed 9/9, including Arabic controls, RTL behavior, explicit English conversation language, knowledge revision history, prompt creation, and streamed responses.                                                                                                                                                                                                                                                                              |
+| Arabic/RTL responsive visual       | Passed 1/1 across five viewport sizes, including overflow and critical accessibility assertions.                                                                                                                                                                                                                                                                                                                                               |
+| Release state                      | The full browser and visual matrices remain incomplete. The no-membership `/app` route failure remains recorded from the earlier release run. PR #48 remains a draft with three review requests pending, no independent review decision, and no GitHub checks. MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback evidence remain open. M3.8 remains **In Progress**; do not merge, dispatch CI, or deploy. |
+
+Commands:
+
+```sh
+NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test pnpm test:e2e:isolated -- tests/e2e/workspace-assistant.spec.ts --project=chromium
+
+NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test pnpm test:e2e:isolated -- tests/e2e/visual-regression.spec.ts --project=visual-chromium --grep 'workspace AI assistant renders Arabic RTL across the full responsive matrix'
+```
+
+## Workspace AI Assistant refactor — exact clean SHA — 2026-10-25
+
+Exact clean code SHA: `784e427fd7f8750a878d10852dbcc6fae1c6fe90` (PR #48).
+This UI-only follow-up isolates the structured response/evidence/proposal panel
+and loads workspace prompt data only when Tools and context opens. Prompt
+requests are fenced by workspace slug so a late response cannot replace the
+active workspace's prompt list. No schema or migration changed.
+
+| Check                               | Result                                                                                                                                                                                                                                                                                                                                                                                        |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                       | Passed, exit 0: Prettier, ESLint, TypeScript, 625 unit files / 5,338 tests, and production build.                                                                                                                                                                                                                                                                                             |
+| Pre-push affected-core gate         | Passed, exit 0. The missing test-ownership mapping escalated to the full unit suite; selected disposable-Postgres integrations passed, including Workspace Assistant 13/13.                                                                                                                                                                                                                   |
+| Focused prompt-library Chromium E2E | Passed 1/1. Verified there was no prompt-list GET before opening Tools and context, then created a private prompt and checked mobile layout.                                                                                                                                                                                                                                                  |
+| Focused Arabic/RTL visual           | Passed 1/1 across all five responsive viewports, including overflow and critical accessibility assertions.                                                                                                                                                                                                                                                                                    |
+| Review and release state            | PR #48 remains a draft with three review requests pending, no independent review decision, and no GitHub checks. Full browser/device and visual release coverage, live MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback evidence remain open. M3.8 remains **In Progress**. Do not merge or deploy; no GitHub Actions build or deployment was triggered. |
+
+Commands:
+
+```sh
+NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test pnpm test:e2e:isolated -- --project=chromium --grep 'English prompt library supports private prompt creation and mobile widths'
+
+NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test pnpm test:e2e:isolated -- tests/e2e/visual-regression.spec.ts --project=visual-chromium --grep 'workspace AI assistant renders Arabic RTL across the full responsive matrix'
+```
+
+The earlier full Chromium release run at SHA
+`57619cfa41d4a39cb7dd976591a906cb3fc8bb9d` had five failures and one skip;
+the no-membership `/app` route still reproduced a skeleton-only render with a
+Next.js destination-stream error. A separate full visual attempt stopped at
+24/272 after snapshot mismatches on other routes. Those broad gates remain
+incomplete and are not represented as passing on this SHA.
+
+## Workspace AI Assistant exact-SHA release verification — 2026-10-25
+
+Exact checked-out code SHA: `57619cfa41d4a39cb7dd976591a906cb3fc8bb9d` (PR #48).
+The SHA is the pushed feature-branch head before this documentation update.
+No Assistant runtime or schema changes were made after this SHA.
+
+| Check                            | Result                                                                                                                                                                                                                                                                                                                                    |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                    | Passed: formatting, lint, TypeScript, 625 unit files / 5,338 tests, and the Next production build.                                                                                                                                                                                                                                        |
+| Pre-push database and unit gates | Passed on this SHA: full unit suite and full disposable-Postgres integration suite; Workspace Assistant integration passed 13/13.                                                                                                                                                                                                         |
+| `pnpm test:e2e:release`          | Failed: 297 passed, 5 failed, and 1 skipped of 303 Chromium cases. The chain stopped before the full visual suite. Assistant chat, Arabic/RTL, language preference, and governance cases passed; the knowledge-history E2E failed during the run.                                                                                         |
+| Focused failure rechecks         | Research watchlist and first-login redirect passed individually. The Assistant knowledge-history test passed twice after the full run; its revisions endpoint returned both revision snapshots, including the older content. The no-agency-membership test failed again with a skeleton-only page and a Next.js destination-stream error. |
+| Agency membership retry          | Failed 1/1 on Chromium: `/app` stayed on the loading skeleton instead of redirecting to `/setup`; Next.js logged `The destination stream errored while writing data`.                                                                                                                                                                     |
+| Focused Assistant visual check   | Passed 1/1 on `visual-chromium`: Arabic RTL, all five responsive viewports, no overflow, and no critical accessibility violations.                                                                                                                                                                                                        |
+| Separate full visual attempt     | Incomplete: stopped after 24/272 cases. Snapshot mismatches appeared on planning, settings, agency settings, platform, brand-kit, client, account, and agency detail screens. The Assistant-specific five-viewport check above remains green; the full matrix is not a pass.                                                              |
+| Review and release state         | PR #48 remains a draft with no independent review decision. Full browser/visual release coverage, live MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback evidence remain open. M3.8 remains **In Progress**. Do not merge or deploy; no GitHub Actions build or deployment was triggered.             |
+
+The five full-suite failures were: two agency-switcher cases (connection reset / unexpected `/app` URL), the Research watchlist creation case (expected heading did not appear before timeout), first-login password redirect (timed out waiting to leave `/set-password`), and Assistant knowledge history (response wait timed out). The Next dev server logged repeated memory-threshold restarts and destination-stream aborts during the run. Focused rechecks cleared the Research, first-login, and Assistant cases; the no-membership navigation failure remains reproducible in isolation. Treat the full release gate as failed until the browser environment and that case complete cleanly.
+
+Focused Assistant visual command:
+
+```sh
+NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test pnpm test:visual -- --grep 'workspace AI assistant renders Arabic RTL across the full responsive matrix'
+```
+
+## Workspace AI Assistant release-candidate diagnostic recheck — 2026-10-25
+
+Exact checked-out SHA: `5111bc93550b5a42b90fd4c926994b443285441b`.
+This was a focused retry of the two previously reproducible, non-assistant
+Chromium cases. It made no application-code changes.
+
+| Check                         | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Focused isolated Chromium run | 1 passed, 1 failed. Research teardown passed; the planning filter still failed to show the canonical item.                                                                                                                                                                                                                                                                                                                                                                              |
+| Planning fixture diagnosis    | The dev seed schedules the canonical item at `Date.now() + 7 days`; the test URLs omit `month`. On the 2026-10-25 run, the seeded item fell in November, outside the default October planning view. The assertion remains useful; the fixture month and requested month need to be aligned.                                                                                                                                                                                             |
+| Release state                 | This is a pre-existing E2E fixture/query mismatch outside the Assistant implementation. Full browser/device and visual release coverage, independent review, live MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback evidence remain open. PR #48 is still a draft; review requests are pending with the three available repository administrators after the configured CODEOWNERS team returned 404. No GitHub checks or deployment were triggered. |
+
+Command:
+
+```sh
+NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test pnpm test:e2e:isolated -- --project=chromium --grep 'planning URL filters narrow the list and survive view changes|creates a named watchlist and assigns a source account'
+```
+
 ## Planning XLSX release build-memory follow-up — exact local verification — 2026-10-24
 
 Exact clean application SHA: `c035cfd38e2da6f3b9f3c438d51d79899d9561ab`.
@@ -4279,3 +4420,82 @@ Arabic/RTL visual and accessibility case passed all five responsive viewports.
 The Firefox project did not complete: its browser process remained unresponsive
 for more than five minutes and the run was stopped. This does not count as a
 Firefox pass; complete browser/device release coverage remains open.
+
+### 2026-10-25 — Workspace AI Assistant redesign and clean local evidence
+
+Application changes are in local code commit
+`bfbe95f66cde87ef64f16d5b49a828528328369c`. The assistant now opens on the
+conversation, keeps searchable/pinnable history in a compact panel, and opens
+the prompt library, knowledge, and context on demand. Arabic is the default
+response language independent of the interface locale; English can be chosen
+and saved explicitly for an individual conversation. The database migration
+adds the response-language and pinned-conversation state.
+
+| Check                                                                                                                                                                      | Result                                                                                                                                                                                             |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                                                                                                                              | Pass on the exact code SHA — format, lint, typecheck, 625 unit files / 5,338 tests, and production build                                                                                           |
+| `NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:55432/planner_test pnpm migration-drill`                                                               | Pass — PostgreSQL 16.15, all five scenarios, 104/104 from zero, skipped-migration repair, in-place upgrade, backup/restore, and failed-migration abort                                             |
+| `NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:55432/planner_test pnpm test:integration`                                                              | Pass — full configured PostgreSQL integration suite; Workspace AI Assistant 13/13, including default Arabic/explicit language persistence, proposal conflict/replay protections, and authorization |
+| `NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:55432/planner_test pnpm test:e2e:isolated -- tests/e2e/workspace-assistant.spec.ts --project=chromium` | Pass — 9/9, including Arabic RTL with an explicit English response and conversation-specific language persistence                                                                                  |
+| `NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:55432/planner_test pnpm audit --prod --audit-level high`                                               | Pass — exit 0; zero high/critical findings, two low and seven moderate advisories remain                                                                                                           |
+| Focused `pnpm test:visual` for `workspace AI assistant renders Arabic RTL across the full responsive matrix`                                                               | Pass on visual-baseline SHA `5dc86d5ecb1874b067d11a0bb238ce2b93f3c2e9` — 1/1 case, five responsive viewports, RTL and critical accessibility checks; refreshed five assistant screenshots          |
+| Full `pnpm test:visual` release suite                                                                                                                                      | Incomplete — prior run stopped at 12/272; rerun stopped at 37/272 with 20 failures observed across unrelated screens and a Next.js memory restart; full browser/device coverage remains open       |
+
+The screenshot-only commit `5dc86d5ecb1874b067d11a0bb238ce2b93f3c2e9` updates
+the five Arabic assistant visual baselines; the application code remains the
+same as `bfbe95f`. E2E and visual runs can cause Next.js to rewrite the
+generated heading in `AGENTS.md`; it was restored after the follow-up sequence
+and the worktree is clean now. Both commits are local to
+`codex/workspace-ai-assistant-redesign` and have not been pushed or merged.
+
+M3.8 remains **In Progress**, not **Verified** or release-approved. Independent
+review, full browser/device release coverage, live MiniMax model/tool and
+privacy UAT, separated-account human UAT, and production backup/rollback
+evidence remain open. No GitHub build or deployment was triggered. Follow the
+tracker and release runbook after those gates are completed.
+
+### 2026-10-25 — Workspace AI Assistant full-browser follow-up
+
+The browser release attempt ran at code-state SHA
+`c4df5e16586892c0ca1a6523b7bb30a3d6239789`, from a clean checkout. The
+`pnpm test:e2e:release` command completed its Chromium E2E stage with 295/303
+passing, 7 failing, and 1 skipped; it exited before invoking the visual stage.
+All 9 Workspace AI Assistant E2E cases passed, as did the assistant Arabic/RTL
+accessibility case.
+
+An isolated retry targeting the seven failure titles matched 8 test cases
+(the agency-switcher title matched its English and Arabic variants): 6 passed
+and 2 reproduced. The Research route accessibility timeout, Arabic agency
+switcher timeout, Arabic shell timeout, and both social analytics failures
+passed on retry. The two reproducible failures were outside the assistant:
+the planning URL filter did not render the seeded `Autumn Blend Reveal` item,
+and the Research teardown request carried empty `handle` and `sourceUrl`
+instead of the entered values. These remain release-suite failures and were
+not changed as part of the assistant redesign.
+
+The full visual suite was then attempted at the same code state, while the
+Next.js-generated heading edit in `AGENTS.md` from the preceding run was still
+present. It was stopped after case 37/272; 20 cases had failed by that point,
+with observed mismatches on existing planning, account/settings, agency AI,
+platform, and brand-kit surfaces plus a navigation timeout during a
+memory-threshold server restart. This is diagnostic partial output, not
+exact-clean-worktree release evidence and not a passing visual suite. The
+assistant's focused five-viewport Arabic/RTL visual check remains the only
+current visual pass for this change. The generated `AGENTS.md` edit was
+restored after the run, and `git status` was clean.
+
+This follow-up does not close the release browser/device gate. M3.8 remains
+**In Progress**: independent review, complete browser/device coverage, live
+MiniMax model/tool and privacy UAT, separated-account human UAT, and production
+backup/rollback evidence are still open. No merge, GitHub build, or deployment
+was performed.
+
+The local pre-push hook then passed the full unit suite and all affected
+PostgreSQL integration tests on clean SHA
+`665990a77841a423b9e524ce9c76de619c002387`; Workspace AI Assistant integration
+passed 13/13. The pushed branch is tracked at `origin/codex/workspace-ai-assistant-redesign`.
+Draft PR [#48](https://github.com/LaraTik/laratik-planner/pull/48) targets
+`main`. A later documentation-only status sync is on its head and changes no
+runtime or test code. The PR has no review decision or GitHub checks, and no
+workflow was dispatched. It remains ineligible for merge and deployment while
+the release gates above are open.

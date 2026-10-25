@@ -28,6 +28,8 @@ export const workspaceAssistantConversations = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     title: text("title").notNull().default("New conversation"),
     mode: text("mode").notNull().default("ask"),
+    responseLocale: text("response_locale").notNull().default("ar"),
+    pinnedAt: timestamp("pinned_at", { withTimezone: true, mode: "date" }),
     archivedAt: archivedAt(),
     ...timestamps,
   },
@@ -40,6 +42,10 @@ export const workspaceAssistantConversations = pgTable(
     check(
       "workspace_assistant_conversation_mode_valid",
       sql`${t.mode} IN ('ask', 'plan', 'apply')`,
+    ),
+    check(
+      "workspace_assistant_conversation_response_locale_valid",
+      sql`${t.responseLocale} IN ('ar', 'en')`,
     ),
   ],
 );

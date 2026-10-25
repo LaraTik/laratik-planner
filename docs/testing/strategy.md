@@ -2,11 +2,16 @@
 
 ## Release gates
 
-Review and release evidence happen locally. GitHub Actions remain manual-only
-and main-only: do not dispatch workflows for branches or pull requests. Run
-the applicable gates on the exact candidate SHA, record results in the
-production-readiness evidence, obtain the independent review, then merge and
-push. After merge, manually dispatch CI on `main` to run its quality, unit,
+Review and release evidence normally happen locally. GitHub Actions remain
+manual-only and main-only: do not dispatch workflows for branches or pull
+requests. Run the applicable gates on the exact candidate SHA, record results
+in the production-readiness evidence, obtain the independent review, then merge
+and push. An explicit user request to merge/deploy authorizes proceeding with
+incomplete local gates; record the waiver and risks, keep failed gates marked
+failed, and do not mark readiness `Verified` or `READY`. Never bypass GitHub
+branch protection, exact-SHA CI/image requirements, provider preflight,
+production backup before migrations, or deployment health/rollback controls.
+After merge, manually dispatch CI on `main` to run its quality, unit,
 migration, audit, image-build, and smoke jobs and publish the exact SHA-tagged
 images. The full PostgreSQL integration suite remains a local release gate
 and is not run by GitHub Actions. Once CI succeeds for the same SHA, manually
@@ -39,6 +44,9 @@ candidates require the full browser and visual matrix. Record command, date,
 exact clean SHA, exit code, and result summary in the evidence bundle. The
 Actions workflows remain available only for exceptional maintenance or
 recovery; their output is neither required nor a substitute for local gates.
+An explicit user waiver does not change a failed or incomplete gate into a
+pass, and does not waive successful `main` CI, image publication, production
+backup, provider preflight, health check, or rollback controls.
 
 ## Test layers
 

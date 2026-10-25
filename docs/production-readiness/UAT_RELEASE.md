@@ -1,17 +1,17 @@
 # Production UAT and release verdict
 
-> **Current status — 2026-10-24: NOT READY TO DEPLOY.** This file describes the §23 30-step **UAT** gate, which is independent from the **deploy** gate in `PRODUCTION_READINESS_TRACKER.md`. Both gates must pass for `READY`; either failing blocks release. Local verification evidence is current through application SHA `68a63d5a43773deb43e4e7773b3f543bd51fc923` and is recorded in `TEST_EVIDENCE.md`. The Workspace AI Assistant's separated-account journey, MiniMax model/tool and privacy UAT, production backup/rollback proof, and recorded independent PR approval are still outstanding. The historical 2026-08-21 readiness note below is superseded by this current status.
+> **Current status — 2026-10-25: NOT READY.** This file describes the §23 30-step **UAT** gate, which is independent from the **deploy** gate in `PRODUCTION_READINESS_TRACKER.md`. Both gates must pass for `READY`; either failing blocks a routine release. An explicit user request may authorize a risk-accepted deployment while either gate is incomplete, but it does not change this readiness status or complete any UAT row. The user has authorized merge/deploy of PR #48 under that exception. The Workspace AI Assistant's separated-account journey, MiniMax model/tool and privacy UAT, production backup/rollback proof, and recorded independent PR approval remain outstanding. The historical 2026-08-21 readiness note below is superseded by this current status.
 
 ## Two-gate summary
 
-| Gate                                      | Owner                | Current status (2026-10-24)                                                               | How it flips                                                                                                                                                      |
+| Gate                                      | Owner                | Current status (2026-10-25)                                                               | How it flips                                                                                                                                                      |
 | ----------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Deploy**                                | Implementation       | `BLOCKED` — see `PRODUCTION_READINESS_TRACKER.md`                                         | Complete the code review and all local, external-service, browser, backup, and rollback gates; deploy the reviewed main SHA.                                      |
+| **Deploy**                                | Implementation       | `AUTHORIZED — risk-accepted release in progress; readiness remains NOT READY`             | Complete the authorized PR #48 main-only CI and Deploy flow; retain all hard deployment controls and record the exact deployed SHA.                               |
 | **UAT (§23 journey + external services)** | Independent reviewer | `PENDING` — the 30-step journey and external owner checks are not signed for this release | Run the journey with separate Maya / Omar / Elena / Jon / Sophie / Daniel accounts; complete the owner checks below; record evidence and sign the final decision. |
 
 ## UAT verdict
 
-`NOT READY TO DEPLOY — 2026-10-24`
+`NOT READY — 2026-10-25` (UAT remains pending even though the user authorized a risk-accepted deployment.)
 
 The evidence contracts are in place:
 

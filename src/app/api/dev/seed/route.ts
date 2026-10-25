@@ -451,13 +451,15 @@ async function seedInternal(f: {
 
   // ─── Workspace ──────────────────────────────────────────────────────────
   let workspaceId: string;
+  let workspaceTimezone: string;
   const existingWorkspace = await db
-    .select({ id: workspaces.id })
+    .select({ id: workspaces.id, timezone: workspaces.timezone })
     .from(workspaces)
     .where(and(eq(workspaces.agencyId, agencyId), eq(workspaces.slug, f.workspaceSlug)))
     .limit(1);
   if (existingWorkspace[0]) {
     workspaceId = existingWorkspace[0].id;
+    workspaceTimezone = existingWorkspace[0].timezone;
   } else {
     const [created] = await db
       .insert(workspaces)
@@ -469,17 +471,19 @@ async function seedInternal(f: {
         createdBy: userId,
       })
       .onConflictDoNothing()
-      .returning({ id: workspaces.id });
+      .returning({ id: workspaces.id, timezone: workspaces.timezone });
     if (created) {
       workspaceId = created.id;
+      workspaceTimezone = created.timezone;
     } else {
       const [racedWorkspace] = await db
-        .select({ id: workspaces.id })
+        .select({ id: workspaces.id, timezone: workspaces.timezone })
         .from(workspaces)
         .where(and(eq(workspaces.agencyId, agencyId), eq(workspaces.slug, f.workspaceSlug)))
         .limit(1);
       if (!racedWorkspace) throw new Error("Seed workspace conflict could not be resolved");
       workspaceId = racedWorkspace.id;
+      workspaceTimezone = racedWorkspace.timezone;
     }
   }
 
@@ -828,7 +832,7 @@ async function seedInternal(f: {
   // channel created above, matching the production "select all
   // active channels by default" rule from §8.
   const existingContentItem = await db
-    .select({ id: contentItems.id })
+    .select({ id: contentItems.id, plannedPublishAt: contentItems.plannedPublishAt })
     .from(contentItems)
     .where(
       and(eq(contentItems.workspaceId, workspaceId), eq(contentItems.title, f.contentItemTitle)),
@@ -836,11 +840,13 @@ async function seedInternal(f: {
     .limit(1);
 
   let contentItemId: string;
+  let plannedPublishAt: Date;
   // ponytail: fixed month keeps committed screenshots stable across month boundaries;
   // rotate this date and the visual harness month together when intentionally refreshing refs.
   const visualPublishAt = new Date(Date.UTC(2026, 8, 15, 10, 54));
   if (existingContentItem[0]) {
     contentItemId = existingContentItem[0].id;
+    plannedPublishAt = f.visualFixture ? visualPublishAt : existingContentItem[0].plannedPublishAt;
     if (f.visualFixture) {
       await db
         .update(contentItems)
@@ -864,8 +870,9 @@ async function seedInternal(f: {
         contentOwnerId: userId,
         createdBy: userId,
       })
-      .returning({ id: contentItems.id });
+      .returning({ id: contentItems.id, plannedPublishAt: contentItems.plannedPublishAt });
     contentItemId = created!.id;
+    plannedPublishAt = created!.plannedPublishAt;
 
     // Connect every channel the seed just created. We use
     // onConflictDoNothing because a previous interrupted run may
@@ -954,6 +961,11 @@ async function seedInternal(f: {
       workspaceSlug: f.workspaceSlug,
       channelIds,
       contentItemId,
+      contentItemMonth: new Intl.DateTimeFormat("en-CA", {
+        timeZone: workspaceTimezone,
+        year: "numeric",
+        month: "2-digit",
+      }).format(plannedPublishAt),
       ...(deliveryMediaAssetId ? { deliveryMediaAssetId } : {}),
       platformAdmin: f.platformRole !== null,
       platformRole: f.platformRole,

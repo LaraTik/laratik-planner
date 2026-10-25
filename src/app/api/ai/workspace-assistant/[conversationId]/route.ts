@@ -67,11 +67,17 @@ export async function PATCH(
       title: z.string().trim().min(1).max(160).optional(),
       archived: z.boolean().optional(),
       mode: z.enum(["ask", "plan", "apply"]).optional(),
+      responseLocale: z.enum(["ar", "en"]).optional(),
+      pinned: z.boolean().optional(),
     })
     .strict()
     .refine(
       (value) =>
-        value.title !== undefined || value.archived !== undefined || value.mode !== undefined,
+        value.title !== undefined ||
+        value.archived !== undefined ||
+        value.mode !== undefined ||
+        value.responseLocale !== undefined ||
+        value.pinned !== undefined,
     )
     .safeParse(await request.json().catch(() => null));
   if (!body.success) return errorResponse("invalid_request", 400);
@@ -84,6 +90,10 @@ export async function PATCH(
         ...(body.data.title !== undefined ? { title: body.data.title } : {}),
         ...(body.data.archived !== undefined ? { archived: body.data.archived } : {}),
         ...(body.data.mode !== undefined ? { mode: body.data.mode } : {}),
+        ...(body.data.responseLocale !== undefined
+          ? { responseLocale: body.data.responseLocale }
+          : {}),
+        ...(body.data.pinned !== undefined ? { pinned: body.data.pinned } : {}),
       },
     );
     return updated

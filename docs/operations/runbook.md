@@ -109,15 +109,24 @@ When a section header in this runbook carries an M-tag, that tag is the contract
 
 The release is reviewed and verified on the developer/operator machine.
 GitHub is the remote source and PR/merge record; do not dispatch GitHub Actions
-for routine branch checks, builds, or deployments. Keep the independent review
-and every required production-readiness gate. Record evidence against the exact
-clean commit SHA before merging. For code changes run `pnpm verify`; run the
-disposable-database integration and migration checks when required; run the
-affected browser, EN/AR accessibility, and visual checks for touched UI. A
-release candidate also runs `pnpm test:e2e:release` and the exact tracker gates.
+for routine branch checks, builds, or deployments. Normally keep the independent
+review and every required production-readiness gate, and record evidence against
+the exact clean commit SHA before merging. For code changes run `pnpm verify`;
+run the disposable-database integration and migration checks when required;
+run the affected browser, EN/AR accessibility, and visual checks for touched UI.
+A release candidate also runs `pnpm test:e2e:release` and the exact tracker gates.
 
-After local review passes, merge the change into `main` and push `main`. For a
-release, manually dispatch **CI** with `main` selected. CI runs its main-only
+An explicit user request to merge or deploy the current release authorizes
+proceeding when local review evidence or readiness gates are incomplete. Record
+the authorization and risks in the tracker and evidence bundle; keep failed
+gates failed and do not mark the release `Verified` or `READY`. This does not
+authorize bypassing GitHub branch protection, exact-SHA CI/image requirements,
+provider preflight, production backup before migrations, or deployment health
+and rollback controls. Stop if any of those hard controls fail.
+
+After local review passes, or after explicit user authorization, merge the
+change into `main` and push `main`. For a release, manually dispatch **CI** with
+`main` selected. CI runs its main-only
 quality, unit, migration, audit, image-build and smoke jobs, then publishes
 immutable app and migrator images tagged with that exact `main` SHA. The full
 Postgres integration suite remains a local release gate and is not run in

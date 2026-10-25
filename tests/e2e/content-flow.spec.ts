@@ -594,11 +594,12 @@ test.describe("Content: Quick Create + workflow transitions", () => {
 
   test("planning URL filters narrow the list and survive view changes", async ({ page }) => {
     const seeded = await bootstrapTestSession(page);
+    const month = `month=${encodeURIComponent(seeded.contentItemMonth)}`;
 
     // Other workflow tests share the seeded workspace and may leave
     // creative-review items behind. Assert the stage filter's actual
     // contract instead of assuming the entire workspace is empty.
-    await page.goto("/app/a/test-agency/w/acme/planning?stage=creative_review");
+    await page.goto(`/app/a/test-agency/w/acme/planning?${month}&stage=creative_review`);
     const creativeReviewItems = page.getByTestId("planning-list-item");
     const filteredStatuses = await creativeReviewItems.evaluateAll((items) =>
       items.map((item) => item.getAttribute("data-status")),
@@ -606,7 +607,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     expect(filteredStatuses.every((status) => status === "creative_review")).toBe(true);
     await expect(page.getByText("Autumn Blend Reveal", { exact: true })).toHaveCount(0);
 
-    const filteredUrl = `/app/a/test-agency/w/acme/planning?stage=draft&channel=${seeded.channelIds[0]}&owner=${seeded.userId}`;
+    const filteredUrl = `/app/a/test-agency/w/acme/planning?${month}&stage=draft&channel=${seeded.channelIds[0]}&owner=${seeded.userId}`;
     await page.goto(filteredUrl);
     await expect(page.getByText("Autumn Blend Reveal", { exact: true })).toBeVisible();
     await expect(page.getByTestId("planning-status-filter")).toHaveValue("");

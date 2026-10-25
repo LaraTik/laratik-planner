@@ -151,6 +151,7 @@ beforeEach(() => {
   mocks.getAssistantConversation.mockResolvedValue({
     id: "conversation-1",
     title: "Earlier",
+    responseLocale: "ar",
     messages: [{ role: "user", content: "Earlier question" }],
   });
   mocks.resolveAssistantPrompt.mockResolvedValue({
@@ -230,6 +231,51 @@ beforeEach(() => {
 });
 
 describe("POST /api/ai/workspace-assistant", () => {
+  it("defaults new sessions and model instructions to Arabic independently of the interface locale", async () => {
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    expect(mocks.createAssistantConversation).toHaveBeenCalledWith(
+      { id: "user-1" },
+      "workspace-1",
+      "Workspace AI session",
+      "ask",
+      "ar",
+    );
+    expect(mocks.chat.mock.calls[0]?.[0].messages[0].content).toContain(
+      "Respond in Arabic by default",
+    );
+  });
+
+  it("accepts an explicit English response language for a new conversation", async () => {
+    const response = await POST(request({ responseLocale: "en" }));
+
+    expect(response.status).toBe(200);
+    expect(mocks.createAssistantConversation).toHaveBeenCalledWith(
+      { id: "user-1" },
+      "workspace-1",
+      "Workspace AI session",
+      "ask",
+      "en",
+    );
+    expect(mocks.chat.mock.calls[0]?.[0].messages[0].content).toContain(
+      "Respond in clear, professional English",
+    );
+  });
+
+  it("rejects response-language drift for an existing conversation before provider use", async () => {
+    const response = await POST(
+      request({
+        conversationId: "11111111-1111-4111-8111-111111111111",
+        responseLocale: "en",
+      }),
+    );
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: "assistant_language_conflict" });
+    expect(mocks.chat).not.toHaveBeenCalled();
+  });
+
   it("rejects roles outside planning before loading context or calling AI", async () => {
     mocks.hasWorkspaceRole.mockResolvedValue(false);
 
