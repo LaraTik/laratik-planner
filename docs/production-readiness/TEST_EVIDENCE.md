@@ -4279,3 +4279,36 @@ Arabic/RTL visual and accessibility case passed all five responsive viewports.
 The Firefox project did not complete: its browser process remained unresponsive
 for more than five minutes and the run was stopped. This does not count as a
 Firefox pass; complete browser/device release coverage remains open.
+
+### 2026-10-25 — Workspace AI Assistant redesign and clean local evidence
+
+Application changes are in local code commit
+`bfbe95f66cde87ef64f16d5b49a828528328369c`. The assistant now opens on the
+conversation, keeps searchable/pinnable history in a compact panel, and opens
+the prompt library, knowledge, and context on demand. Arabic is the default
+response language independent of the interface locale; English can be chosen
+and saved explicitly for an individual conversation. The database migration
+adds the response-language and pinned-conversation state.
+
+| Check                                                                                                                                                                      | Result                                                                                                                                                                                             |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                                                                                                                              | Pass on the exact code SHA — format, lint, typecheck, 625 unit files / 5,338 tests, and production build                                                                                           |
+| `NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:55432/planner_test pnpm migration-drill`                                                               | Pass — PostgreSQL 16.15, all five scenarios, 104/104 from zero, skipped-migration repair, in-place upgrade, backup/restore, and failed-migration abort                                             |
+| `NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:55432/planner_test pnpm test:integration`                                                              | Pass — full configured PostgreSQL integration suite; Workspace AI Assistant 13/13, including default Arabic/explicit language persistence, proposal conflict/replay protections, and authorization |
+| `NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:55432/planner_test pnpm test:e2e:isolated -- tests/e2e/workspace-assistant.spec.ts --project=chromium` | Pass — 9/9, including Arabic RTL with an explicit English response and conversation-specific language persistence                                                                                  |
+| `NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:55432/planner_test pnpm audit --prod --audit-level high`                                               | Pass — exit 0; zero high/critical findings, two low and seven moderate advisories remain                                                                                                           |
+| Focused `pnpm test:visual` for `workspace AI assistant renders Arabic RTL across the full responsive matrix`                                                               | Pass on visual-baseline SHA `5dc86d5ecb1874b067d11a0bb238ce2b93f3c2e9` — 1/1 case, five responsive viewports, RTL and critical accessibility checks; refreshed five assistant screenshots          |
+| Full `pnpm test:visual` release suite                                                                                                                                      | Incomplete — stopped at 12/272 after unrelated planning, settings, agency AI, platform, and brand-kit baseline mismatches; the full browser/device matrix remains open                             |
+
+The screenshot-only commit `5dc86d5ecb1874b067d11a0bb238ce2b93f3c2e9` updates
+the five Arabic assistant visual baselines; the application code remains the
+same as `bfbe95f`. E2E and visual runs can cause Next.js to rewrite the
+generated heading in `AGENTS.md`; that generated edit was restored, and the
+worktree was clean after each verification pass. Both commits are local to
+`codex/workspace-ai-assistant-redesign` and have not been pushed or merged.
+
+M3.8 remains **In Progress**, not **Verified** or release-approved. Independent
+review, full browser/device release coverage, live MiniMax model/tool and
+privacy UAT, separated-account human UAT, and production backup/rollback
+evidence remain open. No GitHub build or deployment was triggered. Follow the
+tracker and release runbook after those gates are completed.
