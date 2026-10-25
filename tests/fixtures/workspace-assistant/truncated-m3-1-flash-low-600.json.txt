@@ -1,0 +1,24 @@
+{
+  "answer": "The selected month is planned for November 2026 with 14 active items across Instagram, LinkedIn, and TikTok. The deterministic analysis identifies a publish-light first week, with 2 of 14 items scheduled against a target of 4, and reports two static posts without captions that remain in draft. The visible source set is internally inconsistent: it contains 20 campaign-asset records, all described as Instagram static posts with caption drafts pending review, while the plan summary identifies 14 active items across three channels and the deterministic findings state that only two captions are incomplete. The plan should therefore be treated as having both an opening-week cadence gap and unresolved caption-review data that requires verification before execution.",
+  "findings": [
+    {
+      "title": "Week 1 is below the stated publishing target",
+      "detail": "Only 2 of the 14 scheduled items are reported in the first week, compared with a target of 4. This suggests a cadence gap of 2 items at the start of the selected month.",
+      "severity": "medium",
+      "evidenceIds": [
+        "assistant-evidence-1",
+        "assistant-evidence-2"
+      ]
+    },
+    {
+      "title": "Two posts are reported as caption-incomplete",
+      "detail": "The deterministic analysis reports two static posts with no caption that remain in draft status, indicating that these items are not ready for publication without copy or approval.",
+      "severity": "low",
+      "evidenceIds": [
+        "assistant-evidence-1",
+        "assistant-evidence-2"
+      ]
+    },
+    {
+      "title": "Visible source counts do not reconcile",
+      "detail": "The plan summary reports 14 active items across Instagram, LinkedIn, and TikTok, but the visible

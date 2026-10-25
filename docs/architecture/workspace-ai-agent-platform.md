@@ -69,13 +69,33 @@ reasoning, modality, and suitability capabilities; the assistant hides effort
 controls unsupported by the selected model and rejects unsupported effort
 requests before reserving budget. M3.1 Flash receives only the documented
 `low`, `medium`, `high`, `xhigh`, or `max` effort values; M3 has no reasoning
-control. Agency configuration remains authoritative for model selection.
+control. The registry also records each model's `recommendedReasoningEffort`.
+When a caller does not choose an effort, the server applies that recommended
+value: a reasoning model left uncapped can spend the entire output budget on
+hidden thinking and return no answer at all, which is a failure mode of the
+budget rather than of the model. Agency configuration remains authoritative
+for model selection.
 Agency admins select the permitted model set from the server allowlist and keep
 the agency default within that set. Members can choose a permitted model; the
 preference is stored in browser storage per user and agency, then validated
 again against both agency and server allowlists for every request. Model
 metadata does not establish eligibility for a specific subscription key, and
 the external account/model smoke remains a production gate.
+
+The assistant's answer is one JSON document, so its output budget has to fit
+the document rather than a sentence. The request budget ceiling is 8,192
+tokens, clamped to the agency plan's per-request output limit the same way
+every other AI route clamps its own; a 1,200-token budget cut the document
+off mid-object, which made every request fail to parse. The provider's stop
+reason is now carried through the client, so a truncated answer is
+distinguishable from a malformed one and from an unavailable provider. A
+truncated document that still contains a usable answer is recovered — the
+complete parts are kept, unusable entries are dropped, and the truncation is
+disclosed in the response limitations. A failure that cannot be recovered
+reports a distinct reason: a truncated answer, an empty answer, an unusable
+answer, or a provider failure. The underlying error is preserved in the
+failure log instead of being replaced by a generic one, which is what
+previously made every cause look like the same outage.
 
 This is a grounded, narrowly governed assistant slice, not the full agent
 experience in the acceptance scenario. It resolves authorized content item references by ID,

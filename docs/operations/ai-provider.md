@@ -109,7 +109,73 @@ The system is provider-agnostic at the wire-format layer. The MiniMax integratio
 
 A non-OpenAI-compatible provider (e.g. a provider that uses a different streaming protocol, a different tool-call shape, or a different message structure) is a larger lift — the AI client must grow a new adapter. The contract is the same; the implementation is per-provider. Document the adapter in `docs/decisions/00XX-<provider>-integration.md`.
 
-## 7. Common hazards
+## 7. Output budget and reasoning effort for the workspace assistant
+
+The workspace assistant asks the provider for one JSON document, not a chat
+reply. Two provider settings decide whether that document arrives intact.
+
+**Output budget.** The assistant requests `max_tokens: 8192`, clamped to the
+agency plan's `max_output_tokens_per_request` when the plan sets a lower
+limit (the Enterprise plan sets 8,000). A smaller budget does not produce a
+shorter answer — it produces a _truncated_ one, because the provider stops
+mid-document. The previous budget of 1,200 tokens cut the document off inside
+the findings array, so the response could not be parsed and every request
+failed with the generic "Check AI availability" message. The budget covers the
+longest response observed in production (4,564 output tokens at `high` effort
+on M3.1 Flash). A larger cap does not increase spend by itself:
+`reconcileAiBudget` bills the tokens the provider actually returned, not the
+cap.
+
+**Reasoning effort.** M3.1 Flash spends part of the output budget on hidden
+thinking before it emits the answer. At a 1,200-token budget with no effort
+set, the whole budget went to thinking and the provider returned **no content
+at all** (`stop_reason: max_tokens`, zero output tokens). The model registry
+therefore records a `recommendedReasoningEffort` per model:
+
+| Model                | `recommendedReasoningEffort`  | Reasoning efforts accepted              |
+| -------------------- | ----------------------------- | --------------------------------------- |
+| `MiniMax-M3`         | `null` (no reasoning control) | none                                    |
+| `MiniMax-M3.1-Flash` | `"low"`                       | `low`, `medium`, `high`, `xhigh`, `max` |
+
+The server applies the recommended effort whenever the caller does not send
+one, and the client no longer forces `medium`. A member who picks a higher
+effort explicitly still gets it. If a higher effort is chosen and the answer
+is still cut off, the request reports `ai_response_truncated` rather than
+failing silently.
+
+**Truncation is now a visible state.** The provider's stop reason is carried
+through `ChatResult.stopReason`. When the document is truncated, the route
+recovers the complete parts of the answer, drops the entries that are not
+usable, discloses the truncation in the response `limitations`, and — when
+nothing can be recovered — returns a distinct error code:
+
+| Code                       | Meaning                                                      |
+| -------------------------- | ------------------------------------------------------------ |
+| `ai_provider_rate_limited` | The provider's own usage window or quota is spent.           |
+| `ai_response_truncated`    | The answer was cut off at the output limit.                  |
+| `ai_response_empty`        | The provider returned no content (budget spent on thinking). |
+| `ai_response_invalid`      | The provider answered, but not with the expected document.   |
+| `ai_provider_failed`       | The provider call itself failed.                             |
+
+The client maps each code to its own message in English and Arabic. The
+underlying error is preserved in the failure log with the model, stop reason,
+and response state, so a truncated answer can be told apart from an outage
+after the fact.
+
+**The provider's plan window is a separate limit from Planner's quota.**
+MiniMax M Plan has its own 5-hour and weekly windows, and a provider `429`
+means that window is spent — not that the key is wrong, and not that
+Planner's own token budget is exhausted. The provider returns
+`rate_limit_error` for it. The assistant reports that as
+`ai_provider_rate_limited` so it is not mistaken for an outage; it clears on
+its own when the window resets.
+
+To re-measure the budget after a model change, run the provider probe against
+the deployment's key and compare `stop_reason` and `output_tokens` at each
+effort level. The budget must exceed the largest observed `output_tokens` with
+headroom for a verbose run.
+
+## 8. Common hazards
 
 - **Rotating the env-var key while a managed-secret agency is active** — the rotation does not affect the managed-secret agency. Verify with `SELECT key_source FROM ai_feature_setting WHERE agency_id = '<id>';`.
 - **Pasting the plaintext key into a commit, a screenshot, or a Slack message** — the audit row records the `lastFour`; the plaintext is never recoverable from the database. If the plaintext is exposed, rotate the key immediately.
@@ -117,7 +183,7 @@ A non-OpenAI-compatible provider (e.g. a provider that uses a different streamin
 - **Switching providers without updating the Sentry dashboard** — the 5xx rate, latency p95, and capability-denied alerts are provider-agnostic at the surface, but the token-budget-exhausted alert may need a different metric name in the new provider.
 - **Expecting a provider environment variable to enable AI** — configure the provider key/base/model in the deployment, then enable the agency master switch and desired capabilities in `/app/agency-settings/ai`. The provider configuration alone never exposes AI to an agency.
 
-## 8. Cross-references
+## 9. Cross-references
 
 - `src/lib/ai/provider-secret.ts` — the per-agency managed-secret service.
 - `src/lib/ai/key-management.ts` — the key-management helpers (rotation seam, audit context).

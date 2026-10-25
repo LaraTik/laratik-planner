@@ -39,10 +39,15 @@ import {
 import { updateContentItem } from "@/features/content/update-content.server";
 import { reconcileContentItemMediaFolders } from "@/lib/media/planning-folder-lifecycle";
 
-export { analyzeWorkspacePlan, parseWorkspaceAssistantResponse } from "./analysis";
+export {
+  analyzeWorkspacePlan,
+  parseWorkspaceAssistantResponse,
+  parseWorkspaceAssistantResponseWithRecovery,
+} from "./analysis";
 export type {
   WorkspaceAssistantEvidence,
   WorkspaceAssistantFinding,
+  WorkspaceAssistantParseResult,
   WorkspaceAssistantResponse,
   WorkspaceAssistantToolResult,
   WorkspacePlanItem,

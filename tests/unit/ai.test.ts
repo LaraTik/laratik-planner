@@ -108,7 +108,26 @@ describe("chat", () => {
       inputTokens: 11,
       outputTokens: 22,
       model: "MiniMax-M3-test",
+      stopReason: null,
     });
+  });
+
+  it("reports the provider's stop reason so truncation is detectable", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        content: [{ type: "text", text: "Cut off" }],
+        usage: { input_tokens: 11, output_tokens: 22 },
+        stop_reason: "max_tokens",
+      }),
+    });
+    const ai = await loadAi();
+    const result = await ai.chat({
+      messages: [{ role: "user", content: "go" }],
+      apiKey: "sk-1234",
+    });
+    expect(result?.stopReason).toBe("max_tokens");
   });
 
   it("throws when the API responds non-2xx (no silent swallow)", async () => {
@@ -223,6 +242,7 @@ describe("chat", () => {
       inputTokens: 12,
       outputTokens: 5,
       model: "MiniMax-M3.1-Flash",
+      stopReason: null,
     });
     expect(visibleDeltas.join("")).toBe('{"answer":"done"}');
     expect(visibleDeltas.join("")).not.toContain("private reasoning");
@@ -234,6 +254,83 @@ describe("chat", () => {
       system: "system",
       messages: [{ role: "user", content: "Review" }],
     });
+  });
+
+  it("reports a truncated stream through its stop reason", async () => {
+    const frames = [
+      { type: "message_start", message: { usage: { input_tokens: 12 } } },
+      { type: "content_block_delta", delta: { type: "text_delta", text: '{"answer":' } },
+      { type: "message_delta", delta: { stop_reason: "max_tokens" }, usage: { output_tokens: 5 } },
+    ];
+    const encoder = new TextEncoder();
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const frame of frames) {
+          controller.enqueue(
+            encoder.encode(`event: ${frame.type}\ndata: ${JSON.stringify(frame)}\n\n`),
+          );
+        }
+        controller.close();
+      },
+    });
+    fetchMock.mockResolvedValueOnce({ ok: true, status: 200, body });
+    const ai = await loadAi();
+    const result = await ai.chatStream(
+      { model: "MiniMax-M3", messages: [{ role: "user", content: "go" }], apiKey: "sk-1234" },
+      () => undefined,
+    );
+    expect(result?.stopReason).toBe("max_tokens");
+  });
+
+  it("keeps streaming after a malformed frame instead of discarding the answer", async () => {
+    const encoder = new TextEncoder();
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode("event: ping\ndata: not-json\n\n"));
+        controller.enqueue(
+          encoder.encode(
+            `event: content_block_delta\ndata: ${JSON.stringify({
+              type: "content_block_delta",
+              delta: { type: "text_delta", text: '{"answer":"done"}' },
+            })}\n\n`,
+          ),
+        );
+        controller.close();
+      },
+    });
+    fetchMock.mockResolvedValueOnce({ ok: true, status: 200, body });
+    const ai = await loadAi();
+    const visibleDeltas: string[] = [];
+    const result = await ai.chatStream(
+      { model: "MiniMax-M3", messages: [{ role: "user", content: "go" }], apiKey: "sk-1234" },
+      (delta) => visibleDeltas.push(delta),
+    );
+    expect(result?.content).toBe('{"answer":"done"}');
+  });
+
+  it("surfaces the provider's own message when a stream reports an error", async () => {
+    const encoder = new TextEncoder();
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            `event: error\ndata: ${JSON.stringify({
+              type: "error",
+              error: { type: "overloaded_error", message: "Service temporarily overloaded" },
+            })}\n\n`,
+          ),
+        );
+        controller.close();
+      },
+    });
+    fetchMock.mockResolvedValueOnce({ ok: true, status: 200, body });
+    const ai = await loadAi();
+    await expect(
+      ai.chatStream(
+        { model: "MiniMax-M3", messages: [{ role: "user", content: "go" }], apiKey: "sk-1234" },
+        () => undefined,
+      ),
+    ).rejects.toThrow(/Service temporarily overloaded/);
   });
 });
 

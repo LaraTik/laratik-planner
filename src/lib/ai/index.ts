@@ -269,6 +269,28 @@ export async function generateResearchTeardown(input: {
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
+/**
+ * A provider request the provider rejected.
+ *
+ * The status is kept so callers can tell a quota or rate limit apart from an
+ * outage. Both are provider failures, but a quota limit clears on its own
+ * while an outage does not, and the user-facing message has to say which one
+ * happened.
+ */
+export class AiProviderError extends Error {
+  /** The HTTP status the provider returned. */
+  readonly status: number;
+  /** The provider's own explanation, truncated for logs. */
+  readonly body: string;
+
+  constructor(status: number, body: string) {
+    super(`MiniMax API error: ${status} ${body.slice(0, 200)}`);
+    this.name = "AiProviderError";
+    this.status = status;
+    this.body = body.slice(0, 200);
+  }
+}
+
 export interface ChatOptions {
   messages: ChatMessage[];
   /** An agency-configured model from the server-side allowlist. */
@@ -294,6 +316,13 @@ export interface ChatResult {
   inputTokens: number | null;
   outputTokens: number | null;
   model: string;
+  /**
+   * The provider's stop reason. `"max_tokens"` means the model hit the
+   * output budget and the answer is truncated — callers that need a
+   * complete answer must treat that as a failure rather than a short
+   * answer. `null` when the provider did not report one.
+   */
+  stopReason: string | null;
 }
 
 /**
@@ -344,12 +373,13 @@ export async function chat(opts: ChatOptions): Promise<ChatResult | null> {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`MiniMax API error: ${res.status} ${text.slice(0, 200)}`);
+    throw new AiProviderError(res.status, text);
   }
 
   const data = (await res.json()) as {
     content?: { type: string; text?: string }[];
     usage?: { input_tokens?: number; output_tokens?: number };
+    stop_reason?: string;
   };
 
   const text = (data.content ?? [])
@@ -362,6 +392,7 @@ export async function chat(opts: ChatOptions): Promise<ChatResult | null> {
     inputTokens: data.usage?.input_tokens ?? null,
     outputTokens: data.usage?.output_tokens ?? null,
     model: opts.model ?? MODEL,
+    stopReason: typeof data.stop_reason === "string" ? data.stop_reason : null,
   };
 }
 
@@ -395,7 +426,7 @@ export async function chatStream(
   });
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`MiniMax API error: ${response.status} ${errorText.slice(0, 200)}`);
+    throw new AiProviderError(response.status, errorText);
   }
   if (!response.body) throw new Error("MiniMax stream body unavailable");
 
@@ -405,6 +436,7 @@ export async function chatStream(
   let content = "";
   let inputTokens: number | null = null;
   let outputTokens: number | null = null;
+  let stopReason: string | null = null;
   const consumeEvent = (frame: string) => {
     const data = frame
       .split("\n")
@@ -412,18 +444,35 @@ export async function chatStream(
       .map((line) => line.slice(5).trim())
       .join("\n");
     if (!data || data === "[DONE]") return;
-    const event = JSON.parse(data) as {
+    // A malformed SSE frame must not abort the whole stream: the provider can
+    // interleave keep-alive or non-JSON frames, and one bad frame would
+    // otherwise discard an otherwise complete answer.
+    let event: {
       type?: string;
       delta?: { type?: string; text?: string };
       message?: { usage?: { input_tokens?: number; output_tokens?: number } };
       usage?: { input_tokens?: number; output_tokens?: number };
+      error?: { type?: string; message?: string };
     };
-    if (event.type === "error") throw new Error("MiniMax streaming response failed");
+    try {
+      event = JSON.parse(data) as typeof event;
+    } catch {
+      return;
+    }
+    if (event.type === "error") {
+      const detail =
+        typeof event.error?.message === "string" && event.error.message.trim()
+          ? ` ${event.error.message.trim().slice(0, 200)}`
+          : "";
+      throw new Error(`MiniMax streaming response failed${detail}`);
+    }
     if (typeof event.message?.usage?.input_tokens === "number") {
       inputTokens = event.message.usage.input_tokens;
     }
     if (typeof event.usage?.input_tokens === "number") inputTokens = event.usage.input_tokens;
     if (typeof event.usage?.output_tokens === "number") outputTokens = event.usage.output_tokens;
+    const delta = event.delta as { stop_reason?: unknown } | undefined;
+    if (typeof delta?.stop_reason === "string") stopReason = delta.stop_reason;
     if (event.delta?.type === "text_delta" && typeof event.delta.text === "string") {
       content += event.delta.text;
       onTextDelta(event.delta.text);
@@ -451,6 +500,7 @@ export async function chatStream(
     inputTokens,
     outputTokens,
     model: opts.model ?? MODEL,
+    stopReason,
   };
 }
 

@@ -203,6 +203,31 @@ type Labels = {
   recommendations: string;
   hideHistory: string;
   showHistory: string;
+  errorTruncated: string;
+  errorEmpty: string;
+  errorInvalid: string;
+  errorProvider: string;
+  errorRateLimited: string;
+};
+
+/**
+ * The failure codes that get their own explanation.
+ *
+ * A truncated answer, an empty answer, an unusable answer, and an
+ * unavailable provider are different problems, and telling the user to
+ * "check AI availability" for all of them is what made the original failure
+ * impossible to act on.
+ */
+const ASSISTANT_ERROR_LABELS: Record<
+  string,
+  "errorTruncated" | "errorEmpty" | "errorInvalid" | "errorProvider" | "errorRateLimited"
+> = {
+  ai_response_truncated: "errorTruncated",
+  ai_response_empty: "errorEmpty",
+  ai_response_invalid: "errorInvalid",
+  ai_provider_failed: "errorProvider",
+  ai_provider_unavailable: "errorProvider",
+  ai_provider_rate_limited: "errorRateLimited",
 };
 
 const assistantModelPreferenceEvent = "planner-assistant-model-preference";
@@ -482,9 +507,17 @@ export function WorkspaceAssistant({
     /^\d{4}-(0[1-9]|1[0-2])$/.test(requestedMonth) && requestedYear >= 1000 && requestedYear <= 9998
       ? requestedMonth
       : currentMonth;
-  const [reasoningEffort, setReasoningEffort] = useState<
-    "low" | "medium" | "high" | "xhigh" | "max"
-  >("medium");
+  /**
+   * The reasoning effort the user chose. `null` means the user has not
+   * chosen one, so the model's recommended effort applies — the server
+   * applies the same default, and a reasoning model left uncapped can spend
+   * its whole output budget thinking and return no answer at all.
+   */
+  const [reasoningEffortChoice, setReasoningEffortChoice] = useState<
+    "low" | "medium" | "high" | "xhigh" | "max" | null
+  >(null);
+  const reasoningEffort =
+    reasoningEffortChoice ?? modelCapabilities?.recommendedReasoningEffort ?? "low";
   const [mode, setMode] = useState<"ask" | "plan" | "apply">("ask");
   const [responseLocale, setResponseLocale] = useState<AssistantResponseLocale>(
     DEFAULT_ASSISTANT_RESPONSE_LOCALE,
@@ -505,6 +538,22 @@ export function WorkspaceAssistant({
   const [copiedResponseIndex, setCopiedResponseIndex] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
+  /**
+   * The API error code behind the current failure, when the server reported
+   * one. It selects a message that says what actually went wrong — a
+   * truncated answer and an unavailable provider are different problems.
+   */
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+  /** Show the failure message, with the server's code when it reported one. */
+  const failWith = (code: string | null = null) => {
+    setError(true);
+    setErrorCode(code);
+  };
+  /** Clear the failure message and its code. */
+  const clearError = () => {
+    setError(false);
+    setErrorCode(null);
+  };
   const activeRequest = useRef<AbortController | null>(null);
   const activeRunIdRef = useRef<string | null>(null);
   const promptRequestRef = useRef<{
@@ -583,7 +632,7 @@ export function WorkspaceAssistant({
     );
     if (!response.ok) {
       setMode(previousMode);
-      setError(true);
+      failWith();
     }
   }
 
@@ -592,7 +641,8 @@ export function WorkspaceAssistant({
     saveAssistantModelPreference(preferenceKey, nextModel);
     const nextDefinition = getAiModelDefinition(nextModel);
     if (!nextDefinition?.reasoningEfforts.includes(reasoningEffort)) {
-      setReasoningEffort("medium");
+      // Fall back to the new model's own recommendation.
+      setReasoningEffortChoice(null);
     }
   }
 
@@ -618,7 +668,7 @@ export function WorkspaceAssistant({
       },
     );
     if (response.ok) setResponseLocale(nextLocale);
-    else setError(true);
+    else failWith();
   }
 
   async function toggleConversationPin(id: string, pinned: boolean) {
@@ -645,7 +695,7 @@ export function WorkspaceAssistant({
         if (!cancelled) setConversations(data.conversations);
       })
       .catch(() => {
-        if (!cancelled) setError(true);
+        if (!cancelled) failWith();
       });
     return () => {
       cancelled = true;
@@ -701,7 +751,7 @@ export function WorkspaceAssistant({
         }
         rememberActiveRun(null);
         setBusy(false);
-        if (payload.run.status === "failed") setError(true);
+        if (payload.run.status === "failed") failWith();
         if (payload.run.status === "completed") setRunOutputUnavailable(true);
       } catch {
         if (cancelled) return;
@@ -723,7 +773,7 @@ export function WorkspaceAssistant({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ workspaceSlug, action: "cancel" }),
     }).catch(() => null);
-    if (!response?.ok) setError(true);
+    if (!response?.ok) failWith();
   }
 
   async function copyResponse(content: string, index: number) {
@@ -732,7 +782,7 @@ export function WorkspaceAssistant({
       setCopiedResponseIndex(index);
       window.setTimeout(() => setCopiedResponseIndex(null), 1800);
     } catch {
-      setError(true);
+      failWith();
     }
   }
   const quickPrompts = [
@@ -769,7 +819,7 @@ export function WorkspaceAssistant({
     setMessages(nextMessages);
     setDraft("");
     setBusy(true);
-    setError(false);
+    clearError();
     setSelectedProposalIds([]);
     setReply(null);
     setActivity([]);
@@ -849,7 +899,14 @@ export function WorkspaceAssistant({
         setContentReferenceNotFound(data.resolution.status === "not_found");
         return;
       }
-      if (!response.ok || !("answer" in data)) throw new Error("assistant_request_failed");
+      if (!response.ok || !("answer" in data)) {
+        // Keep the server's error code: it says what actually went wrong.
+        throw new Error(
+          !response.ok && "error" in data && typeof data.error === "string"
+            ? data.error
+            : "assistant_request_failed",
+        );
+      }
       if ("runId" in data && data.runId) rememberActiveRun(data.runId);
       setConversationId(data.conversationId);
       if (data.reviewedPlanMonth) changeDashboardMonth(data.reviewedPlanMonth);
@@ -870,7 +927,7 @@ export function WorkspaceAssistant({
         setActivity((current) =>
           current.includes("run_cancelled") ? current : [...current, "run_cancelled"],
         );
-        setError(false);
+        clearError();
         setStreamingText("");
         rememberActiveRun(null);
       } else if (abortController.signal.aborted) {
@@ -878,7 +935,13 @@ export function WorkspaceAssistant({
         setDraft(message);
         setStreamingText("");
       } else {
-        setError(true);
+        // A failed response body that is not JSON raises a parse error, not
+        // a code; only a real code is shown as a specific reason.
+        failWith(
+          caught instanceof Error && /^[a-z][a-z0-9_]*$/.test(caught.message)
+            ? caught.message
+            : null,
+        );
         setMessages(nextMessages);
         setStreamingText("");
       }
@@ -935,10 +998,10 @@ export function WorkspaceAssistant({
             }
           : null,
       );
-      setError(false);
+      clearError();
       setMobileHistoryOpen(false);
     } catch {
-      setError(true);
+      failWith();
     } finally {
       setBusy(false);
     }
@@ -1215,7 +1278,7 @@ export function WorkspaceAssistant({
     setMode("ask");
     setResponseLocale(DEFAULT_ASSISTANT_RESPONSE_LOCALE);
     setMobileHistoryOpen(false);
-    setError(false);
+    clearError();
   }
 
   const promptParametersReady =
@@ -1898,7 +1961,9 @@ export function WorkspaceAssistant({
 
               {error ? (
                 <p role="alert" className="text-body text-danger mt-4">
-                  {labels.error}
+                  {errorCode && ASSISTANT_ERROR_LABELS[errorCode]
+                    ? labels[ASSISTANT_ERROR_LABELS[errorCode]]
+                    : labels.error}
                 </p>
               ) : null}
               {activity.length ? (
@@ -2168,7 +2233,9 @@ export function WorkspaceAssistant({
                   <select
                     value={reasoningEffort}
                     onChange={(event) =>
-                      setReasoningEffort(event.target.value as typeof reasoningEffort)
+                      setReasoningEffortChoice(
+                        event.target.value as NonNullable<typeof reasoningEffortChoice>,
+                      )
                     }
                     className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
                   >

@@ -1,0 +1,75 @@
+{
+  "answer": "The selected month has 14 active items across Instagram, LinkedIn, and TikTok. The visible plan is publish-light in Week 1, with 2 of 14 items scheduled against a target of 4. Two captions are also still pending review and remain drafts. The plan should be adjusted by moving two scheduled items into Week 1 and completing caption review before publishing.",
+  "findings": [
+    {
+      "title": "Week 1 is underfilled",
+      "detail": "Only 2 of 14 scheduled items are in the first week, compared with the visible target of 4. The plan is therefore 2 items below target for Week 1.",
+      "severity": "medium",
+      "evidenceIds": [
+        "assistant-evidence-1",
+        "assistant-evidence-2"
+      ]
+    },
+    {
+      "title": "Two captions remain in draft",
+      "detail": "Two static posts have no caption and remain in draft status, creating a publishing-readiness risk.",
+      "severity": "low",
+      "evidenceIds": [
+        "assistant-evidence-1",
+        "assistant-evidence-2"
+      ]
+    },
+    {
+      "title": "Campaign activity is scheduled across the selected month",
+      "detail": "The workspace summary shows 14 active items for 2026-11 across Instagram, LinkedIn, and TikTok. The supplied campaign-asset records provide supporting evidence for scheduled content in the selected month.",
+      "severity": "low",
+      "evidenceIds": [
+        "assistant-evidence-1",
+        "assistant-evidence-2",
+        "assistant-evidence-3"
+      ]
+    }
+  ],
+  "recommendations": [
+    {
+      "title": "Rebalance Week 1 publishing",
+      "detail": "Move or reschedule two existing month items into Week 1 so the visible count rises from 2 to the target of 4, while preserving the overall total of 14 items.",
+      "evidenceIds": [
+        "assistant-evidence-1",
+        "assistant-evidence-2"
+      ]
+    },
+    {
+      "title": "Complete the two pending captions",
+      "detail": "Draft and review the two captions identified as missing, then move those posts out of draft once approved. Keep the copy warm and direct, and do not introduce price claims without approval.",
+      "evidenceIds": [
+        "assistant-evidence-1",
+        "assistant-evidence-2"
+      ]
+    },
+    {
+      "title": "Revalidate channel and status totals",
+      "detail": "Before making bulk edits, reconcile the visible 14-item summary and the two-item draft count against the underlying records, because the supplied asset list describes more Instagram posts with captions pending review than the visible plan summary indicates.",
+      "evidenceIds": [
+        "assistant-evidence-1",
+        "assistant-evidence-2",
+        "assistant-evidence-3",
+        "assistant-evidence-4"
+      ]
+    }
+  ],
+  "proposedChanges": [
+    {
+      "field": "title",
+      "title": "Week 1 publishing count",
+      "afterValue": "4 items scheduled in Week 1, up from 2, with no increase above the 14-item monthly total",
+      "evidenceIds": [
+        "assistant-evidence-1",
+        "assistant-evidence-2"
+      ]
+    },
+    {
+      "field": "title",
+      "title": "Caption readiness",
+      "afterValue": "Two draft captions reviewed and finalized; affected posts moved from draft to publish-ready status",
+      "evidence
