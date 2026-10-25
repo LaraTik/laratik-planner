@@ -130,11 +130,16 @@ const estimatedOutputTokens = 1_400;
 const WORKSPACE_ASSISTANT_MAX_TOKENS = 8_192;
 
 /**
- * Limitation disclosed to the user when the provider cut the answer off and
- * the response was recovered from the truncated document.
+ * Limitations disclosed to the user when the answer had to be recovered.
+ *
+ * A degraded answer is never presented as a complete one: the user is told
+ * what was lost.
  */
-const TRUNCATED_RESPONSE_LIMITATION =
-  "The model reached its output limit, so this answer is incomplete. Some findings may be missing.";
+const RECOVERY_LIMITATIONS = {
+  truncated:
+    "The model reached its output limit, so this answer is incomplete. Some findings may be missing.",
+  pruned: "Some findings could not be shown and were left out of this answer.",
+} as const;
 
 function errorResponse(error: string, status: number) {
   return NextResponse.json({ error }, { status, headers: mutatingApiHeaders() });
@@ -658,6 +663,7 @@ async function processAssistantRequest(
           "Do not claim a fact unless supported by the supplied context. Do not invent metrics or evidence identifiers.",
           "Return one JSON object with keys answer, findings, recommendations, proposedChanges, limitations.",
           "findings: array of {title, detail, severity: low|medium|high, evidenceIds: string[]}; recommendations: array of {title, detail, evidenceIds: string[]}; proposedChanges: array of {field: title|brief, title, afterValue, evidenceIds: string[]}; limitations: string[].",
+          "At most 8 findings, at most 8 recommendations, and at most 3 proposedChanges. Each finding, recommendation, and proposedChange must cite at least one evidence id from the supplied evidence list; cite only ids that appear there. Keep each citation list short. Put at most 8 items in limitations.",
           "Every factual finding and recommendation must reference evidence supplied in context. In Plan mode only, when the user explicitly requests an edit to the explicitly selected content item, you may suggest up to three proposedChanges for that item's title or brief. Never include a before value or item id; Planner binds those from the selected current record. These are previews and are not applied unless a user confirms them using the separate per-change control. Ask and Apply modes must return an empty proposedChanges array. You cannot approve, publish, change status, or execute actions.",
         ].join(" "),
       },
@@ -864,15 +870,16 @@ async function processAssistantRequest(
       result.content,
       allowedEvidenceIds,
     );
-    const validatedAnswer = parsedAnswer.truncated
-      ? {
-          ...parsedAnswer.response,
-          limitations: [TRUNCATED_RESPONSE_LIMITATION, ...parsedAnswer.response.limitations].slice(
-            0,
-            8,
-          ),
-        }
-      : parsedAnswer.response;
+    const validatedAnswer =
+      parsedAnswer.recovery === "none"
+        ? parsedAnswer.response
+        : {
+            ...parsedAnswer.response,
+            limitations: [
+              RECOVERY_LIMITATIONS[parsedAnswer.recovery],
+              ...parsedAnswer.response.limitations,
+            ].slice(0, 8),
+          };
     if (toolCallingActive && emit) emit("assistant_text", { text: validatedAnswer.answer });
     const proposals: NonNullable<Awaited<ReturnType<typeof createAssistantProposal>>>[] = [];
     if (

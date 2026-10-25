@@ -889,7 +889,7 @@ describe("POST /api/ai/workspace-assistant", () => {
     expect(userPrompt.workspaceBrandContext.brandVoice.tone).toEqual(["Warm and direct"]);
   });
 
-  it("meters provider usage and rejects model references to unknown evidence", async () => {
+  it("drops a finding that references unknown evidence and discloses the pruning", async () => {
     mocks.chat.mockResolvedValue({
       content: JSON.stringify({
         answer: "Review",
@@ -900,6 +900,12 @@ describe("POST /api/ai/workspace-assistant", () => {
             severity: "medium",
             evidenceIds: ["invented"],
           },
+          {
+            title: "Supported",
+            detail: "Backed by the supplied evidence",
+            severity: "medium",
+            evidenceIds: ["workspace-content-2026-11"],
+          },
         ],
         recommendations: [],
         limitations: [],
@@ -909,16 +915,19 @@ describe("POST /api/ai/workspace-assistant", () => {
       model: "MiniMax-M3",
     });
 
-    const response = await POST(request());
+    const response = await POST(request({ month: "2026-11" }));
+    const body = await response.json();
 
-    expect(response.status).toBe(502);
-    await expect(response.json()).resolves.toEqual({ error: "ai_response_invalid" });
+    expect(response.status).toBe(200);
+    // The unsupported claim is not shown; the supported finding is.
+    expect(body.answer.findings).toHaveLength(1);
+    expect(body.answer.findings[0].title).toBe("Supported");
+    expect(body.answer.limitations[0]).toContain("could not be shown");
     expect(mocks.reconcileAiBudget).toHaveBeenCalledWith(
       expect.objectContaining({ actualInputTokens: 120, actualOutputTokens: 30 }),
     );
-    expect(mocks.releaseAiBudgetReservation).not.toHaveBeenCalled();
     expect(mocks.recordAiUsageEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ succeeded: false }),
+      expect.objectContaining({ succeeded: true }),
     );
   });
 
@@ -1160,7 +1169,7 @@ describe("POST /api/ai/workspace-assistant", () => {
 
   it("reports a malformed provider answer separately from a provider outage", async () => {
     mocks.chat.mockResolvedValue({
-      content: '{"answer": "the model ignored the requested shape"}',
+      content: "Here is my analysis in plain prose instead of the requested document.",
       inputTokens: 100,
       outputTokens: 20,
       model: "MiniMax-M3",
