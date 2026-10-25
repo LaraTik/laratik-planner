@@ -48,7 +48,11 @@ const findingSchema = z.object({
 
 const recommendationSchema = z.object({
   title: z.string().trim().min(1).max(180),
+  action: z.string().trim().min(1).max(700),
+  outcome: z.string().trim().min(1).max(500),
   detail: z.string().trim().min(1).max(1_200),
+  completionCheck: z.string().trim().min(1).max(500),
+  affectedItemIds: z.array(z.string().uuid()).max(8).default([]),
   evidenceIds: z.array(z.string().max(160)).min(1).max(MAX_EVIDENCE_IDS_PER_ENTRY),
 });
 
@@ -64,7 +68,7 @@ const limitationSchema = z.string().trim().min(1).max(300);
 const responseSchema = z.object({
   answer: z.string().trim().min(1).max(5_000),
   findings: z.array(findingSchema).max(8),
-  recommendations: z.array(recommendationSchema).max(8),
+  recommendations: z.array(recommendationSchema).max(3),
   proposedChanges: z.array(proposedChangeSchema).max(3).default([]),
   limitations: z.array(limitationSchema).max(8),
 });
@@ -168,6 +172,7 @@ export function analyzeWorkspacePlan(
 export function parseWorkspaceAssistantResponse(
   text: string,
   allowedEvidenceIds: ReadonlySet<string>,
+  allowedContentItemIds?: ReadonlySet<string>,
 ): WorkspaceAssistantResponse {
   const normalized = text
     .trim()
@@ -175,6 +180,7 @@ export function parseWorkspaceAssistantResponse(
     .replace(/\s*```$/, "");
   const parsed = responseSchema.parse(JSON.parse(normalized) as unknown);
   assertKnownEvidenceReferences(parsed, allowedEvidenceIds);
+  assertKnownContentItemReferences(parsed.recommendations, allowedContentItemIds);
   return parsed;
 }
 
@@ -190,7 +196,7 @@ export function parseWorkspaceAssistantResponse(
 const recoveredResponseSchema = z.object({
   answer: responseSchema.shape.answer,
   findings: z.array(findingSchema).max(8).default([]),
-  recommendations: z.array(recommendationSchema).max(8).default([]),
+  recommendations: z.array(recommendationSchema).max(3).default([]),
   proposedChanges: z.array(proposedChangeSchema).max(3).default([]),
   limitations: z.array(limitationSchema).max(8).default([]),
 });
@@ -236,10 +242,11 @@ export type WorkspaceAssistantParseResult = {
 export function parseWorkspaceAssistantResponseWithRecovery(
   text: string,
   allowedEvidenceIds: ReadonlySet<string>,
+  allowedContentItemIds?: ReadonlySet<string>,
 ): WorkspaceAssistantParseResult {
   try {
     return {
-      response: parseWorkspaceAssistantResponse(text, allowedEvidenceIds),
+      response: parseWorkspaceAssistantResponse(text, allowedEvidenceIds, allowedContentItemIds),
       recovery: "none",
     };
   } catch (strictError) {
@@ -247,7 +254,7 @@ export function parseWorkspaceAssistantResponseWithRecovery(
     // starting from the most complete recovery, and keep the first one that
     // yields a usable answer.
     for (const candidate of repairTruncatedJsonCandidates(text)) {
-      const pruned = pruneRecoveredEntries(candidate, allowedEvidenceIds);
+      const pruned = pruneRecoveredEntries(candidate, allowedEvidenceIds, allowedContentItemIds);
       if (!pruned) continue;
       const recovered = recoveredResponseSchema.safeParse(pruned);
       if (!recovered.success) continue;
@@ -258,7 +265,7 @@ export function parseWorkspaceAssistantResponseWithRecovery(
     // Dropping those entries keeps the answer usable.
     const complete = parseJsonDocument(text);
     if (complete) {
-      const pruned = pruneRecoveredEntries(complete, allowedEvidenceIds);
+      const pruned = pruneRecoveredEntries(complete, allowedEvidenceIds, allowedContentItemIds);
       if (pruned) {
         const recovered = recoveredResponseSchema.safeParse(pruned);
         if (recovered.success) {
@@ -300,6 +307,7 @@ function parseJsonDocument(text: string): unknown {
 function pruneRecoveredEntries(
   value: unknown,
   allowedEvidenceIds: ReadonlySet<string>,
+  allowedContentItemIds?: ReadonlySet<string>,
 ): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
@@ -310,7 +318,8 @@ function pruneRecoveredEntries(
       record.recommendations,
       recommendationSchema,
       allowedEvidenceIds,
-      8,
+      3,
+      allowedContentItemIds,
     ),
     proposedChanges: pruneEntryList(
       record.proposedChanges,
@@ -333,16 +342,21 @@ function pruneRecoveredEntries(
 
 function pruneEntryList(
   value: unknown,
-  schema: z.ZodType<{ evidenceIds: string[] }>,
+  schema: z.ZodType<{ evidenceIds: string[]; affectedItemIds?: string[] }>,
   allowedEvidenceIds: ReadonlySet<string>,
   maximum: number,
+  allowedContentItemIds?: ReadonlySet<string>,
 ) {
   if (!Array.isArray(value)) return [];
   return value
     .filter((entry) => {
       const parsed = schema.safeParse(entry);
       if (!parsed.success) return false;
-      return parsed.data.evidenceIds.every((evidenceId) => allowedEvidenceIds.has(evidenceId));
+      const itemIds = parsed.data.affectedItemIds ?? [];
+      return (
+        parsed.data.evidenceIds.every((evidenceId) => allowedEvidenceIds.has(evidenceId)) &&
+        (!allowedContentItemIds || itemIds.every((itemId) => allowedContentItemIds.has(itemId)))
+      );
     })
     .slice(0, maximum);
 }
@@ -362,6 +376,20 @@ function assertKnownEvidenceReferences(
   ];
   if (references.some((reference) => !allowedEvidenceIds.has(reference))) {
     throw new Error("Workspace assistant returned an unknown evidence reference");
+  }
+}
+
+function assertKnownContentItemReferences(
+  recommendations: ReadonlyArray<{ affectedItemIds: readonly string[] }>,
+  allowedContentItemIds?: ReadonlySet<string>,
+) {
+  if (!allowedContentItemIds) return;
+  if (
+    recommendations.some((recommendation) =>
+      recommendation.affectedItemIds.some((itemId) => !allowedContentItemIds.has(itemId)),
+    )
+  ) {
+    throw new Error("Workspace assistant returned an unknown content item reference");
   }
 }
 

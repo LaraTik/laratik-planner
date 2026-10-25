@@ -98,7 +98,7 @@ const components: Components = {
 
 export function AssistantMarkdown({ content }: { content: string }) {
   return (
-    <div className="space-y-3 break-words">
+    <div className="space-y-3 break-words" dir="auto">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {content}
       </ReactMarkdown>

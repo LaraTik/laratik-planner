@@ -1,3 +1,5 @@
+import type { AssistantPlanningObjective } from "@/features/workspace-assistant/planning-objective";
+
 export type AssistantProposal = {
   id: string;
   contentItemId: string;
@@ -12,6 +14,7 @@ export type AssistantProposal = {
 };
 
 export type AssistantReply = {
+  planningObjective?: AssistantPlanningObjective | null;
   answer: {
     answer: string;
     findings: {
@@ -20,7 +23,15 @@ export type AssistantReply = {
       severity: "low" | "medium" | "high";
       evidenceIds: string[];
     }[];
-    recommendations: { title: string; detail: string; evidenceIds: string[] }[];
+    recommendations: {
+      title: string;
+      action: string;
+      outcome: string;
+      detail: string;
+      completionCheck: string;
+      affectedItemIds: string[];
+      evidenceIds: string[];
+    }[];
     proposedChanges: [];
     limitations: string[];
   };
@@ -40,11 +51,21 @@ export type AssistantReply = {
     evidenceIds: string[];
   }[];
   referencedItem?: { id: string; title: string; revision: number } | null;
+  contentItems?: { id: string; title: string }[];
   reviewedPlanMonth?: string;
   proposals: AssistantProposal[];
 };
 
 export type AssistantResponseLabels = {
+  takeaway: string;
+  primaryGoal: string;
+  action: string;
+  intendedOutcome: string;
+  whyThisHelps: string;
+  completionCheck: string;
+  openItem: string;
+  openPlanning: string;
+  supportingDetails: string;
   reviewedPlan: string;
   selectedContent: string;
   findGaps: string;

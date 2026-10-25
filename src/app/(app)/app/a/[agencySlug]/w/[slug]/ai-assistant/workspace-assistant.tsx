@@ -40,6 +40,7 @@ import {
   type AssistantPromptParameter,
   type AssistantResponseLocale,
 } from "@/features/workspace-assistant";
+import type { AssistantPlanningObjective } from "@/features/workspace-assistant/planning-objective";
 import { getAiModelDefinition } from "@/lib/ai/model-registry";
 import {
   AssistantHistoryPanel,
@@ -201,6 +202,25 @@ type Labels = {
   conversationRestored: string;
   findings: string;
   recommendations: string;
+  takeaway: string;
+  goalQuestionTitle: string;
+  goalQuestionDescription: string;
+  goalAwareness: string;
+  goalEngagement: string;
+  goalTrust: string;
+  goalConversion: string;
+  goalCustom: string;
+  customGoalLabel: string;
+  customGoalPlaceholder: string;
+  useGoal: string;
+  primaryGoal: string;
+  action: string;
+  intendedOutcome: string;
+  whyThisHelps: string;
+  completionCheck: string;
+  openItem: string;
+  openPlanning: string;
+  supportingDetails: string;
   hideHistory: string;
   showHistory: string;
   errorTruncated: string;
@@ -532,6 +552,18 @@ export function WorkspaceAssistant({
   const [runOutputUnavailable, setRunOutputUnavailable] = useState(false);
   const [streamingText, setStreamingText] = useState("");
   const [reply, setReply] = useState<AssistantReply | null>(null);
+  const [planningObjective, setPlanningObjective] = useState<AssistantPlanningObjective | null>(
+    null,
+  );
+  const [goalPromptPending, setGoalPromptPending] = useState(false);
+  const [pendingGoalRequest, setPendingGoalRequest] = useState<{
+    message: string;
+    promptId?: string;
+    mode: "ask" | "plan" | "apply";
+  } | null>(null);
+  const [customGoalSelected, setCustomGoalSelected] = useState(false);
+  const [customPlanningObjective, setCustomPlanningObjective] = useState("");
+  const planningObjectivesByConversation = useRef(new Map<string, AssistantPlanningObjective>());
   const [selectedProposalIds, setSelectedProposalIds] = useState<string[]>([]);
   const [proposalError, setProposalError] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -562,6 +594,12 @@ export function WorkspaceAssistant({
   } | null>(null);
   const activeRunStorageKey = `planner-assistant-run:${workspaceSlug}`;
   const inputId = useId();
+  const customGoalInputId = useId();
+  const firstGoalChoiceRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (goalPromptPending && !busy) firstGoalChoiceRef.current?.focus();
+  }, [goalPromptPending, busy]);
 
   async function refreshVisibleConversations() {
     const response = await fetch(
@@ -797,6 +835,8 @@ export function WorkspaceAssistant({
     promptId?: string,
     selectedMode: "ask" | "plan" | "apply" = mode,
     regenerate = false,
+    objectiveOverride?: AssistantPlanningObjective,
+    replaceLastUserMessage = false,
   ) {
     event?.preventDefault();
     const message = (selected ?? draft).trim();
@@ -814,7 +854,11 @@ export function WorkspaceAssistant({
     ) {
       return;
     }
-    const historyMessages = regenerate ? messages.slice(0, -2) : messages;
+    const historyMessages = regenerate
+      ? messages.slice(0, -2)
+      : replaceLastUserMessage
+        ? messages.slice(0, -1)
+        : messages;
     const nextMessages = [...historyMessages, { role: "user" as const, content: message }];
     setMessages(nextMessages);
     setDraft("");
@@ -852,6 +896,9 @@ export function WorkspaceAssistant({
           mode: selectedMode,
           model: selectedModel,
           responseLocale,
+          ...((objectiveOverride ?? planningObjective)
+            ? { planningObjective: objectiveOverride ?? planningObjective }
+            : {}),
           history: historyMessages.slice(-8),
           ...(selectedContentItemId || contentItemReference.trim()
             ? { contentItemReference: selectedContentItemId ?? contentItemReference.trim() }
@@ -879,6 +926,7 @@ export function WorkspaceAssistant({
               | (AssistantReply & { conversationId: string; runId?: string })
               | {
                   error?: string;
+                  requiresPlanningObjective?: true;
                   resolution?:
                     | { status: "ambiguous"; candidates: ContentCandidate[] }
                     | { status: "not_found" };
@@ -887,6 +935,7 @@ export function WorkspaceAssistant({
         | (AssistantReply & { conversationId: string; runId?: string })
         | {
             error?: string;
+            requiresPlanningObjective?: true;
             resolution?:
               { status: "ambiguous"; candidates: ContentCandidate[] } | { status: "not_found" };
           };
@@ -897,6 +946,23 @@ export function WorkspaceAssistant({
           data.resolution.status === "ambiguous" ? data.resolution.candidates : [],
         );
         setContentReferenceNotFound(data.resolution.status === "not_found");
+        return;
+      }
+      if (
+        response.ok &&
+        "requiresPlanningObjective" in data &&
+        data.requiresPlanningObjective === true
+      ) {
+        setMessages(nextMessages);
+        setGoalPromptPending(true);
+        setPendingGoalRequest({
+          message,
+          ...(effectivePromptId ? { promptId: effectivePromptId } : {}),
+          mode: selectedMode,
+        });
+        setCustomGoalSelected(false);
+        setCustomPlanningObjective("");
+        setStreamingText("");
         return;
       }
       if (!response.ok || !("answer" in data)) {
@@ -911,6 +977,13 @@ export function WorkspaceAssistant({
       setConversationId(data.conversationId);
       if (data.reviewedPlanMonth) changeDashboardMonth(data.reviewedPlanMonth);
       setReply(data);
+      setGoalPromptPending(false);
+      setPendingGoalRequest(null);
+      const selectedObjective = data.planningObjective ?? objectiveOverride ?? planningObjective;
+      if (selectedObjective) setPlanningObjective(selectedObjective);
+      if (selectedObjective) {
+        planningObjectivesByConversation.current.set(data.conversationId, selectedObjective);
+      }
       setStreamingText("");
       setMessages([...nextMessages, { role: "assistant", content: data.answer.answer }]);
       rememberActiveRun(null);
@@ -951,6 +1024,25 @@ export function WorkspaceAssistant({
     }
   }
 
+  async function selectPlanningObjective(objective: AssistantPlanningObjective) {
+    if (!pendingGoalRequest || busy) return;
+    const pending = pendingGoalRequest;
+    setPlanningObjective(objective);
+    setGoalPromptPending(false);
+    setPendingGoalRequest(null);
+    setCustomGoalSelected(false);
+    setCustomPlanningObjective("");
+    await submit(
+      undefined,
+      pending.message,
+      pending.promptId,
+      pending.mode,
+      false,
+      objective,
+      true,
+    );
+  }
+
   async function openConversation(id: string) {
     setBusy(true);
     try {
@@ -969,6 +1061,11 @@ export function WorkspaceAssistant({
         };
       };
       setConversationId(data.conversation.id);
+      setPlanningObjective(planningObjectivesByConversation.current.get(id) ?? null);
+      setGoalPromptPending(false);
+      setPendingGoalRequest(null);
+      setCustomGoalSelected(false);
+      setCustomPlanningObjective("");
       setMode(data.conversation.mode);
       setResponseLocale(data.conversation.responseLocale);
       setContentItemReference("");
@@ -1275,6 +1372,11 @@ export function WorkspaceAssistant({
     setSelectedContentItemId(null);
     setContentCandidates([]);
     setContentReferenceNotFound(false);
+    setPlanningObjective(null);
+    setGoalPromptPending(false);
+    setPendingGoalRequest(null);
+    setCustomGoalSelected(false);
+    setCustomPlanningObjective("");
     setMode("ask");
     setResponseLocale(DEFAULT_ASSISTANT_RESPONSE_LOCALE);
     setMobileHistoryOpen(false);
@@ -1337,6 +1439,16 @@ export function WorkspaceAssistant({
   const promptsToDisplay =
     showAllPrompts || promptSearch.trim() ? filteredPrompts : filteredPrompts.slice(0, 6);
   const showDashboardComposer = !conversationId && messages.length === 0;
+  const planningObjectiveLabel = planningObjective
+    ? planningObjective.type === "custom"
+      ? (planningObjective.customText ?? "")
+      : {
+          awareness: labels.goalAwareness,
+          engagement: labels.goalEngagement,
+          trust: labels.goalTrust,
+          conversion: labels.goalConversion,
+        }[planningObjective.type]
+    : null;
   const selectedProposals =
     reply?.proposals.filter((proposal) => selectedProposalIds.includes(proposal.id)) ?? [];
   const canApplySelectedProposals =
@@ -1890,7 +2002,11 @@ export function WorkspaceAssistant({
                       className={message.role === "user" ? "ms-auto max-w-[85%]" : "max-w-[95%]"}
                     >
                       <p className="text-label text-fg-muted mb-1 font-semibold">
-                        {message.role === "user" ? labels.you : labels.assistant}
+                        {message.role === "user"
+                          ? labels.you
+                          : index === messages.length - 1 && reply
+                            ? labels.takeaway
+                            : labels.assistant}
                       </p>
                       <div
                         className={`text-body rounded-[var(--radius-control)] px-3 py-2 ${message.role === "user" ? "bg-primary-subtle text-fg-primary" : "bg-surface-subtle text-fg-primary"}`}
@@ -1958,6 +2074,112 @@ export function WorkspaceAssistant({
                   ) : null}
                 </ol>
               )}
+
+              {goalPromptPending ? (
+                <section
+                  className="border-border bg-surface-subtle mx-auto mt-4 max-w-3xl rounded-[var(--radius-card)] border p-4 sm:p-5"
+                  aria-labelledby="workspace-assistant-goal-title"
+                  aria-describedby="workspace-assistant-goal-description"
+                >
+                  <h3
+                    id="workspace-assistant-goal-title"
+                    className="text-title-card text-fg-primary font-semibold"
+                  >
+                    {labels.goalQuestionTitle}
+                  </h3>
+                  <p
+                    id="workspace-assistant-goal-description"
+                    className="text-body text-fg-secondary mt-1"
+                  >
+                    {labels.goalQuestionDescription}
+                  </p>
+                  <div
+                    className="mt-4 grid gap-2 sm:grid-cols-2"
+                    role="group"
+                    aria-label={labels.goalQuestionTitle}
+                  >
+                    <Button
+                      ref={firstGoalChoiceRef}
+                      type="button"
+                      variant="outline"
+                      className="min-h-11 justify-start text-start whitespace-normal"
+                      disabled={busy || archivedView}
+                      onClick={() => void selectPlanningObjective({ type: "awareness" })}
+                    >
+                      {labels.goalAwareness}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-11 justify-start text-start whitespace-normal"
+                      disabled={busy || archivedView}
+                      onClick={() => void selectPlanningObjective({ type: "engagement" })}
+                    >
+                      {labels.goalEngagement}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-11 justify-start text-start whitespace-normal"
+                      disabled={busy || archivedView}
+                      onClick={() => void selectPlanningObjective({ type: "trust" })}
+                    >
+                      {labels.goalTrust}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-11 justify-start text-start whitespace-normal"
+                      disabled={busy || archivedView}
+                      onClick={() => void selectPlanningObjective({ type: "conversion" })}
+                    >
+                      {labels.goalConversion}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={customGoalSelected ? "default" : "outline"}
+                      className="min-h-11 justify-start text-start whitespace-normal sm:col-span-2"
+                      disabled={busy || archivedView}
+                      aria-pressed={customGoalSelected}
+                      onClick={() => setCustomGoalSelected(true)}
+                    >
+                      {labels.goalCustom}
+                    </Button>
+                  </div>
+                  {customGoalSelected ? (
+                    <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                      <label
+                        htmlFor={customGoalInputId}
+                        className="text-label text-fg-secondary grid gap-1"
+                      >
+                        <span>{labels.customGoalLabel}</span>
+                        <DirAwareInput
+                          id={customGoalInputId}
+                          locale={locale}
+                          value={customPlanningObjective}
+                          onChange={(event) => setCustomPlanningObjective(event.target.value)}
+                          placeholder={labels.customGoalPlaceholder}
+                          maxLength={180}
+                          disabled={busy || archivedView}
+                        />
+                      </label>
+                      <Button
+                        type="button"
+                        className="min-h-11"
+                        disabled={busy || archivedView || customPlanningObjective.trim().length < 3}
+                        onClick={() =>
+                          void selectPlanningObjective({
+                            type: "custom",
+                            customText: customPlanningObjective.trim(),
+                          })
+                        }
+                      >
+                        {labels.useGoal}
+                      </Button>
+                    </div>
+                  ) : null}
+                </section>
+              ) : null}
 
               {error ? (
                 <p role="alert" className="text-body text-danger mt-4">
@@ -2064,6 +2286,8 @@ export function WorkspaceAssistant({
                   workspaceTimezone={workspaceTimezone}
                   currentTime={currentTime}
                   labels={labels}
+                  itemHrefBase={itemHrefBase}
+                  planningObjectiveLabel={planningObjectiveLabel}
                   mode={mode}
                   selectedProposalIds={selectedProposalIds}
                   selectedProposals={selectedProposals}
@@ -2100,7 +2324,7 @@ export function WorkspaceAssistant({
                   value={mode}
                   onChange={(event) => void changeMode(event.target.value as typeof mode)}
                   className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
-                  disabled={busy || archivedView}
+                  disabled={busy || archivedView || goalPromptPending}
                   aria-describedby="workspace-assistant-mode-description"
                   data-testid="assistant-mode"
                 >
@@ -2118,7 +2342,7 @@ export function WorkspaceAssistant({
                   placeholder={labels.contentReferenceHint}
                   maxLength={500}
                   className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
-                  disabled={busy || archivedView}
+                  disabled={busy || archivedView || goalPromptPending}
                 />
               </label>
               <label className="text-label text-fg-secondary flex shrink-0 flex-col gap-1">
@@ -2264,11 +2488,17 @@ export function WorkspaceAssistant({
                 maxLength={1_000}
                 rows={2}
                 className="border-border bg-surface text-body min-h-11 min-w-0 flex-1 resize-y rounded-[var(--radius-control)] border px-3 py-2"
-                disabled={busy || archivedView}
+                disabled={busy || archivedView || goalPromptPending}
               />
               <Button
                 type="submit"
-                disabled={busy || archivedView || !draft.trim() || !promptParametersReady}
+                disabled={
+                  busy ||
+                  archivedView ||
+                  goalPromptPending ||
+                  !draft.trim() ||
+                  !promptParametersReady
+                }
                 aria-label={labels.send}
               >
                 <Send className="h-4 w-4" aria-hidden="true" />
@@ -2379,7 +2609,7 @@ export function WorkspaceAssistant({
               className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
               aria-label={labels.mode}
               data-testid="assistant-sticky-mode"
-              disabled={busy || archivedView}
+              disabled={busy || archivedView || goalPromptPending}
             >
               <option value="ask">{labels.modeAsk}</option>
               <option value="plan">{labels.modePlan}</option>
@@ -2397,11 +2627,13 @@ export function WorkspaceAssistant({
             placeholder={dashboardLabels.heroPlaceholder}
             maxLength={1_000}
             className="border-border bg-surface text-body min-h-11 min-w-0 flex-1 rounded-[var(--radius-control)] border px-3"
-            disabled={busy || archivedView}
+            disabled={busy || archivedView || goalPromptPending}
           />
           <Button
             type="submit"
-            disabled={busy || archivedView || !draft.trim() || !promptParametersReady}
+            disabled={
+              busy || archivedView || goalPromptPending || !draft.trim() || !promptParametersReady
+            }
             aria-label={labels.send}
           >
             <Send className="h-4 w-4" aria-hidden="true" />
