@@ -37,6 +37,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { DateFormat, formatCurrency, formatDate } from "@/lib/i18n/format-locale";
 import { META_DEFAULT_GRAPH_VERSION } from "@/lib/meta/version";
+import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import {
   createAdvertisingConnectionAction,
   grantAdvertisingFinancialAuthorityAction,
@@ -192,6 +193,8 @@ export function AdvertisingAdminPanel({
   validationResults = [],
   syncRuns = [],
   reconciliations = [],
+  latestReconciliations,
+  asOf,
 }: {
   connections: readonly Connection[];
   accounts: readonly AdvertisingAccount[];
@@ -205,9 +208,12 @@ export function AdvertisingAdminPanel({
   validationResults?: readonly ValidationResult[];
   syncRuns?: readonly SyncRun[];
   reconciliations?: readonly Reconciliation[];
+  latestReconciliations?: readonly Reconciliation[];
+  asOf: string;
 }) {
   const t = useLocaleT();
   const [createState, createAction] = useActionState(createAdvertisingConnectionAction, initial);
+  const accountReconciliations = latestReconciliations ?? reconciliations;
   return (
     <div className="space-y-6">
       <AdvertisingSetupSteps
@@ -216,10 +222,24 @@ export function AdvertisingAdminPanel({
           (connection) => connection.lastValidationStatus === "passed",
         )}
         hasAccounts={accounts.length > 0}
-        hasWorkspaceAccess={visibilityGrants.some((grant) => !grant.revokedAt)}
+        hasWorkspaceAccess={visibilityGrants.some(
+          (grant) =>
+            grant.capability === "read_reports" &&
+            isAdvertisingGrantActive(grant, Date.parse(asOf)),
+        )}
         hasReportingSync={syncStates.some(
           (state) => !["paused", "dead_letter"].includes(state.status),
         )}
+      />
+      <AdvertisingOperatorSummary
+        asOf={asOf}
+        connections={connections}
+        accounts={accounts}
+        capabilities={capabilities}
+        syncStates={syncStates}
+        visibilityGrants={visibilityGrants}
+        syncRuns={syncRuns}
+        reconciliations={accountReconciliations}
       />
       <AdvertisingCreateCard
         createAction={createAction}
@@ -228,6 +248,7 @@ export function AdvertisingAdminPanel({
       />
 
       <AdvertisingOverviewCard
+        asOf={asOf}
         connections={connections}
         accounts={accounts}
         capabilities={capabilities}
@@ -259,11 +280,13 @@ export function AdvertisingAdminPanel({
       )}
 
       <AdvertisingAccountsTable
+        asOf={asOf}
         accounts={accounts}
         connectionAccounts={connectionAccounts}
         syncStates={syncStates}
         capabilities={capabilities}
         visibilityGrants={visibilityGrants}
+        reconciliations={accountReconciliations}
       />
       <GrantAccessCard
         accounts={accounts}
@@ -278,6 +301,305 @@ export function AdvertisingAdminPanel({
         reconciliations={reconciliations}
       />
     </div>
+  );
+}
+
+function AdvertisingOperatorSummary({
+  asOf,
+  connections,
+  accounts,
+  capabilities,
+  syncStates,
+  visibilityGrants,
+  syncRuns,
+  reconciliations,
+}: {
+  asOf: string;
+  connections: readonly Connection[];
+  accounts: readonly AdvertisingAccount[];
+  capabilities: readonly Capability[];
+  syncStates: readonly SyncState[];
+  visibilityGrants: readonly VisibilityGrant[];
+  syncRuns: readonly SyncRun[];
+  reconciliations: readonly Reconciliation[];
+}) {
+  const t = useLocaleT();
+  const validationStatus = (connection: Connection) => connection.lastValidationStatus;
+  const latestReconciliation = latestReconciliationByAccount(reconciliations);
+  const latestSyncRuns = latestSyncRunByAccount(syncRuns);
+  const now = Date.parse(asOf);
+  const activeAccounts = accounts.filter((account) => account.status === "active");
+  const hasNoReportableAccounts = activeAccounts.length === 0;
+  const hasAccountStatusIssue = accounts.some((account) => account.status !== "active");
+  const hasMissingReportingCapability = activeAccounts.some(
+    (account) =>
+      !capabilities.some(
+        (capability) =>
+          capability.accountId === account.id &&
+          capability.capability === "read_reports" &&
+          capability.status === "available",
+      ),
+  );
+  const discoveryConnection = connections.find(
+    (connection) =>
+      connection.status === "active" &&
+      connection.currentCredentialVersion > 0 &&
+      ["passed", "partial"].includes(validationStatus(connection) ?? ""),
+  );
+  const connectionMissingCredential = connections.find(
+    (connection) => connection.status !== "revoked" && connection.currentCredentialVersion < 1,
+  );
+  const hasMissingCredential = connectionMissingCredential !== undefined;
+  const hasConnectionIssue = connections.some((connection) => connection.status !== "active");
+  const hasMissingValidation = connections.some(
+    (connection) =>
+      connection.status !== "revoked" &&
+      connection.currentCredentialVersion > 0 &&
+      validationStatus(connection) === null,
+  );
+  const hasValidationIssue = connections.some((connection) => {
+    const status = validationStatus(connection);
+    return (
+      connection.status !== "revoked" && status !== null && !["passed", "partial"].includes(status)
+    );
+  });
+  const hasPartialValidation = connections.some(
+    (connection) => connection.status !== "revoked" && validationStatus(connection) === "partial",
+  );
+  const nonRevokedConnectionIds = new Set(
+    connections
+      .filter((connection) => connection.status !== "revoked")
+      .map((connection) => connection.id),
+  );
+  const hasSyncIssue =
+    syncStates.some(
+      (state) =>
+        nonRevokedConnectionIds.has(state.connectionId) &&
+        (["failed", "dead_letter"].includes(state.status) || Boolean(state.lastErrorCode)),
+    ) ||
+    latestSyncRuns.some(
+      (run) => nonRevokedConnectionIds.has(run.connectionId) && run.status === "failed",
+    );
+  const hasPartialSync =
+    syncStates.some(
+      (state) => nonRevokedConnectionIds.has(state.connectionId) && state.status === "partial",
+    ) || latestSyncRuns.some((run) => nonRevokedConnectionIds.has(run.connectionId) && run.partial);
+  const hasMissingVisibility = activeAccounts.some(
+    (account) =>
+      !visibilityGrants.some(
+        (grant) =>
+          grant.accountId === account.id &&
+          grant.capability === "read_reports" &&
+          isAdvertisingGrantActive(grant, now),
+      ),
+  );
+  const hasPartialReconciliation = activeAccounts.some(
+    (account) => latestReconciliation.get(account.id)?.completeness !== "complete",
+  );
+
+  const status =
+    connections.length === 0
+      ? "notConfigured"
+      : hasMissingCredential ||
+          hasMissingValidation ||
+          hasValidationIssue ||
+          hasConnectionIssue ||
+          hasSyncIssue ||
+          hasMissingVisibility ||
+          hasMissingReportingCapability ||
+          hasNoReportableAccounts ||
+          hasAccountStatusIssue
+        ? "needsAttention"
+        : hasPartialValidation || hasPartialSync || hasPartialReconciliation
+          ? "partial"
+          : "ready";
+  const statusCopy = {
+    ready: {
+      label: t("advertising.operatorStatusReady"),
+      title: t("advertising.operatorReady"),
+      description: t("advertising.operatorReadyDescription"),
+      icon: CheckCircle2,
+      badge: "success" as const,
+    },
+    partial: {
+      label: t("advertising.operatorStatusPartial"),
+      title: t("advertising.operatorPartial"),
+      description: t("advertising.operatorPartialDescription"),
+      icon: ShieldAlert,
+      badge: "warning" as const,
+    },
+    needsAttention: {
+      label: t("advertising.operatorStatusNeedsAttention"),
+      title: t("advertising.operatorNeedsAttention"),
+      description: t("advertising.operatorNeedsAttentionDescription"),
+      icon: AlertTriangle,
+      badge: "danger" as const,
+    },
+    notConfigured: {
+      label: t("advertising.operatorStatusNotConfigured"),
+      title: t("advertising.operatorNotConfigured"),
+      description: t("advertising.operatorNotConfiguredDescription"),
+      icon: ShieldAlert,
+      badge: "outline" as const,
+    },
+  }[status];
+  const StatusIcon = statusCopy.icon;
+  const actions = [
+    ...(connections.length === 0 ||
+    connections.some((connection) => connection.status === "revoked")
+      ? [
+          {
+            key: "connection",
+            label: t("advertising.operatorActionCreateConnection"),
+            href: "#advertising-create-card",
+          },
+        ]
+      : []),
+    ...(hasMissingCredential
+      ? [
+          {
+            key: "credential",
+            label: t("advertising.operatorActionCredential"),
+            href: `#advertising-connection-${connectionMissingCredential?.id ?? ""}`,
+          },
+        ]
+      : []),
+    ...(hasMissingValidation ||
+    hasValidationIssue ||
+    hasPartialValidation ||
+    hasMissingReportingCapability ||
+    connections.some((connection) => connection.status === "invalid")
+      ? [
+          {
+            key: "validation",
+            label: t("advertising.operatorActionValidation"),
+            href: "#advertising-history-card",
+          },
+        ]
+      : []),
+    ...(hasSyncIssue || hasPartialSync
+      ? [
+          {
+            key: "sync",
+            label: t("advertising.operatorActionSync"),
+            href: "#advertising-history-card",
+          },
+        ]
+      : []),
+    ...(hasMissingVisibility
+      ? [
+          {
+            key: "visibility",
+            label: t("advertising.operatorActionVisibility"),
+            href: "#advertising-grants-card",
+          },
+        ]
+      : []),
+    ...(hasPartialReconciliation
+      ? [
+          {
+            key: "reconciliation",
+            label: t("advertising.operatorActionReconciliation"),
+            href: "#advertising-reconciliation-history",
+          },
+        ]
+      : []),
+    ...(hasNoReportableAccounts && discoveryConnection
+      ? [
+          {
+            key: "discoverAccounts",
+            label: t("advertising.operatorActionDiscoverAccounts"),
+            href: `#advertising-connection-${discoveryConnection.id}`,
+          },
+        ]
+      : []),
+    ...(hasAccountStatusIssue
+      ? [
+          {
+            key: "accountStatus",
+            label: t("advertising.operatorActionAccountStatus"),
+            href: "#advertising-accounts-table-card",
+          },
+        ]
+      : []),
+  ];
+
+  return (
+    <section
+      aria-labelledby="advertising-operator-title"
+      data-testid="advertising-operator-summary"
+    >
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="bg-primary-subtle text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+              <StatusIcon className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <div>
+              <CardTitle>{t("advertising.operatorSummaryTitle")}</CardTitle>
+              <p
+                id="advertising-operator-title"
+                className="text-body text-fg-primary mt-2 font-semibold"
+              >
+                {statusCopy.title}
+              </p>
+              <p className="text-label text-fg-secondary mt-1 max-w-3xl">
+                {statusCopy.description}
+              </p>
+            </div>
+          </div>
+          <Badge variant={statusCopy.badge}>{statusCopy.label}</Badge>
+        </div>
+        <div className="border-border mt-5 border-t pt-4">
+          <p className="text-label text-fg-muted font-semibold">
+            {t("advertising.operatorNextActions")}
+          </p>
+          {actions.length === 0 ? (
+            <p className="text-label text-fg-secondary mt-2">{t("advertising.operatorNoAction")}</p>
+          ) : (
+            <ul className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              {actions.map((action) => (
+                <li key={action.key}>
+                  <a
+                    href={action.href}
+                    className="text-primary focus-visible:ring-focus-ring inline-flex min-h-11 w-full items-center justify-between gap-3 rounded-[var(--radius-control)] px-3 py-2 text-start text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                  >
+                    <span>{action.label}</span>
+                    <ChevronRight className="h-4 w-4 shrink-0 rtl:rotate-180" aria-hidden="true" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </Card>
+    </section>
+  );
+}
+
+function latestReconciliationByAccount(rows: readonly Reconciliation[]) {
+  const latest = new Map<string, Reconciliation>();
+  for (const row of rows) {
+    const current = latest.get(row.accountId);
+    if (!current || row.checkedAt > current.checkedAt) latest.set(row.accountId, row);
+  }
+  return latest;
+}
+
+function latestSyncRunByAccount(rows: readonly SyncRun[]) {
+  const latest = new Map<string, SyncRun>();
+  for (const run of rows) {
+    const current = latest.get(run.accountId);
+    if (!current || run.startedAt > current.startedAt) latest.set(run.accountId, run);
+  }
+  return [...latest.values()];
+}
+
+function isAdvertisingGrantActive(grant: VisibilityGrant, now: number) {
+  return (
+    grant.revokedAt === null &&
+    Date.parse(grant.startsAt) <= now &&
+    now < (grant.endsAt === null ? Number.POSITIVE_INFINITY : Date.parse(grant.endsAt))
   );
 }
 
@@ -431,12 +753,14 @@ function AdvertisingCreateCard({
 }
 
 function AdvertisingOverviewCard({
+  asOf,
   connections,
   accounts,
   capabilities,
   syncStates,
   visibilityGrants,
 }: {
+  asOf: string;
   connections: readonly Connection[];
   accounts: readonly AdvertisingAccount[];
   capabilities: readonly Capability[];
@@ -444,6 +768,7 @@ function AdvertisingOverviewCard({
   visibilityGrants: readonly VisibilityGrant[];
 }) {
   const t = useLocaleT();
+  const now = Date.parse(asOf);
   const configuredConnections = connections.filter(
     (connection) => connection.currentCredentialVersion > 0,
   ).length;
@@ -454,7 +779,7 @@ function AdvertisingOverviewCard({
     (state) => !["paused", "dead_letter"].includes(state.status),
   ).length;
   const readyAccounts = accounts.filter((account) =>
-    isReportingReady(account, capabilities, visibilityGrants),
+    isReportingReady(account, capabilities, visibilityGrants, now),
   ).length;
   const attentionAccounts = Math.max(accounts.length - readyAccounts, 0);
   const metrics = [
@@ -553,27 +878,34 @@ function AdvertisingOverviewCard({
 }
 
 function AdvertisingAccountsTable({
+  asOf,
   accounts,
   connectionAccounts,
   syncStates,
   capabilities,
   visibilityGrants,
+  reconciliations,
 }: {
+  asOf: string;
   accounts: readonly AdvertisingAccount[];
   connectionAccounts: readonly ConnectionAccount[];
   syncStates: readonly SyncState[];
   capabilities: readonly Capability[];
   visibilityGrants: readonly VisibilityGrant[];
+  reconciliations: readonly Reconciliation[];
 }) {
   const t = useLocaleT();
+  const locale = useLocaleCode();
+  const now = Date.parse(asOf);
   const [query, setQuery] = React.useState("");
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const filteredAccounts = accounts.filter((account) =>
     `${account.name} ${account.externalAccountId}`.toLocaleLowerCase().includes(normalizedQuery),
   );
   const readyCount = accounts.filter((account) =>
-    isReportingReady(account, capabilities, visibilityGrants),
+    isReportingReady(account, capabilities, visibilityGrants, now),
   ).length;
+  const latestReconciliations = latestReconciliationByAccount(reconciliations);
 
   return (
     <Card
@@ -642,7 +974,7 @@ function AdvertisingAccountsTable({
           role="region"
           aria-label={t("advertising.accountTableLabel")}
         >
-          <table className="w-full min-w-[720px] text-start">
+          <table className="w-full min-w-[900px] text-start">
             <thead className="bg-surface-subtle/40">
               <tr className="border-border border-b">
                 <th className="text-label text-fg-muted px-5 py-3 font-semibold" scope="col">
@@ -660,6 +992,12 @@ function AdvertisingAccountsTable({
                 <th className="text-label text-fg-muted px-3 py-3 font-semibold" scope="col">
                   {t("advertising.accountTableSync")}
                 </th>
+                <th className="text-label text-fg-muted px-3 py-3 font-semibold" scope="col">
+                  {t("advertising.accountTableCompleteness")}
+                </th>
+                <th className="text-label text-fg-muted px-3 py-3 font-semibold" scope="col">
+                  {t("advertising.accountTableLastSync")}
+                </th>
                 <th
                   className="text-label text-fg-muted px-5 py-3 text-end font-semibold"
                   scope="col"
@@ -673,9 +1011,13 @@ function AdvertisingAccountsTable({
                 const linked = connectionAccounts.find((link) => link.accountId === account.id);
                 const sync = syncStates.find((state) => state.accountId === account.id);
                 const grants = visibilityGrants.filter(
-                  (grant) => grant.accountId === account.id && !grant.revokedAt,
+                  (grant) =>
+                    grant.accountId === account.id &&
+                    grant.capability === "read_reports" &&
+                    isAdvertisingGrantActive(grant, now),
                 );
-                const isReady = isReportingReady(account, capabilities, grants);
+                const isReady = isReportingReady(account, capabilities, grants, now);
+                const reconciliation = latestReconciliations.get(account.id);
                 return (
                   <tr key={account.id} className="border-border border-b last:border-b-0">
                     <td className="px-5 py-3.5">
@@ -738,14 +1080,6 @@ function AdvertisingAccountsTable({
                         }
                       />
                     </td>
-                    <td className="px-5 py-3.5 text-end">
-                      <a
-                        href="#advertising-grants-card"
-                        className="border-border text-label text-fg-primary focus-visible:ring-focus-ring inline-flex min-h-9 items-center rounded-[var(--radius-control)] border px-3 font-semibold focus:outline-none focus-visible:ring-2"
-                      >
-                        {t("advertising.manageAccess")}
-                      </a>
-                    </td>
                     <td className="px-3 py-3.5">
                       <StatusBadge
                         variant={
@@ -759,6 +1093,39 @@ function AdvertisingAccountsTable({
                             : t("advertising.syncDisabled")
                         }
                       />
+                    </td>
+                    <td className="px-3 py-3.5">
+                      <StatusBadge
+                        variant={
+                          reconciliation?.completeness === "complete"
+                            ? "success"
+                            : reconciliation?.completeness === "partial"
+                              ? "warning"
+                              : "outline"
+                        }
+                        label={
+                          reconciliation?.completeness === "complete"
+                            ? t("advertising.historyStatus.complete")
+                            : reconciliation?.completeness === "partial"
+                              ? t("advertising.historyStatus.partial")
+                              : reconciliation
+                                ? t("advertising.historyStatus.unavailable")
+                                : t("advertising.accountCompletenessUnavailable")
+                        }
+                      />
+                    </td>
+                    <td className="text-label text-fg-secondary px-3 py-3.5">
+                      {sync?.lastCompletedAt
+                        ? formatRelativeDate(sync.lastCompletedAt, new Date(now), locale)
+                        : t("advertising.syncDisabled")}
+                    </td>
+                    <td className="px-5 py-3.5 text-end">
+                      <a
+                        href="#advertising-grants-card"
+                        className="border-border text-label text-fg-primary focus-visible:ring-focus-ring inline-flex min-h-9 items-center rounded-[var(--radius-control)] border px-3 font-semibold focus:outline-none focus-visible:ring-2"
+                      >
+                        {t("advertising.manageAccess")}
+                      </a>
                     </td>
                   </tr>
                 );
@@ -775,16 +1142,22 @@ function isReportingReady(
   account: AdvertisingAccount,
   capabilities: readonly Capability[],
   visibilityGrants: readonly VisibilityGrant[],
+  now: number,
 ) {
   return (
     account.status === "active" &&
-    (capabilities.some(
+    capabilities.some(
       (capability) =>
         capability.accountId === account.id &&
         capability.capability === "read_reports" &&
         capability.status === "available",
-    ) ||
-      visibilityGrants.some((grant) => grant.accountId === account.id && !grant.revokedAt))
+    ) &&
+    visibilityGrants.some(
+      (grant) =>
+        grant.accountId === account.id &&
+        grant.capability === "read_reports" &&
+        isAdvertisingGrantActive(grant, now),
+    )
   );
 }
 
@@ -1092,7 +1465,11 @@ function AdvertisingHistoryCard({
   const reconciliationPreview = reconciliations.slice(0, 8);
   const reconciliationOverflow = reconciliations.slice(8);
   return (
-    <Card data-testid="advertising-history-card" className="overflow-hidden">
+    <Card
+      id="advertising-history-card"
+      data-testid="advertising-history-card"
+      className="overflow-hidden"
+    >
       <div className="border-border bg-surface-subtle/55 -mx-4 -mt-4 mb-5 flex flex-wrap items-start justify-between gap-3 border-b px-4 py-4 sm:-mx-5 sm:-mt-5 sm:px-5">
         <div className="flex items-start gap-3">
           <div className="bg-primary-subtle text-primary flex h-10 w-10 items-center justify-center rounded-xl">
@@ -1170,6 +1547,12 @@ function AdvertisingHistoryCard({
                       </>
                     ) : null}
                   </p>
+                  {run.partial ? (
+                    <p className="text-label text-warning mt-2 flex items-start gap-1.5">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      <span>{t("advertising.partialSyncHint")}</span>
+                    </p>
+                  ) : null}
                 </div>
               </li>
             ))
@@ -1380,7 +1763,7 @@ function HistoryStatusBadge({
         status === "passed" || status === "succeeded"
           ? "success"
           : partial || status === "partial"
-            ? "outline"
+            ? "warning"
             : "danger"
       }
     >
@@ -1442,6 +1825,11 @@ function ReconciliationRow({
             )}
             {t(`advertising.historyStatus.${row.completeness}`)}
           </Badge>
+          {row.completeness === "partial" ? (
+            <p className="text-label text-warning max-w-64">
+              {t("advertising.partialReconciliationHint")}
+            </p>
+          ) : null}
           {discrepancyIsZero ? (
             <span className="text-label text-success">{t("advertising.reconciled")}</span>
           ) : null}
@@ -1533,7 +1921,11 @@ function ConnectionCard({
   };
 
   return (
-    <Card data-testid={`advertising-connection-${connection.id}`} className="overflow-hidden">
+    <Card
+      id={`advertising-connection-${connection.id}`}
+      data-testid={`advertising-connection-${connection.id}`}
+      className="scroll-mt-6 overflow-hidden"
+    >
       <div className="border-border bg-surface-subtle/55 -mx-4 -mt-4 mb-5 flex flex-wrap items-start justify-between gap-4 border-b px-4 py-4 sm:-mx-5 sm:-mt-5 sm:px-5">
         <div className="flex items-start gap-3">
           <div className="bg-primary-subtle text-primary flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">

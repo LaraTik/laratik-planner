@@ -31,6 +31,11 @@ import {
 import { isAgencyAdmin } from "@/lib/auth/policy";
 import { getBuiltInAssistantPrompt } from "./prompts";
 import { AssistantPromptParametersSchema } from "./parameters";
+import {
+  getDefaultAssistantKnowledge,
+  type AssistantKnowledgeEntry,
+  type AssistantKnowledgeLocale,
+} from "./default-knowledge";
 import { updateContentItem } from "@/features/content/update-content.server";
 import { reconcileContentItemMediaFolders } from "@/lib/media/planning-folder-lifecycle";
 
@@ -200,6 +205,7 @@ export async function listAssistantKnowledge(
   agencyId: string,
   workspaceId: string,
   search = "",
+  locale: AssistantKnowledgeLocale = "en",
 ) {
   await requireAssistantAccess(actor, workspaceId);
   const terms = search
@@ -214,11 +220,12 @@ export async function listAssistantKnowledge(
           return [
             ilike(workspaceAssistantKnowledge.title, pattern),
             ilike(workspaceAssistantKnowledge.content, pattern),
+            ilike(sql`${workspaceAssistantKnowledge.tags}::text`, pattern),
           ];
         }),
       )
     : undefined;
-  return db
+  const rows = await db
     .select({
       id: workspaceAssistantKnowledge.id,
       scope: workspaceAssistantKnowledge.scope,
@@ -252,6 +259,21 @@ export async function listAssistantKnowledge(
     )
     .orderBy(desc(workspaceAssistantKnowledge.updatedAt))
     .limit(searchCondition ? 50 : 100);
+  const storedEntries: AssistantKnowledgeEntry[] = rows.map((row) => ({
+    ...row,
+    scope: row.scope as Exclude<AssistantKnowledgeEntry["scope"], "default">,
+    category: row.category as AssistantKnowledgeEntry["category"],
+    verificationStatus: row.verificationStatus as AssistantKnowledgeEntry["verificationStatus"],
+    isBuiltIn: false,
+  }));
+  const defaultEntries = getDefaultAssistantKnowledge(locale);
+  const matchingDefaults = terms.length
+    ? defaultEntries.filter((entry) => {
+        const text = `${entry.title} ${entry.content} ${entry.tags.join(" ")}`.toLocaleLowerCase();
+        return terms.some((term) => text.includes(term));
+      })
+    : defaultEntries;
+  return [...storedEntries, ...matchingDefaults];
 }
 
 export async function searchAssistantKnowledge(
@@ -259,8 +281,9 @@ export async function searchAssistantKnowledge(
   agencyId: string,
   workspaceId: string,
   query: string,
+  locale: AssistantKnowledgeLocale = "en",
 ) {
-  const rows = await listAssistantKnowledge(actor, agencyId, workspaceId, query);
+  const rows = await listAssistantKnowledge(actor, agencyId, workspaceId, query, locale);
   const queryTerms = new Set(
     query
       .toLocaleLowerCase()
@@ -278,7 +301,8 @@ export async function searchAssistantKnowledge(
         b.score - a.score ||
         Number(b.row.verificationStatus === "verified") -
           Number(a.row.verificationStatus === "verified") ||
-        b.row.updatedAt.getTime() - a.row.updatedAt.getTime(),
+        b.row.updatedAt.getTime() - a.row.updatedAt.getTime() ||
+        Number(a.row.isBuiltIn) - Number(b.row.isBuiltIn),
     )
     .slice(0, 6)
     .map(({ row }) => ({ ...row, content: row.content.slice(0, 1_800) }));

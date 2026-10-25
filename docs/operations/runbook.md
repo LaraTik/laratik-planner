@@ -107,6 +107,8 @@ When a section header in this runbook carries an M-tag, that tag is the contract
 
 ## Local review, release, and deployment
 
+> **The canonical release path is [`docs/operations/release.md`](./release.md)** — one ordered sequence from verify through deploy to the deploy-log entry. This section is the reference detail behind it: the commands, the container topology, the backup/restore procedures, and the recovery paths. Where the two disagree, `release.md` wins.
+
 The release is reviewed and verified on the developer/operator machine.
 GitHub is the remote source and PR/merge record; do not dispatch GitHub Actions
 for routine branch checks, builds, or deployments. Normally keep the independent
@@ -284,6 +286,16 @@ ssh laratik-vps 'gunzip -c /var/backups/laratik-planner/planner-20260818-030000.
 # 4. Restart
 ssh laratik-vps 'cd /opt/laratik-planner && docker compose up -d app'
 ```
+
+### Local design preview from production data
+
+Use [`local-production-snapshot.md`](local-production-snapshot.md) and
+`./scripts/local-prod-snapshot.sh capture` to stream a production dump into a
+local staging database, scrub provider credentials and account identities,
+and save a reusable local-only snapshot. `restore` and `run` use only the
+dedicated local Postgres container and `planner_snapshot` database, separate
+from the regular development and test databases. This process does not restore
+to or modify production.
 
 ## Rotation
 

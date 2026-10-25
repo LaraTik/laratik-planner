@@ -94,6 +94,12 @@ localhost:5432  Postgres (Docker via docker-compose.dev.yml, OR homebrew)
 
 The Postgres port is shared between Docker and a local install. If you run both, change the port mapping in `docker-compose.dev.yml` to avoid the conflict. The repo's AGENTS.md assumes Docker, but the local `.env` works against either — `DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5432/planner` is host-agnostic.
 
+For a reusable, credential-scrubbed copy of production data, see
+[`local-production-snapshot.md`](local-production-snapshot.md). Its `run`
+command uses the isolated `planner_snapshot` database in a separate local
+Postgres container (port 5434 by default) and does not point the local app at
+production.
+
 ## Troubleshooting
 
 | Symptom                                                | Fix                                                                                                                              |

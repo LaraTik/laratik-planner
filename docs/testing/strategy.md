@@ -17,8 +17,11 @@ images. The full PostgreSQL integration suite remains a local release gate
 and is not run by GitHub Actions. Once CI succeeds for the same SHA, manually
 dispatch Deploy on `main`; it verifies the run and both image tags before
 invoking the VPS deployment. See ADR 0019 for manual-only triggers, ADR 0021
-for local review/evidence, and ADR 0022 for the main-only hosted build/deploy
-path. See [`../operations/local-test-speed-plan.md`](../operations/local-test-speed-plan.md)
+for local review/evidence, ADR 0022 for the main-only hosted build/deploy
+path, and ADR 0024 for the canonical ordered path, the review-evidence form,
+and the branch/worktree lifecycle. The ordered procedure itself is
+[`../operations/release.md`](../operations/release.md). See
+[`../operations/local-test-speed-plan.md`](../operations/local-test-speed-plan.md)
 for focused local checks and the staged plan for safely speeding up the full
 integration suite.
 

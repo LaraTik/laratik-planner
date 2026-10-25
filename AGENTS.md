@@ -11,7 +11,7 @@
 - Execute tracker items in dependency order. A full implementation pass does not remove evidence requirements.
 - Use atomic milestone commits and never mix unrelated work.
 - Never mark work complete from compilation alone or weaken/skip a test to obtain green output.
-- MiniMax may move work through `Tested`; only an independent reviewer may assign `Verified`.
+- MiniMax may move work through `Tested`; only an independent reviewer may assign `Verified`. The reviewer is the repository owner, or any other person who did not write the change — the implementation agent can never review its own work. The review may be recorded as a GitHub PR review **or** a local review record (reviewer, date, exact SHA, confirmed boxes); see `docs/contributing/pr-review-checklist.md`.
 - Record every material deviation with reason, impact, security/data implications, and approval requirement.
 - Preserve production identifiers/data. Every migration needs forward, compatibility, backup, and rollback evidence.
 - End an implementation pass with the evidence bundle described in `docs/production-readiness/README.md`.
@@ -22,6 +22,17 @@
 - Record the user's authorization, exact release SHA, failed or incomplete gates, and material impact/security/data risks in the production-readiness tracker and evidence bundle. This is a waiver of stop conditions, not a passing result: never weaken tests, describe a failed gate as passed, or assign `Verified` without the independent reviewer.
 - Keep the hard deployment controls: do not force-bypass GitHub branch protection or deployment-environment approvals; require successful CI and exact SHA-tagged images for the `main` SHA; retain provider preflight, production backup before migrations, readiness checks, and automatic rollback. If any hard control fails, stop and report the blocker.
 - A user-approved release may be deployed while UAT or readiness remains `Pending` / `NOT READY`; keep that status truthful and record the deployment as risk-accepted, not as production-readiness verification.
+
+## The release path
+
+**`docs/operations/release.md` is the canonical release path**: verify → review → merge → clean up → push → build and publish → deploy → verify → record. It is one ordered path with no options.
+
+`AGENTS.md`, `docs/operations/runbook.md`, and `docs/contributing/release-checklist.md` remain in force but describe the same sequence. Where they disagree with `docs/operations/release.md`, that document wins.
+
+Two rules that shape everything below:
+
+- **The independent review is a person, not a form.** ADR 0021 moved review to the local machine, so a GitHub PR review and a local review record satisfy the gate equally. What the gate protects is that someone who did not write the code read the diff. Requiring one specific artifact blocked the release without protecting anything.
+- **Squash-merges break ancestry-based tests.** A branch merged as a squash commit is only _patch-equivalent_ to `main`, never an _ancestor_ — and `git branch -d` refuses it. Ancestry alone is therefore never a safe test for "is this merged". Use `./scripts/cleanup-worktrees.sh`, which checks ancestry first and then falls back to patch equivalence plus a per-file content comparison.
 
 ## Quick start
 
@@ -38,9 +49,11 @@
 ./scripts/project.sh migrate      # pnpm db:migrate
 ./scripts/project.sh backup       # pg_dump → ./tmp/backups
 
-# Deploy to VPS
+# Deploy to VPS (canonical path: docs/operations/release.md)
 ./scripts/deploy.sh <full-sha>    # on the VPS, deploys the exact 40-char SHA built and published locally
-# See docs/operations/runbook.md#local-review-release-and-deployment for the procedure.
+# The local buildx → GHCR → ssh path is the FALLBACK for when the dispatched CI build
+# is unavailable. The normal path dispatches CI on main, then Deploy on main.
+# See docs/operations/release.md for the full ordered path.
 
 # Daily ops report (read-only; see docs/operations/daily-report.md)
 PLANNER_TOKEN=<read-only token> python3 scripts/daily-report.py
@@ -225,6 +238,7 @@ in one pass or extract code only to reduce file length.
 - ✅ Pre-push hook runs affected unit and integration checks selected from the pushed commit range; it does not run the full integration suite or E2E. The full integration suite runs once for a release candidate against disposable `planner_test`. Use `pnpm test:affected -- --layer browser` for local affected E2E and `pnpm test:e2e:release` for the strict full browser + visual release-candidate check. Do not dispatch GitHub Actions for branches or PRs. The only routine workflow dispatches are CI then Deploy against `main` after local review, merge, and evidence. Skip hooks only for a documented reason.
 - ✅ Review and verify locally before merging: inspect the complete diff, obtain the independent review required by the production-readiness tracker when available, run `pnpm verify`, and complete the applicable local integration, migration, bilingual browser, accessibility, and visual gates. Record evidence against the exact clean SHA. If the user explicitly requests merge/deploy while evidence is incomplete, record the waiver and risks and continue without treating the gates as passed.
 - ✅ Merge finished work to `main` after local review and required gates pass, or when the user explicitly authorizes merge/deploy. Push the resulting `main` SHA to `origin`; then manually dispatch the CI workflow on `main` to build, smoke-test, and publish the SHA-tagged app and migrator images. After CI succeeds for that exact SHA, manually dispatch Deploy on `main`. GitHub Actions never run automatically for branches or PRs; do not dispatch a branch ref. Follow the runbook and retain exact-SHA evidence. No finished work sits in a dirty tree or stale branch.
+- ✅ Branch and worktree lifecycle: a feature branch and its worktree are temporary scratch space. After its work lands on `main`, remove both — `git branch -d` and `git worktree remove` are correct for the common case. Squash-merges break the ancestry test, so use `./scripts/cleanup-worktrees.sh` (report by default, `--apply` to remove). It checks ancestry first, then patch equivalence plus a per-file content comparison; it refuses `main`, refuses dirty worktrees, and never discards unique work. A branch that still carries unmerged commits is unfinished work, not cleanup: rebase it onto `main` and finish it. See `docs/operations/release.md` § 4.
 - ✅ Before a Docker production build, check the Buildx builder's memory (`docker info --format '{{.MemTotal}}'`). The production Next build is capped at two workers and a 3 GiB Node heap. If the Docker VM has less than 8 GiB available or reports allocation/OOM failures, increase Docker Desktop memory (12 GiB recommended on this 48 GiB host) before retrying. Do not blindly raise `NODE_OPTIONS`: concurrent Next workers and BuildKit need memory outside the V8 heap. See `docs/operations/runbook.md`.
 - ✅ Keep the remote Planner MCP current on every change: update the implementation, `docs/api/mcp.md`, `docs/api/README.md`, `docs/api/mcp-evaluation.xml`, affected bilingual Account UI copy, tests, and production-readiness evidence together. Follow [`docs/operations/mcp-maintenance.md`](docs/operations/mcp-maintenance.md); never ship a new tool, scope, error, or transport behavior with stale client documentation.
 - ✅ Staging before production: not yet (single-environment for v1, see Goal 14)
@@ -576,7 +590,7 @@ diff shapes, and extension recipe.
 - **Branches:** `main` is production. `feat/*` for features, `fix/*` for hotfixes, `chore/*` for chores. Squash-merge.
 - **PRs:** local review and the applicable local release gates must be complete before merge. Reference the goal number in the PR title. Do not wait for or dispatch GitHub Actions.
 - **ADRs:** material deviations from the master prompt go in `docs/decisions/`. The first one (`docs/decisions/0001-vps-port.md`) records the choice to self-host on the LaraTik VPS instead of Supabase + Vercel.
-- **Merge on completion:** when independent local review, `pnpm verify`, and the applicable local integration/migration/browser/accessibility/visual gates are complete and recorded against the exact clean SHA, commit with a `<type>(<scope>): <description>` message, merge to `main`, and push. Manually dispatch CI on `main` to build/publish immutable SHA-tagged app/migrator images, then manually dispatch Deploy for the same SHA. GitHub does not run integration tests; the complete integration suite is a local release gate. Never dispatch branch or PR refs. No finished work sits in a dirty tree or stale branch; feature branches (`feat/*`, `fix/*`, `chore/*`) are temporary scratch space.
+- **Merge on completion:** when independent local review, `pnpm verify`, and the applicable local integration/migration/browser/accessibility/visual gates are complete and recorded against the exact clean SHA, commit with a `<type>(<scope>): <description>` message, merge to `main`, and push. Manually dispatch CI on `main` to build/publish immutable SHA-tagged app/migrator images, then manually dispatch Deploy for the same SHA. GitHub does not run integration tests; the complete integration suite is a local release gate. Never dispatch branch or PR refs. No finished work sits in a dirty tree or stale branch; feature branches (`feat/*`, `fix/*`, `chore/*`) are temporary scratch space — remove the branch and its worktree with `./scripts/cleanup-worktrees.sh --apply` once the work is on `main`. The full ordered path is `docs/operations/release.md`.
 
 ## Product UI/UX Engineering Rules
 
@@ -849,6 +863,82 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 - Tests covering A1→A2, A1→B1, B1→A1, browser refresh, browser back, direct URL, workspace removed, stale cached API response live in `tests/unit/workspace-isolation.test.ts` and `tests/e2e/workspace.spec.ts`.
 
 ## Changelog
+
+### 2026-10-25 — the release path was blocked by its own record-keeping, not by its gates
+
+Merging, cleaning up, pushing, and deploying had become slow in a way that
+looked like discipline and was not. The gate _content_ was sound; four
+mechanics around it were unreachable, contradictory, or mechanically
+impossible, and each one turned an ordinary merge into a written
+risk-acceptance paragraph. The review, with measurements, is in
+`docs/audits/RELEASE_PROCESS_REVIEW_2026-10-25.md`; the decision is ADR 0024.
+
+- **The independent review was trapped in an artifact.** ADR 0021 moved review
+  to the local machine, but the checklist still demanded a **GitHub PR
+  comment** as the proof. The tracker then recorded, release after release,
+  that the review was complete while "no independent GitHub review decision
+  is recorded" — and readiness stayed `READY FOR INDEPENDENT REVIEW` from
+  2026-08-24. The review now records as a GitHub PR review **or** a local
+  review record (reviewer, date, exact SHA, confirmed boxes). Independence is
+  unchanged: the implementation agent can never review its own work, and the
+  substantive checklist — IDOR, transactions, audit rows, tenant isolation,
+  migrations, secrets — is untouched.
+
+- **There was no cleanup procedure, and one worktree could not be cleaned.**
+  The repository demands "no finished work sits in a dirty tree or stale
+  branch" and provided no mechanism. `scripts/cleanup-worktrees.sh` now
+  classifies every ref — merged, stale snapshot, or unfinished work — and
+  removes only what is safe. It checks ancestry first, then patch equivalence
+  plus a per-file content comparison, because a squash-merged branch is only
+  patch-equivalent to `main` and `git branch -d` refuses it. It refuses
+  `main`, refuses dirty worktrees, and never discards unique work.
+
+- **The release path was described three ways.** The quick start implied a
+  local build, the hard rules required dispatching CI and Deploy on `main`,
+  and the runbook called the local path "recovery only".
+  `docs/operations/release.md` is now the single ordered path — verify →
+  review → merge → clean up → push → build and publish → deploy → verify →
+  record — and the local buildx path is named explicitly as the fallback.
+
+- **A clean release no longer needs a paragraph.** A routine release records
+  one row in the deploy log; the full narrative in the tracker and
+  `TEST_EVIDENCE.md` is written only when a gate failed, was waived, or the
+  release carried a risk acceptance.
+
+The hard deployment controls do not move: branch protection,
+deployment-environment approvals, exact-SHA CI and images, provider
+preflight, pre-migration backup, readiness check, and automatic rollback all
+still apply and all still block.
+
+### 2026-10-25 — the advertising account inventory must say when it last ran, not only that it is enabled
+
+The advertising account table reported whether sync was _enabled_ and
+whether reconciliation was _complete_. It never said when the account last
+actually ran, and it read "complete" for an account with no reconciliation
+row at all. Three separate reads of the same row were each allowed to
+answer for a different question.
+
+- **"Access" means the `read_reports` capability, and it means it now.**
+  Readiness counted any non-revoked visibility grant as report access, so a
+  grant for another capability — or one that had already expired — read as
+  access. An account could show "Ready" for reporting while no live report
+  grant existed. Access requires an available `read_reports` capability and
+  a grant active at the panel's as-of instant.
+
+- **"Complete" means a complete reconciliation, per account.** Completeness
+  resolves from the latest reconciliation row _for that account_, so a
+  capped history cannot make one account inherit another's state. An
+  account with no row reads "Not reconciled yet", never "Complete".
+
+- **"Synced" is not "ran".** The new "Last completed sync" column renders
+  the account's last completed run as a relative time, and says "Not
+  scheduled" when the account has never completed one. Sync _enabled_ and
+  sync _last ran_ are different facts and the table now prints both.
+
+An inactive account, or an active account with no available
+`read_reports` capability, now moves the operator summary to "Needs
+attention" and points at account discovery when no reportable account
+exists.
 
 ### 2026-10-20 — a permission is one table, checked twice, not two lists
 

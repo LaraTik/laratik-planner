@@ -346,18 +346,35 @@ describe("Workspace AI Assistant session privacy and prompt governance", () => {
       agencyId,
       workspaceBId,
     );
-    expect(workspaceBKnowledge.map((row) => row.id)).toEqual([agencyEntry.id]);
+    // Built-in defaults are returned for every workspace, so isolation is
+    // asserted over the stored entries rather than over the whole list.
+    expect(workspaceBKnowledge.filter((row) => !row.isBuiltIn).map((row) => row.id)).toEqual([
+      agencyEntry.id,
+    ]);
+    expect(workspaceBKnowledge.map((row) => row.id)).not.toContain(entry.id);
+    expect(workspaceBKnowledge.filter((row) => row.isBuiltIn)).toHaveLength(9);
     expect(
-      await assistant.searchAssistantKnowledge(
-        { id: workspaceManagerA.id },
-        agencyId,
-        workspaceAId,
-        "voice strategy",
+      workspaceBKnowledge.every(
+        (row) => row.isBuiltIn || row.id === agencyEntry.id || row.id === entry.id,
       ),
-    ).toMatchObject([{ id: entry.id, verificationStatus: "verified", revision: 1 }]);
+    ).toBe(true);
+    const workspaceASearch = await assistant.searchAssistantKnowledge(
+      { id: workspaceManagerA.id },
+      agencyId,
+      workspaceAId,
+      "voice strategy",
+    );
+    expect(workspaceASearch[0]).toMatchObject({
+      id: entry.id,
+      verificationStatus: "verified",
+      revision: 1,
+    });
+    expect(workspaceASearch.map((row) => row.id)).not.toContain(agencyEntry.id);
     expect(
       await assistant.listAssistantKnowledge({ id: workspaceManagerB.id }, agencyId, workspaceBId),
-    ).toMatchObject([{ id: agencyEntry.id, scope: "agency" }]);
+    ).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: agencyEntry.id, scope: "agency" })]),
+    );
 
     await expect(
       assistant.createAssistantKnowledge({ id: plannerA.id }, agencyId, workspaceAId, {

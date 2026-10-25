@@ -12,9 +12,22 @@ descriptions.
   `monthly_planning_copilot` capability, managed MiniMax key, model allowlist,
   per-user rate limit, and token reservation/reconciliation.
 - The assistant reads a selected month through authorized Planner services,
-  with bounded plan items, brand context, and permitted workspace or agency
-  knowledge. Deterministic analysis identifies calendar gaps; model findings
+  with bounded plan items, brand context, permitted workspace or agency
+  knowledge, and generic Planner default guidance. Default guidance appears in
+  the Knowledge Library and can inform recommendations, but it never supplies
+  facts about a workspace's brand, audience, products, offers, metrics, or
+  operations. Deterministic analysis identifies calendar gaps; model findings
   and recommendations must cite evidence returned for the current request.
+- The Knowledge Library includes nine curated, code-owned default entries
+  adapted from `docs/ai-planning/defaults/`, with English and Arabic variants.
+  They cover objective-led strategy, decision-ready briefs, evidence and
+  assumptions, responsible claims, channel fit, production readiness,
+  localization, accessibility, and measurement. Relevant entries link to
+  AMEC, ICC, or W3C guidance; the defaults do not claim to establish
+  jurisdiction-specific compliance or workspace facts. Their scope is
+  `default`; they are read-only and always available for retrieval. Workspace
+  managers can copy one into workspace scope to tailor it; the copy starts
+  unverified and then uses normal revision history.
 - Model-driven tools, when enabled by an agency administrator, are a fixed,
   bounded, schema-validated, read-only allowlist. The model cannot select a
   workspace, issue database queries, or add tools. Tool use stays disabled

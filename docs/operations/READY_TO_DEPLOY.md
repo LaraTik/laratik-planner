@@ -131,6 +131,27 @@ If the rollback cause is a schema issue, write a forward-fix migration (never ed
 
 Never record secret values, real invitation URLs, or production user data in this log.
 
+## Deploy log
+
+One row per deploy. This is the record the release checklist's per-deploy gate refers to.
+
+| SHA | Date | Operator | CI run | Deploy run | Health version | Reviewer | Gates | Result |
+| --- | ---- | -------- | ------ | ---------- | -------------- | -------- | ----- | ------ |
+|     |      |          |        |            |                |          |       |        |
+
+**How to fill it.**
+
+- **SHA** — the full 40-character `main` commit that was deployed.
+- **CI run / Deploy run** — the workflow run URLs. In the local-build fallback path, write `local buildx` in place of the CI run URL.
+- **Health version** — the `version` reported by `https://planner.laratik.com/api/health` after the deploy.
+- **Reviewer** — who signed the `docs/contributing/pr-review-checklist.md` boxes, or `waived` when the release proceeded without one.
+- **Gates** — `green` / the list of failed or waived gates with the exact command for each.
+- **Result** — `deployed`, `risk accepted`, or `rolled back`.
+
+**When to write more than a row.** A routine release gets one row. A release where a gate failed, a gate was waived, or the release carried a risk acceptance also gets a full narrative in `PRODUCTION_READINESS_TRACKER.md` and `docs/production-readiness/TEST_EVIDENCE.md` — that is the case where the prose carries information.
+
+Never record secret values, real invitation URLs, or production user data here.
+
 ## Cross-references
 
 - `PRODUCTION_READINESS_TRACKER.md` — OPS-001 row, DEP-001 / DEP-002 rows
