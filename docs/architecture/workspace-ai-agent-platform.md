@@ -101,7 +101,21 @@ manage agency entries. Knowledge is passed to the assistant as source-linked,
 untrusted reference data; tool-mode citations are restricted to evidence IDs
 actually returned by the authorized knowledge tool. Document upload, website
 ingestion, semantic retrieval, usage tracking, and richer provenance remain
-unimplemented. Proposal application supports title, brief, and planned-date
+unimplemented.
+
+The Knowledge Library also includes nine bilingual, code-owned Planner default
+guidance entries adapted from `docs/ai-planning/defaults/`. They are visible in
+the library and available through bounded retrieval under the `default` scope.
+The entries provide generic guidance on strategy, evidence, responsible
+marketing, execution, accessibility, and measurement; relevant entries link to
+AMEC, ICC, or W3C sources. Platform specifications and jurisdiction-specific
+requirements are not treated as fixed defaults. Workspace managers can copy an
+entry into workspace scope to tailor it; the copy begins unverified and uses
+the standard revision history. The built-in entries do not establish
+workspace-specific brand, product, audience, offer, performance, or operating
+facts.
+
+Proposal application supports title, brief, and planned-date
 changes on one explicitly selected draft. The legacy transcript table is
 retained for migration compatibility but is no longer read or written by
 runtime code. Existing transcript rows are not automatically deleted by this

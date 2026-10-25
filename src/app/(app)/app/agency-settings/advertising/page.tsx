@@ -91,6 +91,7 @@ export default async function AdvertisingSettingsPage() {
         }
       />
       <AdvertisingAdminPanel
+        asOf={new Date().toISOString()}
         connections={connections.map((connection) => ({
           ...connection,
           lastValidatedAt: connection.lastValidatedAt?.toISOString() ?? null,
@@ -128,6 +129,10 @@ export default async function AdvertisingSettingsPage() {
           completedAt: run.completedAt?.toISOString() ?? null,
         }))}
         reconciliations={resources.reconciliations.map((row) => ({
+          ...row,
+          checkedAt: row.checkedAt.toISOString(),
+        }))}
+        latestReconciliations={resources.latestReconciliations.map((row) => ({
           ...row,
           checkedAt: row.checkedAt.toISOString(),
         }))}

@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { Archive, Clock3, FilePlus2, Pencil, Search } from "lucide-react";
+import { Archive, Clock3, Copy, FilePlus2, Pencil, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DirAwareInput, DirAwareTextarea } from "@/components/forms/dir-aware-textarea";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 
-type KnowledgeScope = "workspace" | "agency";
+type KnowledgeScope = "workspace" | "agency" | "default";
 type KnowledgeCategory =
   "brand" | "audience" | "strategy" | "operations" | "performance" | "reference";
 type VerificationStatus = "unverified" | "verified" | "outdated";
@@ -23,6 +23,7 @@ type KnowledgeEntry = {
   verifiedAt: string | null;
   revision: number;
   updatedAt: string;
+  isBuiltIn: boolean;
 };
 type KnowledgeSnapshot = Pick<
   KnowledgeEntry,
@@ -77,7 +78,10 @@ export function KnowledgeLibrary({
   async function loadEntries(query = search) {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ workspaceSlug });
+      const params = new URLSearchParams({
+        workspaceSlug,
+        locale: locale === "ar" ? "ar" : "en",
+      });
       if (query.trim()) params.set("q", query.trim());
       const response = await fetch(`/api/ai/workspace-assistant/knowledge?${params}`, {
         cache: "no-store",
@@ -94,7 +98,10 @@ export function KnowledgeLibrary({
 
   useEffect(() => {
     let cancelled = false;
-    const params = new URLSearchParams({ workspaceSlug });
+    const params = new URLSearchParams({
+      workspaceSlug,
+      locale: locale === "ar" ? "ar" : "en",
+    });
     void fetch(`/api/ai/workspace-assistant/knowledge?${params}`, { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("knowledge_load_failed");
@@ -110,7 +117,7 @@ export function KnowledgeLibrary({
     return () => {
       cancelled = true;
     };
-  }, [workspaceSlug]);
+  }, [workspaceSlug, locale]);
 
   function resetForm() {
     setFormOpen(false);
@@ -134,6 +141,19 @@ export function KnowledgeLibrary({
     setTags(entry.tags.join(", "));
     setSourceUrl(entry.sourceUrl ?? "");
     setVerificationStatus(entry.verificationStatus);
+    setFormOpen(true);
+    setError(false);
+  }
+
+  function beginCustomize(entry: KnowledgeEntry) {
+    resetForm();
+    setScope("workspace");
+    setCategory(entry.category);
+    setTitle(entry.title);
+    setContent(entry.content);
+    setTags(entry.tags.join(", "));
+    setSourceUrl(entry.sourceUrl ?? "");
+    setVerificationStatus("unverified");
     setFormOpen(true);
     setError(false);
   }
@@ -218,6 +238,7 @@ export function KnowledgeLibrary({
   }
 
   function canEdit(entry: KnowledgeEntry) {
+    if (entry.isBuiltIn) return false;
     return entry.scope === "agency" ? canManageAgency : canManageWorkspace;
   }
 
@@ -256,6 +277,10 @@ export function KnowledgeLibrary({
           </Button>
         ) : null}
       </div>
+
+      <p className="text-label text-fg-muted mt-3" role="note">
+        {t("workspaceAssistant.knowledge.defaultNotice")}
+      </p>
 
       {formOpen ? (
         <form className="border-border mt-4 grid gap-3 border-t pt-4" onSubmit={saveEntry}>
@@ -409,7 +434,9 @@ export function KnowledgeLibrary({
         </p>
       ) : entries.length === 0 ? (
         <p className="text-label text-fg-muted mt-3" role="status">
-          {t("workspaceAssistant.knowledge.empty")}
+          {search.trim()
+            ? t("workspaceAssistant.knowledge.noSearchResults")
+            : t("workspaceAssistant.knowledge.empty")}
         </p>
       ) : (
         <ul className="mt-3 grid gap-3">
@@ -429,37 +456,53 @@ export function KnowledgeLibrary({
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => void toggleHistory(entry)}
-                  >
-                    <Clock3 className="me-1 h-4 w-4" aria-hidden="true" />
-                    {t("workspaceAssistant.knowledge.history")}
-                  </Button>
-                  {canEdit(entry) ? (
+                  {entry.isBuiltIn ? (
+                    canManageWorkspace ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => beginCustomize(entry)}
+                      >
+                        <Copy className="me-1 h-4 w-4" aria-hidden="true" />
+                        {t("workspaceAssistant.knowledge.customize")}
+                      </Button>
+                    ) : null
+                  ) : (
                     <>
                       <Button
                         type="button"
                         size="sm"
                         variant="ghost"
-                        onClick={() => beginEdit(entry)}
+                        onClick={() => void toggleHistory(entry)}
                       >
-                        <Pencil className="me-1 h-4 w-4" aria-hidden="true" />
-                        {t("workspaceAssistant.knowledge.edit")}
+                        <Clock3 className="me-1 h-4 w-4" aria-hidden="true" />
+                        {t("workspaceAssistant.knowledge.history")}
                       </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => void archiveEntry(entry)}
-                      >
-                        <Archive className="me-1 h-4 w-4" aria-hidden="true" />
-                        {t("workspaceAssistant.knowledge.archive")}
-                      </Button>
+                      {canEdit(entry) ? (
+                        <>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => beginEdit(entry)}
+                          >
+                            <Pencil className="me-1 h-4 w-4" aria-hidden="true" />
+                            {t("workspaceAssistant.knowledge.edit")}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => void archiveEntry(entry)}
+                          >
+                            <Archive className="me-1 h-4 w-4" aria-hidden="true" />
+                            {t("workspaceAssistant.knowledge.archive")}
+                          </Button>
+                        </>
+                      ) : null}
                     </>
-                  ) : null}
+                  )}
                 </div>
               </div>
               <p className="text-body text-fg-secondary mt-2 whitespace-pre-wrap" dir="auto">

@@ -151,14 +151,15 @@
   "showHistory": "Show conversation history",
   "knowledge": {
     "title": "Workspace knowledge",
-    "description": "Keep approved brand, audience, strategy, and reference notes available to the assistant. Shared notes never share workspace access.",
+    "description": "Keep brand, audience, strategy, and reference notes available to the assistant. Shared notes never share workspace access.",
+    "defaultNotice": "Planner starter guidance offers general planning recommendations. Add workspace notes for your brand, audience, products, offers, results, and operating details. Copy a default note to tailor it for this workspace.",
     "add": "Add knowledge",
     "name": "Name",
     "category": "Category",
     "scope": "Share with",
     "workspaceScope": "This workspace",
     "agencyScope": "Agency",
-    "scopes": { "workspace": "Workspace", "agency": "Agency" },
+    "scopes": { "workspace": "Workspace", "agency": "Agency", "default": "Planner default" },
     "verification": "Review status",
     "statuses": { "unverified": "Unverified", "verified": "Verified", "outdated": "Outdated" },
     "categories": {
@@ -180,10 +181,12 @@
     "searchPlaceholder": "Search names and details",
     "loading": "Loading knowledge…",
     "empty": "No knowledge found. Add guidance that should inform assistant responses.",
+    "noSearchResults": "No knowledge matches this search.",
     "error": "Knowledge could not be saved or loaded. Check access and try again.",
     "history": "History",
     "revision": "Revision {revision}",
     "edit": "Edit",
+    "customize": "Copy to workspace",
     "archive": "Archive",
     "confirmArchive": "Archive this knowledge entry? It will no longer be used by the assistant."
   }

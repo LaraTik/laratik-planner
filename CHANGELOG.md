@@ -12,6 +12,47 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Added — the advertising account inventory now says when it last synced, and when it is not reconciled
+
+The advertising account table reported whether sync was _enabled_ and
+whether reconciliation was _complete_, but never when the account last
+actually ran, and it treated an account with no reconciliation row as
+"complete" rather than "not reconciled yet". An operator could read a
+healthy-looking row for an account that had never been synced.
+
+- **Report access is the `read_reports` capability, and it must still be
+  live.** Readiness counted _any_ non-revoked visibility grant as report
+  access. A grant for another capability, or one that had already expired,
+  counted as access — so an account could read as "Ready" for reporting
+  while no live report grant existed. Access now requires an available
+  `read_reports` capability and a grant that is active at the panel's
+  as-of instant.
+- **An account with no reconciliation row is not reconciled.** Completeness
+  now resolves from the latest reconciliation row _per account_ rather
+  than from the newest row overall, so a capped history cannot make one
+  account inherit another's state, and an account with no row reads as
+  "Not reconciled yet" instead of "Complete".
+- **Inactive and unreportable accounts need attention.** An account that
+  is inactive, or that is active but has no available `read_reports`
+  capability, now moves the operator summary to "Needs attention" and
+  points at account discovery when no reportable account exists.
+- **The inventory shows when each account last completed a sync.** A new
+  "Last completed sync" column renders the account's last completed run
+  as a relative time, and says "Not scheduled" when the account has never
+  completed one.
+
+### Fixed — the workspace knowledge isolation test now asserts isolation over stored entries
+
+The default knowledge library pack introduced nine built-in entries that
+every workspace receives. The knowledge isolation test still asserted the
+whole list equalled the single agency entry, so it failed on the built-ins
+and no longer checked the property it was written for: that a workspace
+never sees another workspace's stored entries.
+
+The test now asserts isolation over the stored entries, that a workspace
+never sees another workspace's stored entry, and that the nine built-ins
+are present and flagged as built-in.
+
 ### Fixed — a full review of user permission assignment across the planning flow (and the rest of the app)
 
 A review of who may do what, measured against the master prompt §9 role

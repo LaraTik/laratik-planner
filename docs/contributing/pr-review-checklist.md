@@ -4,7 +4,28 @@
 
 ## Review contract
 
-A PR is `Verified` only when an independent reviewer (not the author) confirms every item below. The `Tested` transition is the author's responsibility; the `Verified` transition is the reviewer's. Both must reference the goal number, the gap-audit ID (if part of a sweep), and the M-tag in the PR title.
+A change is `Verified` only when an independent reviewer (not the author) confirms every item below. The `Tested` transition is the author's responsibility; the `Verified` transition is the reviewer's. Both must reference the goal number, the gap-audit ID (if part of a sweep), and the M-tag.
+
+### Who the reviewer is
+
+The implementation agent writes the code and may move work to `Tested`. **It can never be the reviewer of its own work.** The reviewer is the repository owner, or any other person who did not write the change.
+
+Independence is the whole substance of this gate: the reviewer must have read the diff and the evidence for the exact SHA before confirming the boxes. Nothing below is satisfied by an agent reading its own output.
+
+### Where the review is recorded
+
+ADR 0021 (`docs/decisions/0021-local-review-and-release.md`) moved review to the local operator machine, so the review record may take either form:
+
+- a **GitHub PR review** (approve / request changes), or
+- a **local review record** in the evidence file for that change, naming the reviewer, the date, the exact SHA, and the confirmed boxes.
+
+Both forms satisfy this checklist equally. What this gate protects is that a second pair of eyes checked the diff — the artifact the review is written on is not the point, and requiring one specific artifact blocks the release without protecting anything.
+
+> Never assign `Verified` without this review. If the review did not happen, the row stays `Tested` and the release is risk-accepted at most.
+
+### What this checklist does not change
+
+The substantive review items below — IDOR, transaction boundaries, audit rows, tenant isolation, coverage, migrations and secrets — are unchanged by where the review is recorded.
 
 ## 1. IDOR and authorization
 
@@ -64,7 +85,9 @@ The PR must leave the operational surface in a known state. The reviewer verifie
 
 ## 7. Reviewer sign-off
 
-The reviewer records the verdict in the PR description and in the relevant `PRODUCTION_READINESS_TRACKER.md` row. The sign-off is the gate that flips the row from `Tested` to `Verified`; the tracker is the single source of truth for that transition.
+The reviewer records the verdict in the review record — the PR description, the PR review itself, or the local evidence record — and in the relevant `PRODUCTION_READINESS_TRACKER.md` row. The sign-off is the gate that flips the row from `Tested` to `Verified`; the tracker is the single source of truth for that transition.
+
+A sign-off names the **reviewer**, the **date**, the **exact SHA**, and the confirmed boxes. It is not satisfied by the absence of objections.
 
 | Item                                                                  |  Confirmed by reviewer   | Notes |
 | --------------------------------------------------------------------- | :----------------------: | ----- |

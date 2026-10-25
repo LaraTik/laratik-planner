@@ -1,5 +1,64 @@
 # Test and coverage evidence
 
+## Default Workspace Knowledge Library — merge authorization and exact-code verification — 2026-10-25
+
+Exact feature code SHA: `439e796a707be6c4c1da8b5c84ce7c948d9c743f`
+(`codex/default-knowledge-starters`, based on current `main` SHA
+`b583b1381100fa8ea52e15e52f31776f8104ac3b`). The user explicitly authorized
+merging the changes to `main` and cleaning up the feature branch. Per the
+repository release instructions, this authorization proceeds through the PR,
+main-only exact-SHA CI, and Deploy sequence, while keeping all hard release
+controls in force.
+
+| Check                           | Result                                                                                                                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Commit hook                     | Passed: repository pre-commit typecheck and affected unit layer exited 0.                                                                                                            |
+| `pnpm verify`                   | Passed on exact code SHA: formatting, ESLint, strict TypeScript, 626 unit files / 5,340 tests, and optimized Next.js production build.                                               |
+| Integration and migration drill | Not rerun for this feature SHA. No schema or migration changed.                                                                                                                      |
+| Release E2E and visual matrices | Not rerun for this feature SHA. The earlier release E2E result remains 296 passed / 6 failed / 1 skipped; the 272-case visual matrix remains incomplete after 5 mismatches.          |
+| User-facing and provider UAT    | The feature adds nine bilingual built-in guidance entries; MiniMax model/tool/privacy UAT and separated-account UAT remain open. Source guidance still requires human review in use. |
+| Release verdict                 | Authorized to proceed as a risk-accepted release. This does not turn earlier or unrun gates into passes. Readiness remains **NOT READY**; M3.8 remains **In Progress**.              |
+
+The change adds built-in, workspace-level knowledge guidance and copies it to
+new workspaces; it makes no database schema or migration change. The guidance
+can shape Assistant responses and therefore needs review by workspace users.
+Production restore/rollback proof and an independent review record also remain
+open. The exact merged `main` SHA, CI and Deploy runs, and deployment-control
+results will be recorded here after those steps complete.
+
+## Local production snapshot preview — 2026-10-25
+
+Snapshot workflow code is committed locally at clean SHA
+`672a001a2ebfec15e1767901d73714c30f07aac6` on
+`codex/local-prod-snapshot`; it has not been pushed. This is operational
+preview evidence, not a release gate or a claim that the production-readiness
+matrix passed.
+
+| Check                                                                           | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `./scripts/local-prod-snapshot.sh capture`                                      | Passed in the implementation worktree before the final commit, saving the reusable archive with owner-only permissions. It streamed the dump over SSH and sanitized only in the local staging database; production was read only. The exact-SHA check below verifies restoring and running that archive. Capture was not repeated after commit, to avoid an unnecessary second production read.                                                                                                                                         |
+| `LOCAL_PLANNER_APP_DIR=<preview checkout> ./scripts/local-prod-snapshot.sh run` | Passed at the exact tooling SHA above: restored the saved snapshot into the dedicated loopback-only Postgres container, applied the selected checkout's migrations, and started Next.js. The process was available at `http://localhost:3000` at the time of the check and was stopped afterwards; the snapshot container and its `planner_snapshot` database remain available for a later `run`. The preview checkout was a scratch worktree and was removed after the check, so the command above is written with a placeholder path. |
+| Local HTTP smoke check                                                          | Passed, exit 0: `/` returned HTTP 200, `/dev/signin` returned HTTP 200, and `/api/health` returned `ok: true`, `db: up`, `schema: ready`, and `env: development`.                                                                                                                                                                                                                                                                                                                                                                       |
+| Local preview sign-in                                                           | Passed with the sanitized `local-preview@example.invalid` admin account; the local dev sign-in routed to `/app` and the snapshot-backed platform overview rendered.                                                                                                                                                                                                                                                                                                                                                                     |
+| Automated release suites                                                        | Not run. This change is shell, SQL sanitization, and documentation; only syntax, capture/restore behavior, app startup, and local health were checked. `SKIP_PRECOMMIT=1` was used to avoid running the automated test hook; production-readiness is not inferred from these checks.                                                                                                                                                                                                                                                    |
+
+Commands ran from the snapshot tooling worktree:
+
+```sh
+bash -n scripts/local-prod-snapshot.sh
+./scripts/local-prod-snapshot.sh --help
+./scripts/local-prod-snapshot.sh capture
+LOCAL_PLANNER_APP_DIR=<preview checkout> ./scripts/local-prod-snapshot.sh run
+curl --max-time 30 -sS -o /dev/null -w 'home HTTP %{http_code}\n' http://127.0.0.1:3000/
+curl --max-time 30 -fsS http://127.0.0.1:3000/api/health
+curl --max-time 30 -sS -o /dev/null -w '\ndev signin HTTP %{http_code}\n' http://127.0.0.1:3000/dev/signin
+```
+
+The app preview uses an isolated copy of the owner's staged UI changes; those
+changes are not part of the snapshot workflow commit. Business content remains
+confidential production data after scrubbing. Do not share the archive, and do
+not use this local operational check as production UAT or visual sign-off.
+
 ## Workspace AI Assistant production deployment — 2026-10-25
 
 PR #48 was squash-merged to `main` as exact SHA

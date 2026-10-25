@@ -75,7 +75,7 @@ The following facts are part of the implementation preflight:
 
 ### Documentation and release evidence
 
-- Create `docs/decisions/0005-platform-aware-social-metrics.md`.
+- Create `docs/decisions/0005-platform-aware-social-metric-contract.md`.
 - Modify `docs/operations/runbook.md` under Social analytics.
 - Modify `docs/production-readiness/EXTERNAL_SERVICES_UAT.md`, `docs/production-readiness/TEST_EVIDENCE.md`, and the relevant M4 row/sub-rows in `PRODUCTION_READINESS_TRACKER.md`.
 - Record the exact clean SHA and command results in the evidence bundle; do not mark any row `Verified` without independent review.
@@ -139,7 +139,7 @@ Expected: schema, repository upsert, metadata persistence, and retention behavio
 
 ### Task 1: Freeze the acceptance examples
 
-**Files:** Create `docs/decisions/0005-platform-aware-social-metrics.md`.
+**Files:** Create `docs/decisions/0005-platform-aware-social-metric-contract.md`.
 
 - [ ] **Step 1: Document the platform matrix.**
 
@@ -168,7 +168,7 @@ State that no table migration is required because `source_metadata` is already J
 Run:
 
 ```bash
-git add docs/decisions/0005-platform-aware-social-metrics.md
+git add docs/decisions/0005-platform-aware-social-metric-contract.md
 git commit -m "docs(analytics): define platform metric capabilities"
 ```
 
@@ -415,7 +415,7 @@ git commit -m "feat(analytics): persist partial metric snapshots"
 
 ### Task 6: Verify database compatibility without a migration
 
-**Files:** Modify `tests/integration/social-analytics.test.ts` only if coverage needs an explicit legacy/new metadata case; update `docs/decisions/0005-platform-aware-social-metrics.md` if the final JSON contract changes.
+**Files:** Modify `tests/integration/social-analytics.test.ts` only if coverage needs an explicit legacy/new metadata case; update `docs/decisions/0005-platform-aware-social-metric-contract.md` if the final JSON contract changes.
 
 - [ ] **Step 1: Test legacy rows.**
 
@@ -436,7 +436,7 @@ Expected: no new migration is generated, existing from-zero and upgrade paths re
 - [ ] **Step 4: Commit compatibility evidence.**
 
 ```bash
-git add tests/integration/social-analytics.test.ts docs/decisions/0005-platform-aware-social-metrics.md
+git add tests/integration/social-analytics.test.ts docs/decisions/0005-platform-aware-social-metric-contract.md
 git commit -m "test(analytics): verify legacy metric metadata compatibility"
 ```
 

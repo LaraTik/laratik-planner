@@ -1,6 +1,8 @@
 # Release checklist
 
 > Keyed to the master prompt §24 "Definition of done and release gates" and to `docs/production-readiness/README.md`. The release gate is the per-deploy evidence the operator attaches to the deploy record; the release verdict is the long-lived state in `PRODUCTION_READINESS_TRACKER.md` and `docs/production-readiness/UAT_RELEASE.md`.
+>
+> **The ordered release procedure is [`docs/operations/release.md`](../operations/release.md).** This checklist states _what_ must be evidenced; that document states _in what order_ it happens.
 
 ## 1. Per-deploy gate (the deploy record)
 
@@ -26,16 +28,16 @@ A deploy with any required gate failing is rolled back. The rollback procedure i
 
 A `READY FOR INDEPENDENT REVIEW` → `READY` verdict transition is gated by the long-lived evidence. The reviewer confirms every box below before flipping the verdict in `PRODUCTION_READINESS_TRACKER.md` and `docs/production-readiness/UAT_RELEASE.md`:
 
-| Item                                                                                | Evidence path                                                               | Confirmed |
-| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | :-------: |
-| The 30-step §23 journey PASS for every step                                         | `docs/production-readiness/UAT_RELEASE.md` (one row per step)               |     ☐     |
-| The `EXTERNAL_SERVICES_UAT.md` rows are signed by the owner                         | `docs/production-readiness/EXTERNAL_SERVICES_UAT.md` (owner column)         |     ☐     |
-| Sentry DSN + alert rules live (`OBS-001` closure)                                   | Sentry project + 4 alert rules per `docs/operations/observability.md:73-78` |     ☐     |
-| Manual a11y sign-off (`QA-005` closure)                                             | `docs/production-readiness/ACCESSIBILITY_CHECKLIST.md` (operator + date)    |     ☐     |
-| Visual baselines on the stable UI (`QA-004` closure)                                | `coverage/visual/` artifacts (per-viewport)                                 |     ☐     |
-| Migration drill at the current HEAD matches the production DB ledger                | `pnpm migration-drill` 5/5 + `drizzle.__drizzle_migrations` SELECT          |     ☐     |
-| Encrypted offsite backup + restore drill (`OPS-001` closure)                        | `docs/operations/backup-recovery.md` (last drill date + SHA)                |     ☐     |
-| Independent reviewer (not the author) has signed the `pr-review-checklist.md` boxes | PR comment + tracker row `Verified`                                         |     ☐     |
+| Item                                                                                | Evidence path                                                                                    | Confirmed |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | :-------: |
+| The 30-step §23 journey PASS for every step                                         | `docs/production-readiness/UAT_RELEASE.md` (one row per step)                                    |     ☐     |
+| The `EXTERNAL_SERVICES_UAT.md` rows are signed by the owner                         | `docs/production-readiness/EXTERNAL_SERVICES_UAT.md` (owner column)                              |     ☐     |
+| Sentry DSN + alert rules live (`OBS-001` closure)                                   | Sentry project + 4 alert rules per `docs/operations/observability.md:73-78`                      |     ☐     |
+| Manual a11y sign-off (`QA-005` closure)                                             | `docs/production-readiness/ACCESSIBILITY_CHECKLIST.md` (operator + date)                         |     ☐     |
+| Visual baselines on the stable UI (`QA-004` closure)                                | `coverage/visual/` artifacts (per-viewport)                                                      |     ☐     |
+| Migration drill at the current HEAD matches the production DB ledger                | `pnpm migration-drill` 5/5 + `drizzle.__drizzle_migrations` SELECT                               |     ☐     |
+| Encrypted offsite backup + restore drill (`OPS-001` closure)                        | `docs/operations/backup-recovery.md` (last drill date + SHA)                                     |     ☐     |
+| Independent reviewer (not the author) has signed the `pr-review-checklist.md` boxes | GitHub PR review **or** local review record (reviewer, date, exact SHA) + tracker row `Verified` |     ☐     |
 
 A single unchecked box is a verdict-blocker. The `READY` verdict is the operator-facing promise that every box is checked; the `READY FOR INDEPENDENT REVIEW` verdict is the intermediate state during the closure process.
 
@@ -56,7 +58,8 @@ A `PARTIAL` row is not a verdict-blocker per se, but an unnamed `PARTIAL` (no ow
 The release is not done when the deploy is green. The follow-up hygiene is:
 
 - **Tag the release** with an immutable annotated tag: `git tag -a v<MAJOR>.<MINOR>.<PATCH> <sha> -m "<message>"`. The tag is referenced from `PRODUCTION_READINESS_TRACKER.md` and `docs/production-readiness/CHANGELOG.md` (if present).
-- **Record the deploy** in `docs/operations/READY_TO_DEPLOY.md` §"Deploy log" (or the successor surface). The record includes the SHA, the operator, the date, the workflow run URL, and the smoke evidence.
+- **Record the deploy.** A routine release records **one row** in `docs/operations/READY_TO_DEPLOY.md` § "Deploy log" (SHA, date, operator, CI run, deploy run, health version, reviewer, gate results).
+  - Add a **full narrative** to `PRODUCTION_READINESS_TRACKER.md` and `docs/production-readiness/TEST_EVIDENCE.md` **only when** a gate failed, a gate was waived, or the release carried a risk acceptance. That is the case where the prose carries information; a clean release does not need a paragraph to say that nothing failed.
 - **Monitor the release** for the first 60 minutes. The four Sentry alert rules in `docs/operations/observability.md` are the floor; the operator's eyes are the ceiling.
 - **Close the loop on the UAT journey.** The 30-step §23 walk-through is re-run end-to-end on the live URL with separated accounts; the result is the `UAT_RELEASE.md` row that closes the per-release gate.
 - **Archive the deploy workflow run.** The 90-day GitHub Actions retention is the floor; the `playwright-report`, `test-results`, and `coverage-report` artifacts are attached to the deploy record.

@@ -37,12 +37,15 @@ export async function GET(request: NextRequest) {
     .max(200)
     .safeParse(request.nextUrl.searchParams.get("q") ?? "");
   if (!search.success) return fail("invalid_request", 400);
+  const locale = z.enum(["en", "ar"]).safeParse(request.nextUrl.searchParams.get("locale") ?? "en");
+  if (!locale.success) return fail("invalid_request", 400);
   try {
     const knowledge = await listAssistantKnowledge(
       scope.actor,
       scope.agencyId,
       scope.workspace.id,
       search.data,
+      locale.data,
     );
     return NextResponse.json({ knowledge }, { headers: mutatingApiHeaders() });
   } catch {

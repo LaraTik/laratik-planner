@@ -495,6 +495,7 @@ export async function listAdvertisingResourcesForAdmin() {
     financialAuthorities,
     validationResults,
     reconciliations,
+    latestReconciliations,
     syncRuns,
   ] = await Promise.all([
     db
@@ -685,6 +686,32 @@ export async function listAdvertisingResourcesForAdmin() {
       .orderBy(desc(advertisingSpendReconciliations.checkedAt))
       .limit(100),
     db
+      .selectDistinctOn([advertisingSpendReconciliations.accountId], {
+        id: advertisingSpendReconciliations.id,
+        accountId: advertisingSpendReconciliations.accountId,
+        accountName: advertisingAccounts.name,
+        reportDate: advertisingSpendReconciliations.reportDate,
+        currency: advertisingSpendReconciliations.currency,
+        providerAccountSpend: advertisingSpendReconciliations.providerAccountSpend,
+        canonicalAdSpend: advertisingSpendReconciliations.canonicalAdSpend,
+        workspaceAttributedSpend: advertisingSpendReconciliations.workspaceAttributedSpend,
+        unallocatedSpend: advertisingSpendReconciliations.unallocatedSpend,
+        discrepancy: advertisingSpendReconciliations.discrepancy,
+        completeness: advertisingSpendReconciliations.completeness,
+        checkedAt: advertisingSpendReconciliations.checkedAt,
+      })
+      .from(advertisingSpendReconciliations)
+      .innerJoin(
+        advertisingAccounts,
+        eq(advertisingAccounts.id, advertisingSpendReconciliations.accountId),
+      )
+      .where(eq(advertisingSpendReconciliations.agencyId, agencyId))
+      .orderBy(
+        advertisingSpendReconciliations.accountId,
+        desc(advertisingSpendReconciliations.checkedAt),
+        desc(advertisingSpendReconciliations.id),
+      ),
+    db
       .select({
         id: advertisingSyncRuns.id,
         connectionId: advertisingSyncRuns.connectionId,
@@ -722,5 +749,6 @@ export async function listAdvertisingResourcesForAdmin() {
     validationResults,
     syncRuns,
     reconciliations,
+    latestReconciliations,
   };
 }
