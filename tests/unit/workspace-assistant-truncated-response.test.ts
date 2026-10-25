@@ -60,7 +60,7 @@ describe("truncated provider responses", () => {
 
     const recovered = parseWorkspaceAssistantResponseWithRecovery(text, allowedEvidenceIds(text));
 
-    expect(recovered.truncated).toBe(true);
+    expect(recovered.recovery).toBe("truncated");
     expect(recovered.response.answer.length).toBeGreaterThan(50);
     expect(recovered.response.findings.length).toBeGreaterThanOrEqual(0);
   });
@@ -75,7 +75,7 @@ describe("truncated provider responses", () => {
 
     const parsed = parseWorkspaceAssistantResponseWithRecovery(complete, new Set());
 
-    expect(parsed.truncated).toBe(false);
+    expect(parsed.recovery).toBe("none");
     expect(parsed.response.answer).toBe("The plan has one item.");
   });
 
@@ -84,7 +84,7 @@ describe("truncated provider responses", () => {
 
     const recovered = parseWorkspaceAssistantResponseWithRecovery(text, new Set());
 
-    expect(recovered.truncated).toBe(true);
+    expect(recovered.recovery).toBe("truncated");
     expect(recovered.response.findings).toEqual([]);
     expect(recovered.response.recommendations).toEqual([]);
   });
@@ -107,7 +107,7 @@ describe("truncated provider responses", () => {
 
     const recovered = parseWorkspaceAssistantResponseWithRecovery(text, new Set(["e1"]));
 
-    expect(recovered.truncated).toBe(true);
+    expect(recovered.recovery).toBe("truncated");
     expect(recovered.response.findings.map((finding) => finding.title)).toEqual(["Complete"]);
   });
 
@@ -121,5 +121,94 @@ describe("truncated provider responses", () => {
     const truncated = JSON.stringify({ answer: "x".repeat(5_001) });
 
     expect(() => parseWorkspaceAssistantResponseWithRecovery(truncated, new Set(["e1"]))).toThrow();
+  });
+});
+
+describe("imperfect but complete provider responses", () => {
+  it("keeps a complete answer that returns more findings than the response allows", () => {
+    const findings = Array.from({ length: 11 }, (_, index) => ({
+      title: `Finding ${index}`,
+      detail: "A complete finding.",
+      severity: "medium",
+      evidenceIds: ["e1"],
+    }));
+    const document = JSON.stringify({
+      answer: "The plan has eleven findings.",
+      findings,
+      recommendations: [],
+      limitations: [],
+    });
+
+    const recovered = parseWorkspaceAssistantResponseWithRecovery(document, new Set(["e1"]));
+
+    expect(recovered.recovery).toBe("pruned");
+    expect(recovered.response.answer).toBe("The plan has eleven findings.");
+    expect(recovered.response.findings).toHaveLength(8);
+  });
+
+  it("drops a complete finding that cites evidence the context does not authorize", () => {
+    const document = JSON.stringify({
+      answer: "The plan cites evidence.",
+      findings: [
+        {
+          title: "Allowed",
+          detail: "Uses authorized evidence.",
+          severity: "low",
+          evidenceIds: ["e1"],
+        },
+        {
+          title: "Not allowed",
+          detail: "Cites evidence outside the context.",
+          severity: "low",
+          evidenceIds: ["not-in-context"],
+        },
+      ],
+      recommendations: [],
+      limitations: [],
+    });
+
+    const recovered = parseWorkspaceAssistantResponseWithRecovery(document, new Set(["e1"]));
+
+    expect(recovered.recovery).toBe("pruned");
+    expect(recovered.response.findings.map((finding) => finding.title)).toEqual(["Allowed"]);
+  });
+
+  it("drops a complete finding that cites no evidence at all", () => {
+    const document = JSON.stringify({
+      answer: "The plan has one supported finding.",
+      findings: [
+        { title: "Supported", detail: "Cites evidence.", severity: "low", evidenceIds: ["e1"] },
+        { title: "Unsupported", detail: "Cites nothing.", severity: "low", evidenceIds: [] },
+      ],
+      recommendations: [],
+      limitations: [],
+    });
+
+    const recovered = parseWorkspaceAssistantResponseWithRecovery(document, new Set(["e1"]));
+
+    expect(recovered.recovery).toBe("pruned");
+    expect(recovered.response.findings.map((finding) => finding.title)).toEqual(["Supported"]);
+  });
+
+  it("accepts a citation list that covers every supplied evidence id", () => {
+    const evidenceIds = Array.from({ length: 10 }, (_, index) => `e${index}`);
+    const document = JSON.stringify({
+      answer: "The plan cites everything.",
+      findings: [
+        {
+          title: "Cites all evidence",
+          detail: "A finding that cites the whole supplied set.",
+          severity: "low",
+          evidenceIds,
+        },
+      ],
+      recommendations: [],
+      limitations: [],
+    });
+
+    const recovered = parseWorkspaceAssistantResponseWithRecovery(document, new Set(evidenceIds));
+
+    expect(recovered.recovery).toBe("none");
+    expect(recovered.response.findings[0]?.evidenceIds).toHaveLength(10);
   });
 });

@@ -39,6 +39,15 @@ generic error, and the underlying error was replaced before it was logged.
   the entries that cannot be shown are dropped, and the truncation is
   disclosed in the response limitations rather than silently degrading the
   answer.
+- **An answer that breaks a rule is recovered too.** A complete response with
+  more findings than the response allows, a finding that cites evidence
+  outside the authorized context, or a finding with no citation at all used
+  to fail the whole request. Those entries are now dropped and the rest is
+  shown, with the pruning disclosed in the response limitations. The prompt
+  now states the collection limits and the citation rule, and the schema's cap
+  on how many evidence ids one entry may cite was raised above the number of
+  evidence items the route can supply, so a complete citation of the
+  evidence the model was given is never rejected.
 - **The failure now says what actually happened.** A truncated answer, an
   empty answer, an unusable answer, an exhausted provider usage window, and
   an unavailable provider are five distinct outcomes with five distinct

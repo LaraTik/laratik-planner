@@ -97,6 +97,13 @@ answer, or a provider failure. The underlying error is preserved in the
 failure log instead of being replaced by a generic one, which is what
 previously made every cause look like the same outage.
 
+An answer that breaks a rule is recovered rather than discarded. A complete
+document that returns too many findings, cites evidence outside the
+authorized context, or leaves a finding without a citation keeps the entries
+that are usable and drops the rest. Either way the degradation is disclosed
+in the response limitations, so a partial answer is never presented as a
+complete one. Only a response without a usable answer fails.
+
 This is a grounded, narrowly governed assistant slice, not the full agent
 experience in the acceptance scenario. It resolves authorized content item references by ID,
 Planner item URL, title, or partial title. Calendar/planning URLs, ISO month

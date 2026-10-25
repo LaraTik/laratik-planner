@@ -162,6 +162,32 @@ underlying error is preserved in the failure log with the model, stop reason,
 and response state, so a truncated answer can be told apart from an outage
 after the fact.
 
+**An imperfect answer is recovered, not thrown away.** Two things can go
+wrong with a provider answer, and neither costs the user the whole response:
+
+- **The document was cut off.** The text is a prefix of a valid JSON
+  document. The recovery closes the open structures at the last point where a
+  value completed, so the answer — which the model emits first — survives.
+- **The document is complete but breaks a rule.** The model can return more
+  findings than the response allows, cite evidence outside the authorized
+  context, or leave a finding without a citation. Those entries are dropped;
+  the rest is shown.
+
+Both cases are disclosed in the response `limitations`, so a degraded answer
+is never presented as a complete one. A recovery is only accepted when the
+result still has a usable answer and every remaining evidence reference is
+known; a finding that cites evidence the context did not authorize is dropped
+rather than shown, and a response with no usable answer at all still fails
+with `ai_response_invalid`.
+
+**The response rules are stated in the prompt.** The prompt tells the model
+the collection limits (at most 8 findings, 8 recommendations, 3 proposed
+changes, 8 limitations) and that each entry must cite at least one supplied
+evidence id. The schema's own cap on how many evidence ids one entry may cite
+is deliberately above the number of evidence items the route can supply — the
+cap exists to reject a runaway list, not to reject a complete citation of the
+evidence the model was given.
+
 **The provider's plan window is a separate limit from Planner's quota.**
 MiniMax M Plan has its own 5-hour and weekly windows, and a provider `429`
 means that window is spent — not that the key is wrong, and not that

@@ -28,24 +28,35 @@ export type WorkspaceAssistantFinding = {
   evidenceIds: string[];
 };
 
+/**
+ * The most evidence identifiers one entry may cite.
+ *
+ * The route supplies a bounded evidence set — the month's content summary, up
+ * to six retrieved knowledge entries, the brand rules, and at most one tool
+ * result — so a model that cites everything it was given stays inside this
+ * bound. The cap exists to reject a runaway list, not to reject a complete
+ * citation of the supplied evidence.
+ */
+const MAX_EVIDENCE_IDS_PER_ENTRY = 12;
+
 const findingSchema = z.object({
   title: z.string().trim().min(1).max(180),
   detail: z.string().trim().min(1).max(1_200),
   severity: z.enum(["low", "medium", "high"]),
-  evidenceIds: z.array(z.string().max(160)).min(1).max(8),
+  evidenceIds: z.array(z.string().max(160)).min(1).max(MAX_EVIDENCE_IDS_PER_ENTRY),
 });
 
 const recommendationSchema = z.object({
   title: z.string().trim().min(1).max(180),
   detail: z.string().trim().min(1).max(1_200),
-  evidenceIds: z.array(z.string().max(160)).min(1).max(8),
+  evidenceIds: z.array(z.string().max(160)).min(1).max(MAX_EVIDENCE_IDS_PER_ENTRY),
 });
 
 const proposedChangeSchema = z.object({
   field: z.enum(["title", "brief", "plannedPublishAt"]),
   title: z.string().trim().min(1).max(180),
   afterValue: z.string().trim().min(1).max(2_000),
-  evidenceIds: z.array(z.string().max(160)).min(1).max(3),
+  evidenceIds: z.array(z.string().max(160)).min(1).max(MAX_EVIDENCE_IDS_PER_ENTRY),
 });
 
 const limitationSchema = z.string().trim().min(1).max(300);
@@ -184,26 +195,43 @@ const recoveredResponseSchema = z.object({
   limitations: z.array(limitationSchema).max(8).default([]),
 });
 
+/**
+ * How an answer had to be recovered before it could be shown.
+ *
+ * - `none`      the answer arrived intact
+ * - `truncated` the provider stopped at its output limit
+ * - `pruned`    entries that could not be shown were removed
+ *
+ * The caller discloses the recovery in the response limitations, so a
+ * degraded answer is never presented as a complete one.
+ */
+export type WorkspaceAssistantRecovery = "none" | "truncated" | "pruned";
+
 export type WorkspaceAssistantParseResult = {
   /** The validated response. */
   response: WorkspaceAssistantResponse;
-  /**
-   * True when the provider cut the answer off and it was recovered from the
-   * truncated document. The caller must disclose this to the user.
-   */
-  truncated: boolean;
+  /** How the answer had to be recovered. The caller must disclose it. */
+  recovery: WorkspaceAssistantRecovery;
 };
 
 /**
- * Parse an assistant response, recovering it from a truncated document when
- * the strict parse fails.
+ * Parse an assistant response, recovering as much of it as is safe to show.
  *
- * A provider that reaches its output budget stops mid-document, so the raw
- * text is a *prefix* of a valid JSON document. Discarding it loses the parts
- * that were already complete — normally the `answer` field, which the model
- * emits first. Recovery is only accepted when the repaired document passes
- * schema validation and every evidence reference is known; otherwise the
- * original failure is raised unchanged.
+ * Two things can go wrong with a provider answer, and neither should cost the
+ * user the whole response:
+ *
+ * 1. **The document was cut off.** A provider that reaches its output budget
+ *    stops mid-document, so the raw text is a *prefix* of a valid JSON
+ *    document. Discarding it loses the parts that were already complete —
+ *    normally the `answer` field, which the model emits first.
+ * 2. **The document is complete but imperfect.** The model can return more
+ *    findings than the response allows, cite evidence outside the authorized
+ *    context, or leave a finding without a citation. None of those make the
+ *    answer unusable; only the unusable entries have to go.
+ *
+ * Recovery is accepted only when the result passes schema validation and
+ * every remaining evidence reference is known. If nothing can be recovered,
+ * the original failure is raised unchanged.
  */
 export function parseWorkspaceAssistantResponseWithRecovery(
   text: string,
@@ -212,20 +240,50 @@ export function parseWorkspaceAssistantResponseWithRecovery(
   try {
     return {
       response: parseWorkspaceAssistantResponse(text, allowedEvidenceIds),
-      truncated: false,
+      recovery: "none",
     };
   } catch (strictError) {
-    // The provider stopped mid-document. Recover the parts that are
-    // complete, starting from the most complete recovery, and keep the
-    // first one that yields a usable answer.
+    // The document may be cut off. Recover the parts that are complete,
+    // starting from the most complete recovery, and keep the first one that
+    // yields a usable answer.
     for (const candidate of repairTruncatedJsonCandidates(text)) {
       const pruned = pruneRecoveredEntries(candidate, allowedEvidenceIds);
       if (!pruned) continue;
       const recovered = recoveredResponseSchema.safeParse(pruned);
       if (!recovered.success) continue;
-      return { response: recovered.data, truncated: true };
+      return { response: recovered.data, recovery: "truncated" };
+    }
+    // The document may be complete but break a rule — too many findings, an
+    // entry without a citation, a citation the context does not authorize.
+    // Dropping those entries keeps the answer usable.
+    const complete = parseJsonDocument(text);
+    if (complete) {
+      const pruned = pruneRecoveredEntries(complete, allowedEvidenceIds);
+      if (pruned) {
+        const recovered = recoveredResponseSchema.safeParse(pruned);
+        if (recovered.success) {
+          return { response: recovered.data, recovery: "pruned" };
+        }
+      }
     }
     throw strictError;
+  }
+}
+
+/**
+ * Parse the document without applying the response rules, so the caller can
+ * tell "the document is broken" from "the document breaks a rule".
+ */
+function parseJsonDocument(text: string): unknown {
+  try {
+    return JSON.parse(
+      text
+        .trim()
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```$/, ""),
+    ) as unknown;
+  } catch {
+    return null;
   }
 }
 
