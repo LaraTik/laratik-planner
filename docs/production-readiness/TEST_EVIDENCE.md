@@ -1,5 +1,25 @@
 # Test and coverage evidence
 
+## Workspace AI Assistant browser recheck — exact clean checkout SHA — 2026-10-25
+
+Exact checked-out SHA: `cfd47e9af496ab9c478bd62adac636d6819b938a` (PR #48).
+The application code is unchanged from `784e427fd7f8750a878d10852dbcc6fae1c6fe90`;
+this checkout adds the evidence-only commit `cfd47e9`.
+
+| Check                              | Result                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Workspace Assistant Chromium suite | Passed 9/9, including Arabic controls, RTL behavior, explicit English conversation language, knowledge revision history, prompt creation, and streamed responses.                                                                                                                                                                                                                                                                              |
+| Arabic/RTL responsive visual       | Passed 1/1 across five viewport sizes, including overflow and critical accessibility assertions.                                                                                                                                                                                                                                                                                                                                               |
+| Release state                      | The full browser and visual matrices remain incomplete. The no-membership `/app` route failure remains recorded from the earlier release run. PR #48 remains a draft with three review requests pending, no independent review decision, and no GitHub checks. MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback evidence remain open. M3.8 remains **In Progress**; do not merge, dispatch CI, or deploy. |
+
+Commands:
+
+```sh
+NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test pnpm test:e2e:isolated -- tests/e2e/workspace-assistant.spec.ts --project=chromium
+
+NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test pnpm test:e2e:isolated -- tests/e2e/visual-regression.spec.ts --project=visual-chromium --grep 'workspace AI assistant renders Arabic RTL across the full responsive matrix'
+```
+
 ## Workspace AI Assistant refactor — exact clean SHA — 2026-10-25
 
 Exact clean code SHA: `784e427fd7f8750a878d10852dbcc6fae1c6fe90` (PR #48).
