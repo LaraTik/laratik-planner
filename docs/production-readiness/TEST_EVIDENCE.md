@@ -4298,13 +4298,13 @@ adds the response-language and pinned-conversation state.
 | `NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:55432/planner_test pnpm test:e2e:isolated -- tests/e2e/workspace-assistant.spec.ts --project=chromium` | Pass — 9/9, including Arabic RTL with an explicit English response and conversation-specific language persistence                                                                                  |
 | `NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:55432/planner_test pnpm audit --prod --audit-level high`                                               | Pass — exit 0; zero high/critical findings, two low and seven moderate advisories remain                                                                                                           |
 | Focused `pnpm test:visual` for `workspace AI assistant renders Arabic RTL across the full responsive matrix`                                                               | Pass on visual-baseline SHA `5dc86d5ecb1874b067d11a0bb238ce2b93f3c2e9` — 1/1 case, five responsive viewports, RTL and critical accessibility checks; refreshed five assistant screenshots          |
-| Full `pnpm test:visual` release suite                                                                                                                                      | Incomplete — stopped at 12/272 after unrelated planning, settings, agency AI, platform, and brand-kit baseline mismatches; the full browser/device matrix remains open                             |
+| Full `pnpm test:visual` release suite                                                                                                                                      | Incomplete — prior run stopped at 12/272; rerun stopped at 37/272 with 20 failures observed across unrelated screens and a Next.js memory restart; full browser/device coverage remains open       |
 
 The screenshot-only commit `5dc86d5ecb1874b067d11a0bb238ce2b93f3c2e9` updates
 the five Arabic assistant visual baselines; the application code remains the
 same as `bfbe95f`. E2E and visual runs can cause Next.js to rewrite the
-generated heading in `AGENTS.md`; that generated edit was restored, and the
-worktree was clean after each verification pass. Both commits are local to
+generated heading in `AGENTS.md`; it was restored after the follow-up sequence
+and the worktree is clean now. Both commits are local to
 `codex/workspace-ai-assistant-redesign` and have not been pushed or merged.
 
 M3.8 remains **In Progress**, not **Verified** or release-approved. Independent
@@ -4312,3 +4312,39 @@ review, full browser/device release coverage, live MiniMax model/tool and
 privacy UAT, separated-account human UAT, and production backup/rollback
 evidence remain open. No GitHub build or deployment was triggered. Follow the
 tracker and release runbook after those gates are completed.
+
+### 2026-10-25 — Workspace AI Assistant full-browser follow-up
+
+The browser release attempt ran at code-state SHA
+`c4df5e16586892c0ca1a6523b7bb30a3d6239789`, from a clean checkout. The
+`pnpm test:e2e:release` command completed its Chromium E2E stage with 295/303
+passing, 7 failing, and 1 skipped; it exited before invoking the visual stage.
+All 9 Workspace AI Assistant E2E cases passed, as did the assistant Arabic/RTL
+accessibility case.
+
+An isolated retry targeting the seven failure titles matched 8 test cases
+(the agency-switcher title matched its English and Arabic variants): 6 passed
+and 2 reproduced. The Research route accessibility timeout, Arabic agency
+switcher timeout, Arabic shell timeout, and both social analytics failures
+passed on retry. The two reproducible failures were outside the assistant:
+the planning URL filter did not render the seeded `Autumn Blend Reveal` item,
+and the Research teardown request carried empty `handle` and `sourceUrl`
+instead of the entered values. These remain release-suite failures and were
+not changed as part of the assistant redesign.
+
+The full visual suite was then attempted at the same code state, while the
+Next.js-generated heading edit in `AGENTS.md` from the preceding run was still
+present. It was stopped after case 37/272; 20 cases had failed by that point,
+with observed mismatches on existing planning, account/settings, agency AI,
+platform, and brand-kit surfaces plus a navigation timeout during a
+memory-threshold server restart. This is diagnostic partial output, not
+exact-clean-worktree release evidence and not a passing visual suite. The
+assistant's focused five-viewport Arabic/RTL visual check remains the only
+current visual pass for this change. The generated `AGENTS.md` edit was
+restored after the run, and `git status` was clean.
+
+This follow-up does not close the release browser/device gate. M3.8 remains
+**In Progress**: independent review, complete browser/device coverage, live
+MiniMax model/tool and privacy UAT, separated-account human UAT, and production
+backup/rollback evidence are still open. No merge, GitHub build, or deployment
+was performed.
