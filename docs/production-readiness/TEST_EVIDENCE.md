@@ -1,5 +1,33 @@
 # Test and coverage evidence
 
+## Workspace AI Assistant full release-candidate recheck — exact clean code SHA — 2026-10-25
+
+Exact tested code SHA: `13f5129d7828507e3b8259604d33803b6d3bfaae` (PR #48).
+This run used the already-pushed, clean feature-branch commit. No application
+code changed during verification.
+
+| Check                                                      | Result                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Full Chromium E2E (`pnpm test:e2e:release`, browser phase) | Failed: 296 passed, 6 failed, 1 skipped out of 303 in 27.1 minutes. All 9 Workspace AI Assistant cases passed. Failures: workspace settings page load timed out; agency switch from a workspace page timed out; authenticated Arabic shell did not show the expected “إضافة دفعة” heading; platform overview KPI assertion failed; social analytics page load timed out; first-login redirect stayed on `/set-password` until timeout. |
+| Full visual matrix (`pnpm test:visual`)                    | Interrupted after 12/272 cases because five screenshot comparisons had already failed. Seven passed and five mismatched: workspace planning, workspace settings, agency AI settings, platform overview, and workspace brand kit. No snapshots were updated. This is incomplete evidence, not a pass.                                                                                                                                   |
+| Focused Workspace Assistant Arabic/RTL visual              | Passed previously on the unchanged application code across all five viewport widths, including overflow and critical accessibility assertions.                                                                                                                                                                                                                                                                                         |
+| Release state                                              | Not ready. The full browser and visual gates remain failed/incomplete. The user reports review is complete, but PR #48 has no GitHub review decision or checks recorded. MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback evidence remain open. Do not merge, dispatch CI, or deploy.                                                                                                             |
+
+The browser failures are outside the Assistant’s nine passing journeys except
+for the general Arabic-shell assertion. Page-load failures showed only the
+notification region in the captured page snapshot during the run; the
+first-login failure repeatedly navigated to `/set-password` rather than leaving
+that route. The platform KPI assertion requires its own follow-up because the
+run captured a failure but did not retain a useful diagnostic excerpt in this
+evidence note.
+
+Commands:
+
+```sh
+NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test pnpm test:e2e:release
+NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test pnpm test:visual
+```
+
 ## Workspace AI Assistant browser recheck — exact clean checkout SHA — 2026-10-25
 
 Exact checked-out SHA: `cfd47e9af496ab9c478bd62adac636d6819b938a` (PR #48).
