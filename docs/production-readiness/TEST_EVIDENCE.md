@@ -25,8 +25,21 @@ The change adds built-in, workspace-level knowledge guidance and copies it to
 new workspaces; it makes no database schema or migration change. The guidance
 can shape Assistant responses and therefore needs review by workspace users.
 Production restore/rollback proof and an independent review record also remain
-open. The exact merged `main` SHA, CI and Deploy runs, and deployment-control
-results will be recorded here after those steps complete.
+open.
+
+### Exact-main-SHA merge and deployment record
+
+The default knowledge feature commit `439e796a707be6c4c1da8b5c84ce7c948d9c743f` was included in merged PR #50 (squash SHA `d184be0fb0ef776bba20737dbb5737cc1124e2d7`). The deployed `main` SHA was `7c6077f1f9d3dd8f2afc47fd5fff25b419b4241b`; later documentation and release-policy commits were also included in that deployed main tree.
+
+| Gate | Evidence |
+| --- | --- |
+| Main-only CI | Passed on `7c6077f1f9d3dd8f2afc47fd5fff25b419b4241b`: [run 40196497788](https://github.com/LaraTik/laratik-planner/actions/runs/40196497788); quality, unit tests, migration drill, dependency audit, sidecar tests, image builds, liveness smoke, and GHCR publication succeeded. |
+| App image | `ghcr.io/laratik/laratik-planner:7c6077f1f9d3dd8f2afc47fd5fff25b419b4241b`; manifest digest `sha256:e876aa953dd12ab6e956d5d98bd3e1f609e5b8be43c4bc50aa6d2530d590f497`. |
+| Migrator image | `ghcr.io/laratik/laratik-planner-migrator:7c6077f1f9d3dd8f2afc47fd5fff25b419b4241b`; manifest digest `sha256:be1509b5c580ac1089a88670294b317849255c4d543e6f5678e9bc497734d638`. |
+| Deploy | Passed for `7c6077f1f9d3dd8f2afc47fd5fff25b419b4241b`: [run 40198393327](https://github.com/LaraTik/laratik-planner/actions/runs/40198393327). Provider preflight confirmed Google SMTP configuration. The pre-migration backup was written to `/var/backups/laratik-planner/planner-20261025-133758.sql.gz` (5.3M); the migration command completed successfully. |
+| Production health | Deploy health passed on attempt 2/30: version `7c6077f`, `db=up`, `schema=ready`, storage, R2, and rate-limit checks up. A follow-up request to the public health endpoint returned `ok=true`, `env=production`, and `db=up`. |
+| Compose warning | Deploy logs reported `TRENDS_SERVICE_SECRET` unset and defaulted blank. With service authentication required, the Trend Radar service fails closed when the secret is absent; its enablement flag defaults off. Trend Radar calls need a configured shared secret before the feature is enabled. This did not affect Workspace Assistant or the checked production health services; no secret was changed. |
+| Risk and readiness | The user authorized the merge and release path. The independent review record was not present, so `Verified` was not assigned. The earlier browser result remains 296/303 passed with 6 failed and 1 skipped; the 272-case visual matrix remains incomplete after 5 mismatches. MiniMax model/tool/privacy UAT, separated-account UAT, and production restore/rollback proof remain open. Readiness is **NOT READY** and M3.8 remains **In Progress**. This deployment is risk accepted, not a readiness pass. |
 
 ## Local production snapshot preview — 2026-10-25
 
