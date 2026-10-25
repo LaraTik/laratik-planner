@@ -1,5 +1,28 @@
 # Test and coverage evidence
 
+## Workspace AI Assistant exact-SHA release verification — 2026-10-25
+
+Exact checked-out code SHA: `57619cfa41d4a39cb7dd976591a906cb3fc8bb9d` (PR #48).
+The SHA is the pushed feature-branch head before this documentation update.
+No Assistant runtime or schema changes were made after this SHA.
+
+| Check                            | Result                                                                                                                                                                                                                                                                                                                                    |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                    | Passed: formatting, lint, TypeScript, 625 unit files / 5,338 tests, and the Next production build.                                                                                                                                                                                                                                        |
+| Pre-push database and unit gates | Passed on this SHA: full unit suite and full disposable-Postgres integration suite; Workspace Assistant integration passed 13/13.                                                                                                                                                                                                         |
+| `pnpm test:e2e:release`          | Failed: 297 passed, 5 failed, and 1 skipped of 303 Chromium cases. The chain stopped before the full visual suite. Assistant chat, Arabic/RTL, language preference, and governance cases passed; the knowledge-history E2E failed during the run.                                                                                         |
+| Focused failure rechecks         | Research watchlist and first-login redirect passed individually. The Assistant knowledge-history test passed twice after the full run; its revisions endpoint returned both revision snapshots, including the older content. The no-agency-membership test failed again with a skeleton-only page and a Next.js destination-stream error. |
+| Focused Assistant visual check   | Passed 1/1 on `visual-chromium`: Arabic RTL, all five responsive viewports, no overflow, and no critical accessibility violations.                                                                                                                                                                                                        |
+| Review and release state         | PR #48 remains a draft with no independent review decision. Full browser/visual release coverage, live MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback evidence remain open. M3.8 remains **In Progress**. Do not merge or deploy; no GitHub Actions build or deployment was triggered.             |
+
+The five full-suite failures were: two agency-switcher cases (connection reset / unexpected `/app` URL), the Research watchlist creation case (expected heading did not appear before timeout), first-login password redirect (timed out waiting to leave `/set-password`), and Assistant knowledge history (response wait timed out). The Next dev server logged repeated memory-threshold restarts and destination-stream aborts during the run. Focused rechecks cleared the Research, first-login, and Assistant cases; the no-membership navigation failure remains reproducible in isolation. Treat the full release gate as failed until the browser environment and that case complete cleanly.
+
+Focused Assistant visual command:
+
+```sh
+NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test pnpm test:visual -- --grep 'workspace AI assistant renders Arabic RTL across the full responsive matrix'
+```
+
 ## Workspace AI Assistant release-candidate diagnostic recheck — 2026-10-25
 
 Exact checked-out SHA: `5111bc93550b5a42b90fd4c926994b443285441b`.
