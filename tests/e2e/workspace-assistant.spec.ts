@@ -112,13 +112,23 @@ test.describe("Workspace AI Assistant", () => {
     const workspace = await bootstrapRoleSession(page, "workspace_manager", "assistant-en", {
       locale: "en",
     });
+    const promptListRequestTimes: number[] = [];
+    await page.route("**/api/ai/workspace-assistant/prompts**", async (route) => {
+      if (route.request().method() === "GET") promptListRequestTimes.push(Date.now());
+      await route.continue();
+    });
     await page.goto(`/app/a/test-agency/w/${workspace.workspaceSlug}/ai-assistant`);
     await expect(page.getByRole("combobox", { name: "Response language" })).toHaveValue("ar");
     await expect(page.getByTestId("assistant-mode")).toHaveValue("ask");
     await expect(page.getByTestId("assistant-mode").getByRole("option")).toHaveCount(3);
+    const toolsClickStartedAt = Date.now();
     await page.getByRole("button", { name: "Tools and context" }).click();
     await expect(page.getByRole("heading", { name: "Prompt library" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Monthly plan summary" })).toBeVisible();
+    expect(promptListRequestTimes.length).toBeGreaterThan(0);
+    expect(promptListRequestTimes.every((requestedAt) => requestedAt >= toolsClickStartedAt)).toBe(
+      true,
+    );
     await expectNoSeriousViolations(page);
 
     await page.getByRole("button", { name: "Create a prompt" }).click();

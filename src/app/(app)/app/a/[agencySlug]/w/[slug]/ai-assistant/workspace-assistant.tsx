@@ -45,6 +45,8 @@ import {
   type AssistantConversationSummary,
 } from "./assistant-history-panel";
 import { AssistantMarkdown } from "./assistant-markdown";
+import { AssistantResponsePanel } from "./assistant-response-panel";
+import type { AssistantProposal, AssistantReply } from "./assistant-ui-types";
 
 type Labels = {
   emptyTitle: string;
@@ -113,6 +115,9 @@ type Labels = {
   publishPrompt: string;
   promptPending: string;
   promptError: string;
+  promptsLoading: string;
+  promptsLoadError: string;
+  retry: string;
   dismiss: string;
   showAllPrompts: string;
   showFewerPrompts: string;
@@ -242,50 +247,6 @@ type Prompt = {
   ownerId: string | null;
   canEdit: boolean;
   canPublish: boolean;
-};
-type AssistantProposal = {
-  id: string;
-  contentItemId: string;
-  field: "title" | "brief" | "plannedPublishAt";
-  title: string;
-  beforeValue: string;
-  afterValue: string;
-  evidenceIds: string[];
-  status:
-    "proposed" | "applied" | "rejected" | "stale" | "expired" | "already_applied" | "applying";
-  expiresAt: string;
-};
-type AssistantReply = {
-  answer: {
-    answer: string;
-    findings: {
-      title: string;
-      detail: string;
-      severity: "low" | "medium" | "high";
-      evidenceIds: string[];
-    }[];
-    recommendations: { title: string; detail: string; evidenceIds: string[] }[];
-    proposedChanges: [];
-    limitations: string[];
-  };
-  evidence: {
-    id: string;
-    source: string;
-    retrievedAt: string;
-    period: string;
-    version?: string | null;
-    completeness: string;
-    itemCount: number;
-  }[];
-  deterministicFindings: {
-    title: string;
-    detail: string;
-    severity: string;
-    evidenceIds: string[];
-  }[];
-  referencedItem?: { id: string; title: string; revision: number } | null;
-  reviewedPlanMonth?: string;
-  proposals: AssistantProposal[];
 };
 type ContentCandidate = {
   id: string;
@@ -472,6 +433,9 @@ export function WorkspaceAssistant({
   const [mobileHistoryOpen, setMobileHistoryOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [loadedPromptWorkspaceSlug, setLoadedPromptWorkspaceSlug] = useState<string | null>(null);
+  const [promptsLoading, setPromptsLoading] = useState(false);
+  const [promptsLoadError, setPromptsLoadError] = useState(false);
   const [showAllPrompts, setShowAllPrompts] = useState(false);
   const [promptSearch, setPromptSearch] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -511,21 +475,18 @@ export function WorkspaceAssistant({
   const [reply, setReply] = useState<AssistantReply | null>(null);
   const [selectedProposalIds, setSelectedProposalIds] = useState<string[]>([]);
   const [proposalError, setProposalError] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
   const [copiedResponseIndex, setCopiedResponseIndex] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const activeRequest = useRef<AbortController | null>(null);
   const activeRunIdRef = useRef<string | null>(null);
+  const promptRequestRef = useRef<{
+    workspaceSlug: string;
+    promise: Promise<void>;
+  } | null>(null);
   const activeRunStorageKey = `planner-assistant-run:${workspaceSlug}`;
   const inputId = useId();
-
-  function formatProposalDate(value: string) {
-    const dateValue = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00.000Z` : value;
-    return new Intl.DateTimeFormat(locale, {
-      dateStyle: "medium",
-      timeZone: workspaceTimezone,
-    }).format(new Date(dateValue));
-  }
 
   async function refreshVisibleConversations() {
     const response = await fetch(
@@ -537,15 +498,40 @@ export function WorkspaceAssistant({
     setConversations(data.conversations);
   }
 
-  async function refreshPrompts() {
-    const response = await fetch(
-      `/api/ai/workspace-assistant/prompts?workspaceSlug=${encodeURIComponent(workspaceSlug)}`,
-      { cache: "no-store" },
-    );
-    if (!response.ok) return;
-    const data = (await response.json()) as { prompts: Prompt[] };
-    setPrompts(data.prompts);
-  }
+  const refreshPrompts = useCallback(() => {
+    const existingRequest = promptRequestRef.current;
+    if (existingRequest?.workspaceSlug === workspaceSlug) return existingRequest.promise;
+
+    setPromptsLoading(true);
+    setPromptsLoadError(false);
+    const requestRecord: { workspaceSlug: string; promise: Promise<void> } = {
+      workspaceSlug,
+      promise: Promise.resolve(),
+    };
+    const request = (async () => {
+      try {
+        const response = await fetch(
+          `/api/ai/workspace-assistant/prompts?workspaceSlug=${encodeURIComponent(workspaceSlug)}`,
+          { cache: "no-store" },
+        );
+        if (!response.ok) throw new Error("assistant_prompt_list_failed");
+        const data = (await response.json()) as { prompts: Prompt[] };
+        if (promptRequestRef.current !== requestRecord) return;
+        setPrompts(data.prompts);
+        setLoadedPromptWorkspaceSlug(workspaceSlug);
+      } catch {
+        if (promptRequestRef.current === requestRecord) setPromptsLoadError(true);
+      } finally {
+        if (promptRequestRef.current === requestRecord) {
+          setPromptsLoading(false);
+          promptRequestRef.current = null;
+        }
+      }
+    })();
+    requestRecord.promise = request;
+    promptRequestRef.current = requestRecord;
+    return request;
+  }, [workspaceSlug]);
 
   const rememberActiveRun = useCallback(
     (runId: string | null) => {
@@ -607,32 +593,33 @@ export function WorkspaceAssistant({
 
   useEffect(() => {
     let cancelled = false;
-    async function loadAssistantLibrary() {
-      const [conversationResponse, promptResponse] = await Promise.all([
-        fetch(
-          `/api/ai/workspace-assistant?workspaceSlug=${encodeURIComponent(workspaceSlug)}${archivedView ? "&archived=true" : ""}`,
-          { cache: "no-store" },
-        ),
-        fetch(
-          `/api/ai/workspace-assistant/prompts?workspaceSlug=${encodeURIComponent(workspaceSlug)}`,
-          { cache: "no-store" },
-        ),
-      ]);
-      if (cancelled) return;
-      if (conversationResponse.ok) {
-        const data = (await conversationResponse.json()) as { conversations: Conversation[] };
-        setConversations(data.conversations);
-      }
-      if (promptResponse.ok) {
-        const data = (await promptResponse.json()) as { prompts: Prompt[] };
-        setPrompts(data.prompts);
-      }
-    }
-    void loadAssistantLibrary();
+    void fetch(
+      `/api/ai/workspace-assistant?workspaceSlug=${encodeURIComponent(workspaceSlug)}${archivedView ? "&archived=true" : ""}`,
+      { cache: "no-store" },
+    )
+      .then(async (response) => {
+        if (!response.ok) return;
+        const data = (await response.json()) as { conversations: Conversation[] };
+        if (!cancelled) setConversations(data.conversations);
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      });
     return () => {
       cancelled = true;
     };
   }, [workspaceSlug, archivedView]);
+
+  useEffect(() => {
+    if (toolsOpen && loadedPromptWorkspaceSlug !== workspaceSlug) void refreshPrompts();
+  }, [toolsOpen, loadedPromptWorkspaceSlug, workspaceSlug, refreshPrompts]);
+
+  useEffect(() => {
+    const updateTime = () => setCurrentTime(Date.now());
+    updateTime();
+    const intervalId = window.setInterval(updateTime, 30_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     const storedRunId = window.sessionStorage.getItem(activeRunStorageKey);
@@ -1206,7 +1193,8 @@ export function WorkspaceAssistant({
     canEdit: false,
     canPublish: false,
   }));
-  const displayedPrompts = [...prompts, ...builtInPrompts];
+  const workspacePrompts = loadedPromptWorkspaceSlug === workspaceSlug ? prompts : [];
+  const displayedPrompts = [...workspacePrompts, ...builtInPrompts];
   const filteredPrompts = displayedPrompts.filter((prompt) => {
     const query = promptSearch.trim().toLocaleLowerCase(locale);
     return (
@@ -1235,7 +1223,9 @@ export function WorkspaceAssistant({
     ) &&
     selectedProposals.every(
       (proposal) =>
-        proposal.status === "proposed" && new Date(proposal.expiresAt).getTime() > Date.now(),
+        proposal.status === "proposed" &&
+        currentTime > 0 &&
+        new Date(proposal.expiresAt).getTime() > currentTime,
     );
 
   return (
@@ -1269,6 +1259,24 @@ export function WorkspaceAssistant({
                 className="text-body min-h-10 min-w-0 flex-1 bg-transparent outline-none"
               />
             </div>
+            {promptsLoading ? (
+              <p className="text-label text-fg-muted mt-3" role="status">
+                {labels.promptsLoading}
+              </p>
+            ) : null}
+            {promptsLoadError ? (
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2" role="alert">
+                <p className="text-body text-danger">{labels.promptsLoadError}</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void refreshPrompts()}
+                >
+                  {labels.retry}
+                </Button>
+              </div>
+            ) : null}
             {promptFormOpen ? (
               <form
                 className="border-border mt-4 grid gap-3 border-t pt-4"
@@ -1833,270 +1841,29 @@ export function WorkspaceAssistant({
             ) : null}
 
             {reply ? (
-              <div className="border-border mx-auto mt-5 max-w-3xl space-y-4 border-t pt-4">
-                {reply.reviewedPlanMonth ? (
-                  <p className="text-label text-fg-muted" role="status">
-                    {labels.reviewedPlan}: {formatPlanMonth(reply.reviewedPlanMonth, locale)}
-                  </p>
-                ) : null}
-                {reply.referencedItem ? (
-                  <p className="text-label text-fg-muted" role="status">
-                    {labels.selectedContent}: {reply.referencedItem.title} · revision{" "}
-                    {reply.referencedItem.revision}
-                  </p>
-                ) : null}
-                {reply.deterministicFindings.length ? (
-                  <section aria-label={labels.findGaps}>
-                    <h3 className="text-title-card text-fg-primary font-semibold">
-                      {labels.findGaps}
-                    </h3>
-                    <ul className="mt-2 space-y-2">
-                      {reply.deterministicFindings.map((finding, index) => (
-                        <li
-                          key={`${finding.title}-${index}`}
-                          className="bg-surface-subtle rounded-[var(--radius-control)] p-3"
-                        >
-                          <p className="text-body text-fg-primary font-semibold">{finding.title}</p>
-                          <p className="text-body text-fg-secondary mt-1">{finding.detail}</p>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                ) : null}
-                {reply.answer.findings.length ? (
-                  <section aria-label={labels.findings}>
-                    <h3 className="text-title-card text-fg-primary font-semibold">
-                      {labels.findings}
-                    </h3>
-                    <ul className="mt-2 space-y-2">
-                      {reply.answer.findings.map((item, index) => (
-                        <li
-                          key={`${item.title}-${index}`}
-                          className="bg-surface-subtle rounded-[var(--radius-control)] p-3"
-                        >
-                          <p className="text-body text-fg-primary font-semibold">{item.title}</p>
-                          <p className="text-body text-fg-secondary mt-1">{item.detail}</p>
-                          <div className="text-label text-fg-muted mt-2 flex flex-wrap items-center gap-2">
-                            <span>{labels.evidence}:</span>
-                            {item.evidenceIds.map((id) => (
-                              <a
-                                key={id}
-                                className="text-primary underline underline-offset-2"
-                                href={`#assistant-evidence-${encodeURIComponent(id)}`}
-                              >
-                                {id}
-                              </a>
-                            ))}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                ) : null}
-                {reply.answer.recommendations.length ? (
-                  <section aria-label={labels.recommendations}>
-                    <h3 className="text-title-card text-fg-primary font-semibold">
-                      {labels.recommendations}
-                    </h3>
-                    <ul className="mt-2 space-y-2">
-                      {reply.answer.recommendations.map((item, index) => (
-                        <li
-                          key={`${item.title}-${index}`}
-                          className="bg-surface-subtle rounded-[var(--radius-control)] p-3"
-                        >
-                          <p className="text-body text-fg-primary font-semibold">{item.title}</p>
-                          <p className="text-body text-fg-secondary mt-1">{item.detail}</p>
-                          <div className="text-label text-fg-muted mt-2 flex flex-wrap items-center gap-2">
-                            <span>{labels.evidence}:</span>
-                            {item.evidenceIds.map((id) => (
-                              <a
-                                key={id}
-                                className="text-primary underline underline-offset-2"
-                                href={`#assistant-evidence-${encodeURIComponent(id)}`}
-                              >
-                                {id}
-                              </a>
-                            ))}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                ) : null}
-                {reply.proposals.length ? (
-                  <section aria-label={labels.proposedEdits} data-testid="assistant-proposals">
-                    <h3 className="text-title-card text-fg-primary font-semibold">
-                      {labels.proposedEdits}
-                    </h3>
-                    {selectedProposalIds.length >= 2 ? (
-                      <div className="mt-2 flex justify-end">
-                        <Button
-                          type="button"
-                          size="sm"
-                          disabled={mode !== "apply" || !canApplySelectedProposals}
-                          onClick={() =>
-                            void applySelectedProposals(selectedProposals.map((item) => item.id))
-                          }
-                        >
-                          {selectedProposals.some((proposal) => proposal.status === "applying")
-                            ? labels.applyingSelectedEdits
-                            : `${labels.applySelectedEdits} (${selectedProposals.length})`}
-                        </Button>
-                      </div>
-                    ) : null}
-                    <ul className="mt-2 space-y-2">
-                      {reply.proposals.map((proposal) => {
-                        const expired =
-                          proposal.status === "proposed" &&
-                          new Date(proposal.expiresAt).getTime() <= Date.now();
-                        const status = expired ? "expired" : proposal.status;
-                        const pending = status === "proposed";
-                        const statusLabel =
-                          status === "applied"
-                            ? labels.editApplied
-                            : status === "rejected"
-                              ? labels.editRejected
-                              : status === "stale"
-                                ? labels.editStale
-                                : status === "expired"
-                                  ? labels.editExpired
-                                  : status === "applying"
-                                    ? labels.applyingEdit
-                                    : "";
-                        return (
-                          <li
-                            key={proposal.id}
-                            className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
-                          >
-                            {pending ? (
-                              <div className="mb-2 flex min-h-11 items-center gap-2">
-                                <Checkbox
-                                  id={`assistant-proposal-select-${proposal.id}`}
-                                  checked={selectedProposalIds.includes(proposal.id)}
-                                  onCheckedChange={(checked) =>
-                                    setSelectedProposalIds((current) =>
-                                      checked === true
-                                        ? [...new Set([...current, proposal.id])]
-                                        : current.filter((id) => id !== proposal.id),
-                                    )
-                                  }
-                                />
-                                <label
-                                  htmlFor={`assistant-proposal-select-${proposal.id}`}
-                                  className="text-label text-fg-secondary cursor-pointer"
-                                >
-                                  {labels.selectProposal}
-                                </label>
-                              </div>
-                            ) : null}
-                            <p className="text-body text-fg-primary font-semibold">
-                              {proposal.title}
-                            </p>
-                            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                              <div>
-                                <p className="text-label text-fg-muted">{labels.before}</p>
-                                <p
-                                  className="text-body text-fg-secondary whitespace-pre-wrap"
-                                  dir="auto"
-                                >
-                                  {proposal.field === "plannedPublishAt"
-                                    ? formatProposalDate(proposal.beforeValue)
-                                    : proposal.beforeValue || "—"}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-label text-fg-muted">{labels.after}</p>
-                                <p
-                                  className="text-body text-fg-primary whitespace-pre-wrap"
-                                  dir="auto"
-                                >
-                                  {proposal.field === "plannedPublishAt"
-                                    ? formatProposalDate(proposal.afterValue)
-                                    : proposal.afterValue}
-                                </p>
-                              </div>
-                            </div>
-                            {pending ? (
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  disabled={mode !== "apply"}
-                                  onClick={() => void decideProposal(proposal.id, "apply")}
-                                >
-                                  {labels.applyEdit}
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => void decideProposal(proposal.id, "reject")}
-                                >
-                                  {labels.rejectEdit}
-                                </Button>
-                              </div>
-                            ) : (
-                              <p className="text-label text-fg-muted mt-2" role="status">
-                                {statusLabel}
-                              </p>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                    {proposalError ? (
-                      <p role="alert" className="text-body text-danger mt-2">
-                        {labels.editStatusError}
-                      </p>
-                    ) : null}
-                  </section>
-                ) : null}
-                {reply.answer.limitations.length ? (
-                  <section>
-                    <h3 className="text-label text-fg-primary font-semibold">
-                      {labels.limitations}
-                    </h3>
-                    <ul className="text-label text-fg-secondary mt-1 list-inside list-disc">
-                      {reply.answer.limitations.map((item, index) => (
-                        <li key={index}>{item}</li>
-                      ))}
-                    </ul>
-                  </section>
-                ) : null}
-                {reply.evidence.length ? (
-                  <details className="border-border text-label text-fg-muted rounded-[var(--radius-control)] border px-3 py-2">
-                    <summary className="text-fg-secondary cursor-pointer font-semibold">
-                      {labels.evidence} ({reply.evidence.length})
-                    </summary>
-                    {reply.evidence.map((item) => (
-                      <div
-                        id={`assistant-evidence-${encodeURIComponent(item.id)}`}
-                        key={item.id}
-                        className="mt-3 scroll-mt-4"
-                      >
-                        <p>
-                          {labels.source}: {item.source} · {item.period} · {item.itemCount}{" "}
-                          {labels.itemCount}
-                        </p>
-                        {item.version ? <p>{item.version}</p> : null}
-                        <p>
-                          {labels.capturedAt}:{" "}
-                          {new Intl.DateTimeFormat(locale, {
-                            dateStyle: "medium",
-                            timeStyle: "short",
-                            numberingSystem: "latn",
-                          }).format(new Date(item.retrievedAt))}
-                        </p>
-                        <p>
-                          {item.completeness === "bounded"
-                            ? labels.boundedData
-                            : labels.completeData}
-                        </p>
-                      </div>
-                    ))}
-                  </details>
-                ) : null}
-              </div>
+              <AssistantResponsePanel
+                reply={reply}
+                locale={locale}
+                workspaceTimezone={workspaceTimezone}
+                currentTime={currentTime}
+                labels={labels}
+                mode={mode}
+                selectedProposalIds={selectedProposalIds}
+                selectedProposals={selectedProposals}
+                canApplySelectedProposals={canApplySelectedProposals}
+                proposalError={proposalError}
+                onSelectProposal={(proposalId, selected) =>
+                  setSelectedProposalIds((current) =>
+                    selected
+                      ? [...new Set([...current, proposalId])]
+                      : current.filter((id) => id !== proposalId),
+                  )
+                }
+                onApplySelectedProposals={(proposalIds) => void applySelectedProposals(proposalIds)}
+                onDecideProposal={(proposalId, decision) =>
+                  void decideProposal(proposalId, decision)
+                }
+              />
             ) : null}
           </div>
           <form
@@ -2398,16 +2165,6 @@ export function WorkspaceAssistant({
       </Dialog>
     </section>
   );
-}
-
-function formatPlanMonth(month: string, locale: string) {
-  const date = new Date(`${month}-01T00:00:00.000Z`);
-  return new Intl.DateTimeFormat(locale, {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-    numberingSystem: "latn",
-  }).format(date);
 }
 
 function PromptField({
