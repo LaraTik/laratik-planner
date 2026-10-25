@@ -39,6 +39,9 @@ export function createMiniMaxToolProvider(options: MiniMaxToolProviderOptions): 
         }),
         ...(signal ? { signal } : {}),
       });
+      // The provider body is deliberately not included: it can echo the
+      // request, and this error is surfaced to callers. The status is
+      // enough to tell a rejected request from an outage.
       if (!response.ok) throw new Error(`minimax_tool_request_failed_${response.status}`);
       const raw: unknown = await response.json().catch(() => null);
       return parseMiniMaxResponse(raw, options.model);

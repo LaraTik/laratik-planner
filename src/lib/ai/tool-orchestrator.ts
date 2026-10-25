@@ -63,6 +63,11 @@ export type AgentToolConversationResult = {
   inputTokens: number | null;
   outputTokens: number | null;
   model: string;
+  /**
+   * The provider's stop reason for the final round. `"max_tokens"` means
+   * the answer was cut off and callers must treat it as incomplete.
+   */
+  stopReason: string;
   toolNames: string[];
   evidenceIds: string[];
   rounds: number;
@@ -160,6 +165,7 @@ export async function runAgentToolConversation(input: {
         inputTokens: hasInputUsage && inputUsageComplete ? inputTokens : null,
         outputTokens: hasOutputUsage && outputUsageComplete ? outputTokens : null,
         model,
+        stopReason: response.stopReason,
         toolNames: usedTools,
         evidenceIds: [...evidenceIds],
         rounds: round + 1,

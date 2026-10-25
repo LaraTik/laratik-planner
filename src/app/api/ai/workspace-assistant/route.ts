@@ -12,7 +12,7 @@ import {
   getAssistantConversation,
   isAssistantRunCancellationRequested,
   listAssistantConversations,
-  parseWorkspaceAssistantResponse,
+  parseWorkspaceAssistantResponseWithRecovery,
   recordAssistantRunEvent,
   resolveAssistantPrompt,
   resolveWorkspaceContentReference,
@@ -22,7 +22,7 @@ import {
 import { currentActor } from "@/lib/auth/current-actor";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
-import { chat, chatStream, getActiveApiKey } from "@/lib/ai";
+import { chat, chatStream, getActiveApiKey, AiProviderError } from "@/lib/ai";
 import { getAiModelDefinition, supportsAiReasoningEffort } from "@/lib/ai/model-registry";
 import { getAiModelAllowlist } from "@/lib/ai/capabilities";
 import { serverEnv } from "@/lib/validation/env";
@@ -49,7 +49,7 @@ import {
 } from "@/lib/ai/governance";
 import { aiFeatureSettings, workspaces } from "@/lib/db/schema";
 import { db } from "@/lib/db";
-import { LimitExceededError } from "@/lib/entitlements";
+import { getEffectiveEntitlement, LimitExceededError } from "@/lib/entitlements";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 import { captureError } from "@/lib/observability/sentry";
@@ -110,6 +110,31 @@ const requestSchema = z.object({
 });
 
 const estimatedOutputTokens = 1_400;
+
+/**
+ * Output budget ceiling for the assistant's structured answer.
+ *
+ * The answer is one JSON document whose size depends on the plan and the
+ * requested reasoning effort. A budget of 1,200 tokens cut the document off
+ * mid-object, so the response could not be parsed and the request failed
+ * instead of answering. 8,192 leaves headroom for the longest response
+ * observed in production (4,564 output tokens at `high` effort).
+ *
+ * The agency's plan may cap the request lower; the effective budget is the
+ * smaller of the two, so the assistant honours the same per-request limit
+ * as every other AI route.
+ *
+ * A larger cap does not increase spend by itself: usage is billed from the
+ * tokens the provider actually returns.
+ */
+const WORKSPACE_ASSISTANT_MAX_TOKENS = 8_192;
+
+/**
+ * Limitation disclosed to the user when the provider cut the answer off and
+ * the response was recovered from the truncated document.
+ */
+const TRUNCATED_RESPONSE_LIMITATION =
+  "The model reached its output limit, so this answer is incomplete. Some findings may be missing.";
 
 function errorResponse(error: string, status: number) {
   return NextResponse.json({ error }, { status, headers: mutatingApiHeaders() });
@@ -211,7 +236,7 @@ async function processAssistantRequest(
     return errorResponse("forbidden", 403);
   }
 
-  const [workspaceRecord, feature, capabilities] = await Promise.all([
+  const [workspaceRecord, feature, capabilities, entitlement] = await Promise.all([
     db
       .select({ id: workspaces.id, timezone: workspaces.timezone, agencyId: workspaces.agencyId })
       .from(workspaces)
@@ -225,6 +250,7 @@ async function processAssistantRequest(
       .limit(1)
       .then((rows) => rows[0]),
     loadEnabledCapabilities(agency.agencyId),
+    getEffectiveEntitlement({ agencyId: agency.agencyId }),
   ]);
   if (!workspaceRecord || workspaceRecord.agencyId !== agency.agencyId) {
     return errorResponse("workspace_not_accessible", 403);
@@ -253,6 +279,18 @@ async function processAssistantRequest(
   if (!supportsAiReasoningEffort(selectedModelId, parsed.data.reasoningEffort)) {
     return errorResponse("reasoning_unsupported_for_model", 400);
   }
+  /**
+   * Apply the model's recommended effort when the caller did not choose one.
+   *
+   * Reasoning-capable models spend part of the output budget on hidden
+   * thinking. Without an explicit effort the provider applies its own
+   * default, which can consume the entire budget and return no answer at
+   * all. The client's choice is still honoured when it sends one.
+   */
+  const effectiveReasoningEffort =
+    parsed.data.reasoningEffort ??
+    getAiModelDefinition(selectedModelId)?.recommendedReasoningEffort ??
+    undefined;
   const rate = await enforceRateLimit({
     scope: "ai_generation",
     subject: actor.id,
@@ -387,6 +425,14 @@ async function processAssistantRequest(
   };
   let reservationHeld = false;
   let providerCompleted = false;
+  /**
+   * The provider's stop reason for the answer that was returned. It is kept
+   * outside the `try` so the catch block can tell a truncated answer apart
+   * from a malformed one and report an honest error code.
+   */
+  let providerStopReason: string | null = null;
+  /** True when the provider returned no usable content at all. */
+  let providerResponseEmpty = false;
   let usage = { inputTokens: 0, outputTokens: 0 };
   let reservedInputTokens = 0;
   let reservedOutputTokens = 0;
@@ -668,9 +714,12 @@ async function processAssistantRequest(
     const providerOptions = {
       apiKey,
       model: selectedModelId,
-      maxTokens: 1_200,
+      maxTokens: Math.min(
+        WORKSPACE_ASSISTANT_MAX_TOKENS,
+        entitlement.maxOutputTokensPerRequest ?? WORKSPACE_ASSISTANT_MAX_TOKENS,
+      ),
       temperature: 0.3,
-      ...(parsed.data.reasoningEffort ? { reasoningEffort: parsed.data.reasoningEffort } : {}),
+      ...(effectiveReasoningEffort ? { reasoningEffort: effectiveReasoningEffort } : {}),
       signal: runRequestSignal(abortSignal, runAbortController.signal),
       messages,
     };
@@ -766,7 +815,14 @@ async function processAssistantRequest(
               emit("response_delta", { length: delta.length });
             })
           : chat(providerOptions));
-    if (!result?.content.trim()) throw new Error("empty_provider_response");
+    providerStopReason = result?.stopReason ?? null;
+    if (!result?.content.trim()) {
+      // The provider returned no usable content. On a reasoning-capable
+      // model this is the signature of an output budget spent entirely on
+      // hidden thinking, so it is reported as its own failure mode.
+      providerResponseEmpty = true;
+      throw new Error("empty_provider_response");
+    }
     providerCompleted = true;
     usage = {
       inputTokens: result.inputTokens ?? reservedInputTokens,
@@ -804,7 +860,19 @@ async function processAssistantRequest(
     if (toolCallingActive && usedToolNames.includes("planner_search_brand_knowledge")) {
       for (const evidenceId of toolEvidenceIds) allowedEvidenceIds.add(evidenceId);
     }
-    const validatedAnswer = parseWorkspaceAssistantResponse(result.content, allowedEvidenceIds);
+    const parsedAnswer = parseWorkspaceAssistantResponseWithRecovery(
+      result.content,
+      allowedEvidenceIds,
+    );
+    const validatedAnswer = parsedAnswer.truncated
+      ? {
+          ...parsedAnswer.response,
+          limitations: [TRUNCATED_RESPONSE_LIMITATION, ...parsedAnswer.response.limitations].slice(
+            0,
+            8,
+          ),
+        }
+      : parsedAnswer.response;
     if (toolCallingActive && emit) emit("assistant_text", { text: validatedAnswer.answer });
     const proposals: NonNullable<Awaited<ReturnType<typeof createAssistantProposal>>>[] = [];
     if (
@@ -944,11 +1012,23 @@ async function processAssistantRequest(
         },
       );
     }
-    captureError("ai.workspace_assistant_failed", new Error("Workspace assistant request failed"), {
-      requestId,
-      workspaceId: workspace.id,
-      userId: actor.id,
-    });
+    /**
+     * Report the real failure. Replacing the error with a generic one
+     * destroyed the only evidence of what actually went wrong, which is how
+     * a truncated answer looked identical to an outage.
+     */
+    captureError(
+      "ai.workspace_assistant_failed",
+      error instanceof Error ? error : new Error("Workspace assistant request failed"),
+      {
+        requestId,
+        workspaceId: workspace.id,
+        userId: actor.id,
+        model: selectedModelId,
+        stopReason: providerStopReason,
+        providerResponseEmpty,
+      },
+    );
     try {
       await recordAiUsageEvent({
         agencyId: agency.agencyId,
@@ -965,7 +1045,27 @@ async function processAssistantRequest(
     } catch {
       // Telemetry failure must not expose provider or workspace data.
     }
-    return errorResponse(providerCompleted ? "ai_response_invalid" : "ai_provider_failed", 502);
+    /**
+     * Report the failure mode that actually happened instead of one generic
+     * "AI is unavailable" code:
+     *   - `ai_provider_rate_limited` the provider's own usage window is spent
+     *   - `ai_response_empty`      the provider returned no content at all
+     *   - `ai_response_truncated`  the answer was cut off at the output limit
+     *   - `ai_response_invalid`    the provider answered, but not with the
+     *                              expected document
+     *   - `ai_provider_failed`     the provider call itself failed
+     */
+    const failureCode =
+      error instanceof AiProviderError && error.status === 429
+        ? "ai_provider_rate_limited"
+        : providerResponseEmpty
+          ? "ai_response_empty"
+          : providerStopReason === "max_tokens"
+            ? "ai_response_truncated"
+            : providerCompleted
+              ? "ai_response_invalid"
+              : "ai_provider_failed";
+    return errorResponse(failureCode, 502);
   }
 }
 

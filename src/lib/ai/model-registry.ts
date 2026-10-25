@@ -16,6 +16,17 @@ export type AiModelDefinition = {
   toolCalling: boolean;
   structuredOutput: boolean;
   reasoningEfforts: readonly AiReasoningEffort[];
+  /**
+   * Effort the server applies when the caller does not choose one.
+   *
+   * Reasoning-capable models spend part of the output budget on hidden
+   * thinking before they emit an answer. Without a cap, a structured
+   * response can consume the entire budget on thinking and return no
+   * answer at all. `"low"` keeps the thinking overhead small while still
+   * leaving room for the answer. `null` means the model has no reasoning
+   * dimension to cap.
+   */
+  recommendedReasoningEffort: AiReasoningEffort | null;
   maxContextTokens: number | null;
   maxOutputTokens: number | null;
   suitableFor: readonly ("chat" | "planning" | "complex_analysis")[];
@@ -32,6 +43,7 @@ export const AI_MODEL_REGISTRY: readonly AiModelDefinition[] = [
     toolCalling: false,
     structuredOutput: false,
     reasoningEfforts: [],
+    recommendedReasoningEffort: null,
     maxContextTokens: null,
     maxOutputTokens: null,
     suitableFor: ["chat", "planning"],
@@ -46,6 +58,7 @@ export const AI_MODEL_REGISTRY: readonly AiModelDefinition[] = [
     toolCalling: true,
     structuredOutput: false,
     reasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
+    recommendedReasoningEffort: "low",
     maxContextTokens: null,
     maxOutputTokens: null,
     suitableFor: ["chat", "planning", "complex_analysis"],

@@ -12,6 +12,58 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — the workspace assistant no longer fails with "Check AI availability" when the model simply ran out of output budget
+
+Every workspace assistant request failed with "The assistant could not
+complete this request. Check AI availability and try again." The message was
+a symptom, not the cause: three separate failures were collapsed into one
+generic error, and the underlying error was replaced before it was logged.
+
+- **The output budget was smaller than the answer.** The assistant asks the
+  provider for one JSON document, and the request budget was 1,200 tokens.
+  The provider therefore stopped mid-document, the response could not be
+  parsed, and the request failed. The budget ceiling is now 8,192 tokens,
+  clamped to the agency plan's per-request output limit the same way every
+  other AI route clamps its own, which covers the longest response observed
+  in production (4,564 output tokens at `high` effort) with headroom to
+  spare.
+- **An uncapped reasoning model could answer nothing at all.** M3.1 Flash
+  spends part of the output budget on hidden thinking. At 1,200 tokens with
+  no effort set, the entire budget went to thinking and the provider
+  returned zero content. The model registry now records a
+  `recommendedReasoningEffort` per model (`low` for M3.1 Flash), the server
+  applies it whenever the caller does not choose an effort, and the client
+  no longer forces `medium`.
+- **A truncated answer is recovered instead of discarded.** When the
+  provider cuts the document off, the complete parts of the answer are kept,
+  the entries that cannot be shown are dropped, and the truncation is
+  disclosed in the response limitations rather than silently degrading the
+  answer.
+- **The failure now says what actually happened.** A truncated answer, an
+  empty answer, an unusable answer, an exhausted provider usage window, and
+  an unavailable provider are five distinct outcomes with five distinct
+  codes (`ai_response_truncated`, `ai_response_empty`,
+  `ai_response_invalid`, `ai_provider_rate_limited`, `ai_provider_failed`).
+  The client renders a message for each of them in English and Arabic, and
+  the underlying error — with the model, the stop reason, and whether the
+  response was empty — is preserved in the failure log instead of being
+  replaced by a generic one.
+- **The assistant honours the plan's per-request output limit.** The route
+  requested a fixed budget and ignored the agency's
+  `max_output_tokens_per_request`, unlike every other AI route. The budget
+  is now clamped to the plan limit the same way.
+
+### Added — MiniMax M3.1 Flash is selectable as an assistant model
+
+M3.1 Flash was already implemented in the model registry, the capability
+allowlist, and the AI client, but the production agency's permitted-model
+list excluded it, so members could not select it.
+
+- The production agency's permitted models now include `MiniMax-M3.1-Flash`
+  alongside `MiniMax-M3`. The agency default model and the tool-calling
+  switch are unchanged: including the model makes it selectable, not
+  forced.
+
 ### Added — the advertising account inventory now says when it last synced, and when it is not reconciled
 
 The advertising account table reported whether sync was _enabled_ and

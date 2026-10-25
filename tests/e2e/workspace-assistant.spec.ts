@@ -402,6 +402,33 @@ test.describe("Workspace AI Assistant", () => {
     await expect(page.getByRole("status").getByText("Applied")).toHaveCount(2);
   });
 
+  test("a truncated answer is reported as a truncated answer, not as an AI outage", async ({
+    page,
+  }) => {
+    const workspace = await bootstrapRoleSession(page, "workspace_manager", "assistant-truncated", {
+      locale: "en",
+    });
+    await page.goto(`/app/a/test-agency/w/${workspace.workspaceSlug}/ai-assistant`);
+    await page.route("**/api/ai/workspace-assistant", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+        return;
+      }
+      await route.fulfill({
+        status: 502,
+        contentType: "application/json",
+        body: '{"error":"ai_response_truncated"}',
+      });
+    });
+    await page
+      .getByPlaceholder("Ask for an analysis, suggestion, or plan…")
+      .fill("Analyze the selected month's content plan.");
+    await page.getByRole("button", { name: "Ask assistant" }).click();
+
+    await expect(page.getByRole("alert")).toContainText("cut off");
+    await expect(page.getByRole("alert")).not.toContainText("Check AI availability");
+  });
+
   test("Arabic workspace assistant uses RTL and Arabic prompt controls", async ({ page }) => {
     const workspace = await bootstrapRoleSession(page, "workspace_manager", "assistant-ar", {
       locale: "ar",

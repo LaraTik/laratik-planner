@@ -1,0 +1,40 @@
+{
+  "answer": "The selected month has 14 active items across Instagram, LinkedIn, and TikTok, but only 2 are scheduled in Week 1 versus a target of 4. Two static posts also remain in draft with captions pending review. The available plan evidence identifies Instagram static posts with caption drafts pending, while the workspace brand rules call for a warm and direct tone and prohibit unapproved price claims.",
+  "findings": [
+    {
+      "title": "Week 1 is publish-light",
+      "detail": "Only 2 of 14 scheduled items land in the first week of the selected month, against a target of 4.",
+      "severity": "medium",
+      "evidenceIds": []
+    },
+    {
+      "title": "Two captions are still in draft",
+      "detail": "Two static posts have no caption and remain in draft status.",
+      "severity": "low",
+      "evidenceIds": [
+        "assistant-evidence-1",
+        "assistant-evidence-2"
+      ]
+    },
+    {
+      "title": "Instagram static posts require caption review",
+      "detail": "The visible source records describe Instagram static posts scheduled for the selected month with caption drafts pending review.",
+      "severity": "low",
+      "evidenceIds": [
+        "assistant-evidence-1",
+        "assistant-evidence-2",
+        "assistant-evidence-3",
+        "assistant-evidence-4",
+        "assistant-evidence-5",
+        "assistant-evidence-6",
+        "assistant-evidence-7",
+        "assistant-evidence-8",
+        "assistant-evidence-9",
+        "assistant-evidence-10",
+        "assistant-evidence-11",
+        "assistant-evidence-12",
+        "assistant-evidence-13",
+        "assistant-evidence-14",
+        "assistant-evidence-15",
+        "assistant-evidence-16",
+        "assistant-ev

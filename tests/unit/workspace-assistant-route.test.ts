@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
@@ -36,6 +38,7 @@ const mocks = vi.hoisted(() => ({
   createMiniMaxToolProvider: vi.fn(),
   runAgentToolConversation: vi.fn(),
   listActiveWorkspaceAssistantSkills: vi.fn(),
+  getEffectiveEntitlement: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/current-actor", () => ({ currentActor: mocks.currentActor }));
@@ -73,6 +76,17 @@ vi.mock("@/lib/ai", () => ({
   chat: mocks.chat,
   chatStream: mocks.chatStream,
   getActiveApiKey: mocks.getActiveApiKey,
+  // The same class the route uses, so `instanceof` checks line up.
+  AiProviderError: class AiProviderError extends Error {
+    readonly status: number;
+    readonly body: string;
+    constructor(status: number, body: string) {
+      super(`MiniMax API error: ${status} ${body.slice(0, 200)}`);
+      this.name = "AiProviderError";
+      this.status = status;
+      this.body = body.slice(0, 200);
+    }
+  },
 }));
 vi.mock("@/lib/ai/context", () => ({ loadAiContext: mocks.loadAiContext }));
 vi.mock("@/lib/brand/profile", () => ({ getBrandProfile: mocks.getBrandProfile }));
@@ -101,10 +115,12 @@ vi.mock("@/lib/entitlements", () => ({
   LimitExceededError: class LimitExceededError extends Error {
     details = {};
   },
+  getEffectiveEntitlement: mocks.getEffectiveEntitlement,
 }));
 
 const { POST } = await import("@/app/api/ai/workspace-assistant/route");
 const { LimitExceededError } = await import("@/lib/entitlements");
+const { AiProviderError } = await import("@/lib/ai");
 
 function query(value: unknown) {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
@@ -228,6 +244,10 @@ beforeEach(() => {
   mocks.releaseAiBudgetReservation.mockResolvedValue(true);
   mocks.recordAiUsageEvent.mockResolvedValue(undefined);
   mocks.enforceRateLimit.mockResolvedValue({ allowed: true });
+  mocks.getEffectiveEntitlement.mockResolvedValue({
+    maxOutputTokensPerRequest: 8_000,
+    enabledAiCapabilities: new Set(["monthly_planning_copilot"]),
+  });
 });
 
 describe("POST /api/ai/workspace-assistant", () => {
@@ -1052,5 +1072,115 @@ describe("POST /api/ai/workspace-assistant", () => {
     expect(mocks.recordAiUsageEvent).toHaveBeenCalledWith(
       expect.objectContaining({ succeeded: true, inputTokens: 100, outputTokens: 20 }),
     );
+  });
+
+  it("gives the provider an output budget that fits a structured answer", async () => {
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    expect(mocks.chat.mock.calls[0]?.[0].maxTokens).toBe(8_000);
+  });
+
+  it("honours a plan that caps the per-request output tokens", async () => {
+    mocks.getEffectiveEntitlement.mockResolvedValue({
+      maxOutputTokensPerRequest: 2_000,
+      enabledAiCapabilities: new Set(["monthly_planning_copilot"]),
+    });
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    expect(mocks.chat.mock.calls[0]?.[0].maxTokens).toBe(2_000);
+  });
+
+  it("applies the model's recommended reasoning effort when the caller chooses none", async () => {
+    const response = await POST(request({ model: "MiniMax-M3.1-Flash" }));
+
+    expect(response.status).toBe(200);
+    expect(mocks.chat.mock.calls[0]?.[0].reasoningEffort).toBe("low");
+  });
+
+  it("keeps a reasoning effort the caller chose explicitly", async () => {
+    const response = await POST(request({ model: "MiniMax-M3.1-Flash", reasoningEffort: "high" }));
+
+    expect(response.status).toBe(200);
+    expect(mocks.chat.mock.calls[0]?.[0].reasoningEffort).toBe("high");
+  });
+
+  it("answers with the recovered part of a truncated provider response", async () => {
+    const truncated = readFileSync(
+      join(process.cwd(), "tests/fixtures/workspace-assistant/truncated-m3-400.json.txt"),
+      "utf8",
+    );
+    mocks.chat.mockResolvedValue({
+      content: truncated,
+      inputTokens: 100,
+      outputTokens: 400,
+      model: "MiniMax-M3",
+      stopReason: "max_tokens",
+    });
+
+    const response = await POST(request());
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.answer.answer.length).toBeGreaterThan(50);
+    expect(body.answer.limitations[0]).toContain("output limit");
+  });
+
+  it("reports a truncated answer as its own failure when nothing can be recovered", async () => {
+    mocks.chat.mockResolvedValue({
+      content: '{"answer": "cut off',
+      inputTokens: 100,
+      outputTokens: 400,
+      model: "MiniMax-M3",
+      stopReason: "max_tokens",
+    });
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ error: "ai_response_truncated" });
+  });
+
+  it("reports an empty provider answer as its own failure", async () => {
+    mocks.chat.mockResolvedValue({
+      content: "",
+      inputTokens: 100,
+      outputTokens: 400,
+      model: "MiniMax-M3",
+      stopReason: "max_tokens",
+    });
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ error: "ai_response_empty" });
+  });
+
+  it("reports a malformed provider answer separately from a provider outage", async () => {
+    mocks.chat.mockResolvedValue({
+      content: '{"answer": "the model ignored the requested shape"}',
+      inputTokens: 100,
+      outputTokens: 20,
+      model: "MiniMax-M3",
+      stopReason: "end_turn",
+    });
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ error: "ai_response_invalid" });
+  });
+
+  it("reports an exhausted provider usage allowance separately from an outage", async () => {
+    mocks.chat.mockRejectedValue(
+      new AiProviderError(429, '{"type":"error","error":{"type":"rate_limit_error"}}'),
+    );
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ error: "ai_provider_rate_limited" });
   });
 });
