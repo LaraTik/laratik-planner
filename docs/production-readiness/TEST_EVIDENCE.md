@@ -2,6 +2,33 @@
 
 > **2026-10-25 merge-policy update — ADR 0025** — Independent review and completion of local release gates are no longer prerequisites for merge. Historical entries below retain their original results and context; statements that merging must wait are superseded as stop conditions. No failed, incomplete, or unrun result is changed to pass, and deployment safeguards plus the `Verified` reviewer requirement remain in force.
 
+## Workspace AI Assistant dashboard refactor — source SHA `a6c3707ae1dbcef6c041d9d4c5c901e3bbaf9d8c`
+
+The user explicitly authorized merging, pushing, and deploying this update and
+asked to remove independent review and completed local gates as merge
+prerequisites. The code is committed directly on `main`. This release adds the
+requested bilingual planning dashboard, workspace-scoped monthly aggregates,
+plan comparisons, prompt discovery, recent conversations, and reviewable AI
+proposals. The content query checks the existing workspace role policy and
+returns exact monthly status counts plus at most five not-ready item titles.
+There is no schema change, provider call on page load, or Planner write.
+
+| Check                       | Result                                                                                                                                                                                                                                                                                                         |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Format, lint, and typecheck | Passed on the committed tree: targeted Prettier, ESLint, and `pnpm typecheck` passed. The pre-commit hook also passed its staged formatting/lint, typecheck, and affected-unit checks.                                                                                                                         |
+| Full `pnpm verify`          | Formatting, lint, typecheck, and production build passed. The full unit suite reported 5,354 passed and 4 failed (three 5-second timeouts in unrelated suites and one downstream mock error). The 49 tests in those three files passed when rerun in isolation. No timeout was changed to make this run green. |
+| Production build            | `pnpm build` passed; the Workspace AI Assistant route was generated successfully.                                                                                                                                                                                                                              |
+| Integration                 | The Workspace Assistant integration suite passed on the implementation tree, including the workspace/month query authorization and summary cases. No migration drill was applicable because no migration changed.                                                                                              |
+| Workspace Assistant browser | Eight of nine scenarios passed in the full focused run. The remaining cold-route model-access scenario passed in isolation after increasing that scenario's timeout to 90 seconds; all nine scenarios have a passing run, but the full file was not rerun as one invocation.                                   |
+| Bilingual accessibility     | The focused authenticated-route checks passed 2/2, including Arabic RTL.                                                                                                                                                                                                                                       |
+| Arabic visual review        | Capture and strict screenshot comparison passed across all five responsive sizes. The localized month control now matches the Arabic month heading.                                                                                                                                                            |
+| Broader release matrices    | The full release browser and visual matrices were not rerun on this SHA. Earlier 296/303 browser and 7/272 visual results remain historical and are not changed by these focused checks.                                                                                                                       |
+| Risk and readiness          | The user authorized proceeding with incomplete local evidence. MiniMax model/tool/privacy UAT, separated-account UAT, production restore/rollback proof, and independent reviewer sign-off remain open. `Verified` is not assigned; readiness remains **NOT READY**.                                           |
+
+The user authorization waives merge stop conditions only. Exact-main-SHA CI,
+SHA-tagged images, provider preflight, production backup before migrations,
+readiness checks, and automatic rollback remain required for deployment.
+
 ## User-authorized M3.8 Workspace AI and advertising deployment — 2026-10-25
 
 The user explicitly authorized merging and deploying the Workspace AI Assistant
