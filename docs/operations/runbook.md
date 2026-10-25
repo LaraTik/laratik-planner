@@ -107,27 +107,31 @@ When a section header in this runbook carries an M-tag, that tag is the contract
 
 ## Local review, release, and deployment
 
-> **The canonical release path is [`docs/operations/release.md`](./release.md)** — one ordered sequence from verify through deploy to the deploy-log entry. This section is the reference detail behind it: the commands, the container topology, the backup/restore procedures, and the recovery paths. Where the two disagree, `release.md` wins.
+> **The canonical release path is [`docs/operations/release.md`](./release.md)** — one ordered sequence from merge through deploy to the deploy-log entry. This section is the reference detail behind it: the commands, the container topology, the backup/restore procedures, and the recovery paths. Where the two disagree, `release.md` wins.
 
-The release is reviewed and verified on the developer/operator machine.
 GitHub is the remote source and PR/merge record; do not dispatch GitHub Actions
-for routine branch checks, builds, or deployments. Normally keep the independent
-review and every required production-readiness gate, and record evidence against
-the exact clean commit SHA before merging. For code changes run `pnpm verify`;
-run the disposable-database integration and migration checks when required;
-run the affected browser, EN/AR accessibility, and visual checks for touched UI.
-A release candidate also runs `pnpm test:e2e:release` and the exact tracker gates.
+for routine branch checks, builds, or deployments. Run local checks when
+practical and record evidence against the exact commit SHA. Independent review
+and completion of local release gates are not prerequisites for merging. For
+code changes, run `pnpm verify` where practical; run disposable-database
+integration and migration checks when applicable; run affected browser, EN/AR
+accessibility, and visual checks for touched UI. A release candidate should
+also run `pnpm test:e2e:release` and applicable tracker checks. Keep failed or
+unrun checks recorded accurately, and do not assign `Verified` or `READY`
+without the evidence those statuses require.
 
-An explicit user request to merge or deploy the current release authorizes
-proceeding when local review evidence or readiness gates are incomplete. Record
-the authorization and risks in the tracker and evidence bundle; keep failed
-gates failed and do not mark the release `Verified` or `READY`. This does not
-authorize bypassing GitHub branch protection, exact-SHA CI/image requirements,
-provider preflight, production backup before migrations, or deployment health
-and rollback controls. Stop if any of those hard controls fail.
+An explicit user request to merge or deploy authorizes proceeding without
+asking again when local evidence is incomplete. A merge does not require a
+waiver. If deploying with incomplete evidence, record the authorization and
+risks in the tracker and evidence bundle; keep failed gates failed and do not
+mark the release `Verified` or `READY`. This does not authorize bypassing
+GitHub branch protection, exact-SHA CI/image requirements, provider preflight,
+production backup before migrations, or deployment health and rollback
+controls. Stop if any of those hard controls fail.
 
-After local review passes, or after explicit user authorization, merge the
-change into `main` and push `main`. For a release, manually dispatch **CI** with
+After the change is ready to integrate, merge it into `main` and push `main`;
+independent review and complete local release gates are not merge prerequisites.
+For a release, manually dispatch **CI** with
 `main` selected. CI runs its main-only
 quality, unit, migration, audit, image-build and smoke jobs, then publishes
 immutable app and migrator images tagged with that exact `main` SHA. The full
@@ -573,10 +577,9 @@ touchable.
 
 ### Manual GitHub Actions release path
 
-GitHub Actions remain manual-only and main-only. Local review, `pnpm verify`,
-the full integration suite, and all change-specific release evidence must be
-complete before merge. For an approved release, dispatch CI on `main`; its
-build-smoke job publishes the app and migrator images for the checked-out
+GitHub Actions remain manual-only and main-only. Merge does not require local
+review or completion of local release gates. After merge, dispatch CI on `main`;
+its build-smoke job publishes the app and migrator images for the checked-out
 `main` SHA. Then dispatch Deploy on `main` for that same SHA. The deploy job
 requires successful CI and verifies both private GHCR image tags before SSH
 deployment. Integration tests do not run in GitHub Actions. Never dispatch a
@@ -1037,24 +1040,26 @@ The bell counter is the user's primary signal that something needs their attenti
 
 ## Repository protection (GitHub Settings)
 
-GitHub protects the `main` source history and records the independent PR
-review. Verification and deployment are local per ADR 0021; do not require a
-GitHub Actions status check for merge or deployment.
+GitHub protects the `main` source history with linear history, resolved review
+conversations, and no force-push or branch deletion. Branch protection currently
+requires zero approving reviews and no CODEOWNERS review; local review evidence
+is not a merge requirement. Do not require a GitHub Actions status check for
+merge or deployment.
 
-| Surface                  | Setting                                                                                           | Where                                      |
-| ------------------------ | ------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| `main` branch            | Require 1 review from `@LaraTik/laratik-planner-maintainers`                                      | Branch protection rules                    |
-| `main` branch            | Require linear history (no merge commits)                                                         | Branch protection rules                    |
-| `main` branch            | No force-push                                                                                     | Branch protection rules                    |
-| `main` branch            | No branch deletion                                                                                | Branch protection rules                    |
-| `main` branch            | Require CODEOWNERS review on touched paths (via `.github/CODEOWNERS`)                             | Branch protection rules                    |
-| `main` branch            | No required Actions status checks; exact-SHA local evidence is reviewed before merge              | Branch protection rules                    |
-| `production` environment | Used only by the manually dispatched Deploy workflow; configure any required production approvals | Environments → production                  |
-| Repository secrets       | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_PAT`, `GHCR_USER` for manual Deploy                  | Settings → Secrets and variables → Actions |
-| Secret rotation          | GHCR PAT, VPS SSH key: every 90 days (see `OPS-001` evidence)                                     | Calendar reminder                          |
-| Workflow file            | Top-level `permissions: contents: read` (default deny; legacy workflows only)                     | GitHub Actions configuration               |
-| `deploy.yml` job         | Main-only manual deployment, gated on successful CI and immutable image tags                      | `deploy.yml` deploy job                    |
-| `lint-meta` job          | Run applicable linters locally before release                                                     | `ci.yml` lint-meta job definitions         |
+| Surface                  | Setting                                                                                                              | Where                                      |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `main` branch            | Require linear history (no merge commits)                                                                            | Branch protection rules                    |
+| `main` branch            | No force-push                                                                                                        | Branch protection rules                    |
+| `main` branch            | No branch deletion                                                                                                   | Branch protection rules                    |
+| `main` branch            | No required approving review; no required CODEOWNERS review                                                          | Branch protection rules                    |
+| `main` branch            | No required Actions status checks; local evidence is recorded accurately without a pre-merge review/gate requirement | Branch protection rules                    |
+| `main` branch            | Require review conversation resolution                                                                               | Branch protection rules                    |
+| `production` environment | Used only by the manually dispatched Deploy workflow; configure any required production approvals                    | Environments → production                  |
+| Repository secrets       | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_PAT`, `GHCR_USER` for manual Deploy                                     | Settings → Secrets and variables → Actions |
+| Secret rotation          | GHCR PAT, VPS SSH key: every 90 days (see `OPS-001` evidence)                                                        | Calendar reminder                          |
+| Workflow file            | Top-level `permissions: contents: read` (default deny; legacy workflows only)                                        | GitHub Actions configuration               |
+| `deploy.yml` job         | Main-only manual deployment, gated on successful CI and immutable image tags                                         | `deploy.yml` deploy job                    |
+| `lint-meta` job          | Run applicable linters locally before release                                                                        | `ci.yml` lint-meta job definitions         |
 
 These rules are set in the GH web UI; the in-repo artifacts (`CODEOWNERS`, `dependabot.yml`, `zizmor.yml`, top-level `permissions:` blocks) only enforce what they can. Configure branch review/history protection, production approvals, and secret handling on a fresh repo. The workflow does not add a required Actions status check to `main`.
 

@@ -4,6 +4,8 @@
 
 Accepted — 2026-10-25
 
+> **Merge sequence superseded in part by ADR 0025:** independent review and completed local release gates are not prerequisites for merge.
+
 ## Context
 
 Four mechanics in the release path were unreachable, contradictory, or mechanically impossible. Each converted an ordinary merge into a written risk-acceptance narrative. The full analysis, with measurements, is in [`docs/audits/RELEASE_PROCESS_REVIEW_2026-10-25.md`](../audits/RELEASE_PROCESS_REVIEW_2026-10-25.md).
@@ -20,7 +22,7 @@ A fifth, lower-severity defect: `docs/decisions/` uses three numbers twice (`000
 
 ## Decision
 
-1. **One canonical release path.** `docs/operations/release.md` is the ordered path — verify → review → merge → clean up → push → build and publish → deploy → verify → record — with exact commands, success criteria, and rollback. `AGENTS.md`, the operations runbook, and the release checklist describe the same sequence and defer to it on any disagreement. The local buildx → GHCR → SSH path is named explicitly as the **fallback** for when the dispatched CI build is unavailable.
+1. **One canonical release path.** `docs/operations/release.md` is the ordered path — merge → clean up → push → exact-SHA CI → Deploy → verify → record — with exact commands, success criteria, and rollback. Run local checks and request review when practical, but neither is a merge prerequisite. `AGENTS.md`, the operations runbook, and the release checklist describe the same path and defer to it on any disagreement. The local buildx → GHCR → SSH path is named explicitly as the **fallback** for when the dispatched CI build is unavailable.
 
 2. **The independent review is a person, not a form.** The reviewer is the repository owner, or any other person who did not write the change; the implementation agent can never review its own work. The review may be recorded as a **GitHub PR review** or as a **local review record** naming the reviewer, the date, the exact SHA, and the confirmed boxes. The substantive checklist — IDOR, transaction boundaries, audit rows, tenant isolation, coverage, migrations and secrets — is unchanged, and the prohibition on assigning `Verified` without the review is unchanged.
 

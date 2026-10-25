@@ -77,11 +77,12 @@ Routes and Server Actions validate external input and repeat auth/policy checks;
 domain modules own tenant scope and workflow decisions, while persistence owns
 transactions and locking.
 
-Before merging a page or module change, review the checklist in
-`../architecture/module-ownership.md`: the affected loading, empty, error,
-denied, and success states; EN/AR and RTL; keyboard/accessibility; responsive
-layouts; semantic tokens; and focused tests at the module's public interface.
-Record missing evidence as open work rather than treating compilation as proof.
+During a page or module change, use the checklist in
+`../architecture/module-ownership.md` when practical: the affected loading,
+empty, error, denied, and success states; EN/AR and RTL; keyboard/accessibility;
+responsive layouts; semantic tokens; and focused tests at the module's public
+interface. Record missing evidence as open work rather than treating
+compilation as proof or making it a merge prerequisite.
 
 The master prompt's usual file sizes are review triggers, not automatic split
 requirements. Extract code only when the module has a coherent shared behavior

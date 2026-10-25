@@ -18,6 +18,7 @@
 
 ## Explicit user-requested merge and deployment
 
+- An independent review and complete local release gates are not prerequisites for any merge. Keep review and test evidence truthful; only an independent reviewer may assign `Verified`.
 - When the user explicitly says `merge`, `deploy`, `merge and deploy`, or equivalent for the current release, treat that message as authorization to proceed without asking again, even when local review evidence or production-readiness gates are incomplete. Follow the normal PR → `main` → exact-SHA CI → Deploy sequence.
 - Record the user's authorization, exact release SHA, failed or incomplete gates, and material impact/security/data risks in the production-readiness tracker and evidence bundle. This is a waiver of stop conditions, not a passing result: never weaken tests, describe a failed gate as passed, or assign `Verified` without the independent reviewer.
 - Keep the hard deployment controls: do not force-bypass GitHub branch protection or deployment-environment approvals; require successful CI and exact SHA-tagged images for the `main` SHA; retain provider preflight, production backup before migrations, readiness checks, and automatic rollback. If any hard control fails, stop and report the blocker.
@@ -25,13 +26,13 @@
 
 ## The release path
 
-**`docs/operations/release.md` is the canonical release path**: verify → review → merge → clean up → push → build and publish → deploy → verify → record. It is one ordered path with no options.
+**`docs/operations/release.md` is the canonical release path**: merge → clean up → push → exact-SHA CI → Deploy → verify → record. Run useful local checks and request review when practical, but neither independent review nor complete local release gates are prerequisites for merge. Keep all evidence and readiness statuses accurate.
 
 `AGENTS.md`, `docs/operations/runbook.md`, and `docs/contributing/release-checklist.md` remain in force but describe the same sequence. Where they disagree with `docs/operations/release.md`, that document wins.
 
 Two rules that shape everything below:
 
-- **The independent review is a person, not a form.** ADR 0021 moved review to the local machine, so a GitHub PR review and a local review record satisfy the gate equally. What the gate protects is that someone who did not write the code read the diff. Requiring one specific artifact blocked the release without protecting anything.
+- **Only an independent reviewer may assign `Verified`.** A GitHub PR review and a local review record both document that status. Review is not a merge prerequisite; see ADR 0025.
 - **Squash-merges break ancestry-based tests.** A branch merged as a squash commit is only _patch-equivalent_ to `main`, never an _ancestor_ — and `git branch -d` refuses it. Ancestry alone is therefore never a safe test for "is this merged". Use `./scripts/cleanup-worktrees.sh`, which checks ancestry first and then falls back to patch equivalence plus a per-file content comparison.
 
 ## Quick start
@@ -235,9 +236,9 @@ in one pass or extract code only to reduce file length.
 - ✅ Every migration must be registered in `src/lib/db/migrations/meta/_journal.json`, target the exact table names in the Drizzle schema, and include forward, compatibility, backup, rollback, from-zero, and upgrade evidence. A successful build does not prove that a migration runs.
 - ✅ Record verification against the exact clean commit SHA. If the branch advances or becomes dirty after verification, rerun the affected gates before calling the work complete.
 - ✅ Pre-commit hook catches lint/format/typecheck/unit-test issues early — keep it fast by keeping its scope tight (lint-staged on staged files, `vitest related` on staged sources, sentinel-driven `tsc --noEmit`). Skip with `git commit --no-verify` or `SKIP_TYPECHECK=1` for WIP / hotfixes.
-- ✅ Pre-push hook runs affected unit and integration checks selected from the pushed commit range; it does not run the full integration suite or E2E. The full integration suite runs once for a release candidate against disposable `planner_test`. Use `pnpm test:affected -- --layer browser` for local affected E2E and `pnpm test:e2e:release` for the strict full browser + visual release-candidate check. Do not dispatch GitHub Actions for branches or PRs. The only routine workflow dispatches are CI then Deploy against `main` after local review, merge, and evidence. Skip hooks only for a documented reason.
-- ✅ Review and verify locally before merging: inspect the complete diff, obtain the independent review required by the production-readiness tracker when available, run `pnpm verify`, and complete the applicable local integration, migration, bilingual browser, accessibility, and visual gates. Record evidence against the exact clean SHA. If the user explicitly requests merge/deploy while evidence is incomplete, record the waiver and risks and continue without treating the gates as passed.
-- ✅ Merge finished work to `main` after local review and required gates pass, or when the user explicitly authorizes merge/deploy. Push the resulting `main` SHA to `origin`; then manually dispatch the CI workflow on `main` to build, smoke-test, and publish the SHA-tagged app and migrator images. After CI succeeds for that exact SHA, manually dispatch Deploy on `main`. GitHub Actions never run automatically for branches or PRs; do not dispatch a branch ref. Follow the runbook and retain exact-SHA evidence. No finished work sits in a dirty tree or stale branch.
+- ✅ Pre-push hook runs affected unit and integration checks selected from the pushed commit range; it does not run the full integration suite or E2E. The full integration suite is recommended once for a release candidate against disposable `planner_test`. Use `pnpm test:affected -- --layer browser` for local affected E2E and `pnpm test:e2e:release` for the full browser + visual release-candidate evidence. Do not dispatch GitHub Actions for branches or PRs. The only routine workflow dispatches are CI then Deploy against `main` after merge; record local evidence that is available. Skip hooks only for a documented reason.
+- ✅ Pre-merge checks are recommended, not a merge condition: inspect the diff and run applicable checks when practical. An independent review and completion of local release gates are not required before merging. Record which checks passed, failed, or were not run; never describe an incomplete gate as passed or mark work `Verified` / `READY` without its required evidence.
+- ✅ Merge finished work to `main` when requested or ready for integration. Push the resulting `main` SHA to `origin`; then manually dispatch the CI workflow on `main` to build, smoke-test, and publish the SHA-tagged app and migrator images. After CI succeeds for that exact SHA, manually dispatch Deploy on `main`. GitHub Actions never run automatically for branches or PRs; do not dispatch a branch ref. Follow the runbook and retain exact-SHA evidence. No finished work sits in a dirty tree or stale branch.
 - ✅ Branch and worktree lifecycle: a feature branch and its worktree are temporary scratch space. After its work lands on `main`, remove both — `git branch -d` and `git worktree remove` are correct for the common case. Squash-merges break the ancestry test, so use `./scripts/cleanup-worktrees.sh` (report by default, `--apply` to remove). It checks ancestry first, then patch equivalence plus a per-file content comparison; it refuses `main`, refuses dirty worktrees, and never discards unique work. A branch that still carries unmerged commits is unfinished work, not cleanup: rebase it onto `main` and finish it. See `docs/operations/release.md` § 4.
 - ✅ Before a Docker production build, check the Buildx builder's memory (`docker info --format '{{.MemTotal}}'`). The production Next build is capped at two workers and a 3 GiB Node heap. If the Docker VM has less than 8 GiB available or reports allocation/OOM failures, increase Docker Desktop memory (12 GiB recommended on this 48 GiB host) before retrying. Do not blindly raise `NODE_OPTIONS`: concurrent Next workers and BuildKit need memory outside the V8 heap. See `docs/operations/runbook.md`.
 - ✅ Keep the remote Planner MCP current on every change: update the implementation, `docs/api/mcp.md`, `docs/api/README.md`, `docs/api/mcp-evaluation.xml`, affected bilingual Account UI copy, tests, and production-readiness evidence together. Follow [`docs/operations/mcp-maintenance.md`](docs/operations/mcp-maintenance.md); never ship a new tool, scope, error, or transport behavior with stale client documentation.
@@ -535,7 +536,7 @@ The independent reviewer (Task 13) flips the verdict to `READY` after the
 30-step §23 journey and the owner checks in
 `docs/production-readiness/EXTERNAL_SERVICES_UAT.md` are signed.
 
-> Workflow contract — see `docs/testing/strategy.md` (Release gates), ADR 0019, and ADR 0021. GitHub Actions are disabled for the normal review/release process; local checks and the local operator deployment path are authoritative. The workflows are retained as legacy/manual recovery tooling and must not be dispatched for ordinary branches or releases. Local E2E uses `pnpm test:affected -- --layer browser` or `pnpm test:e2e:release`; pre-push runs affected unit and integration checks selected from the pushed range. The full integration suite is a release-candidate gate, not a per-push hook.
+> Workflow contract — see `docs/operations/release.md`, `docs/testing/strategy.md`, ADR 0019, and ADR 0025. GitHub Actions are manual-only and main-only: dispatch CI and then Deploy for the exact merged `main` SHA. Never dispatch workflows for branches or PRs. Local E2E uses `pnpm test:affected -- --layer browser` or `pnpm test:e2e:release`; pre-push runs affected unit and integration checks selected from the pushed range. Run the full integration suite for release evidence when practical; it is not a merge prerequisite.
 
 ## Activity log rendering
 
@@ -588,9 +589,9 @@ diff shapes, and extension recipe.
 
 - **Commits:** `<type>(<scope>): <description>`. Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `upgrade`. Scopes: `db`, `auth`, `content`, `planning`, `workflow`, `discussions`, `deliveries`, `publishing`, `notifications`, `ai`, `infra`, `ci`, `deps`, `i18n`, `format-payload`.
 - **Branches:** `main` is production. `feat/*` for features, `fix/*` for hotfixes, `chore/*` for chores. Squash-merge.
-- **PRs:** local review and the applicable local release gates must be complete before merge. Reference the goal number in the PR title. Do not wait for or dispatch GitHub Actions.
+- **PRs:** independent review and complete local release gates are not prerequisites for merge. Reference the goal number in the PR title. Record test and review status accurately; do not wait for or dispatch GitHub Actions for branches or PRs.
 - **ADRs:** material deviations from the master prompt go in `docs/decisions/`. The first one (`docs/decisions/0001-vps-port.md`) records the choice to self-host on the LaraTik VPS instead of Supabase + Vercel.
-- **Merge on completion:** when independent local review, `pnpm verify`, and the applicable local integration/migration/browser/accessibility/visual gates are complete and recorded against the exact clean SHA, commit with a `<type>(<scope>): <description>` message, merge to `main`, and push. Manually dispatch CI on `main` to build/publish immutable SHA-tagged app/migrator images, then manually dispatch Deploy for the same SHA. GitHub does not run integration tests; the complete integration suite is a local release gate. Never dispatch branch or PR refs. No finished work sits in a dirty tree or stale branch; feature branches (`feat/*`, `fix/*`, `chore/*`) are temporary scratch space — remove the branch and its worktree with `./scripts/cleanup-worktrees.sh --apply` once the work is on `main`. The full ordered path is `docs/operations/release.md`.
+- **Merge on completion:** merge finished work to `main` without requiring independent local review or complete local release gates first. Run checks when practical and record their exact results; the independent reviewer remains the only role that may assign `Verified`. Push `main`, manually dispatch CI there to build/publish immutable SHA-tagged app/migrator images, then manually dispatch Deploy for the same SHA. GitHub does not run integration tests. Never dispatch branch or PR refs. No finished work sits in a dirty tree or stale branch; feature branches (`feat/*`, `fix/*`, `chore/*`) are temporary scratch space — remove the branch and its worktree with `./scripts/cleanup-worktrees.sh --apply` once the work is on `main`. The full ordered path is `docs/operations/release.md`.
 
 ## Product UI/UX Engineering Rules
 
@@ -896,9 +897,10 @@ risk-acceptance paragraph. The review, with measurements, is in
 - **The release path was described three ways.** The quick start implied a
   local build, the hard rules required dispatching CI and Deploy on `main`,
   and the runbook called the local path "recovery only".
-  `docs/operations/release.md` is now the single ordered path — verify →
-  review → merge → clean up → push → build and publish → deploy → verify →
-  record — and the local buildx path is named explicitly as the fallback.
+  `docs/operations/release.md` is now the single ordered path. Local review and
+  release checks are informative evidence, not merge prerequisites; exact-SHA
+  main CI and deployment safeguards remain required. The local buildx path is
+  named explicitly as the fallback.
 
 - **A clean release no longer needs a paragraph.** A routine release records
   one row in the deploy log; the full narrative in the tracker and

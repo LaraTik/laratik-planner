@@ -76,4 +76,4 @@ Acceptance: all routes enforce their intended role; no cross-agency resource is 
 
 ## Required final report
 
-Return a concise mapping of M2.1–M2.10 to files and commits, every verification command with exact result, the migration compatibility/rollback statement, known owner-only follow-ups, final branch/main SHAs, and CI/deploy URLs or status. If any gate is red, stop before merge and report the precise blocker instead of weakening a test.
+Return a concise mapping of M2.1–M2.10 to files and commits, every verification command with exact result, the migration compatibility/rollback statement, known owner-only follow-ups, final branch/main SHAs, and CI/deploy URLs or status. Do not weaken tests or report a red gate as passed. A red or incomplete local gate does not prevent an authorized merge; report its precise result and leave readiness status truthful.

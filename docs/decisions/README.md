@@ -35,11 +35,13 @@ Numbers are listed in decision order. **Three numbers are used twice** (`0005`, 
 | 0022     | `0022-main-only-hosted-image-build-and-deploy.md` | Main-only hosted image build and deployment                                      | 2026-10-24 |
 | 0023     | `0023-local-production-snapshot.md`               | Reusable local production-data snapshot                                          | 2026-10-25 |
 | 0024     | `0024-release-path-and-review-evidence.md`        | Canonical release path, review evidence, and branch lifecycle                    | 2026-10-25 |
+| 0025     | `0025-no-pre-merge-gates.md`                      | No independent-review or local-gate prerequisite for merging                     | 2026-10-25 |
 
 ## Superseded records
 
 - `0013-advisory-quality-gates.md` — superseded for release execution by ADR 0021.
 - `0019-manual-github-actions.md` — superseded for review by ADR 0021 and for main-only hosted build and deploy by ADR 0022.
+- ADRs 0020, 0021, 0022, and 0024 — superseded by ADR 0025 only where they make independent review or completed local release gates a prerequisite for merge. Their test-safety, readiness-status, and hard deployment controls remain in force.
 
 ## When to write one
 

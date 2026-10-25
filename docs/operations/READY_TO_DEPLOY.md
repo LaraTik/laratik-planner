@@ -135,16 +135,16 @@ Never record secret values, real invitation URLs, or production user data in thi
 
 One row per deploy. This is the record the release checklist's per-deploy gate refers to.
 
-| SHA | Date | Operator | CI run | Deploy run | Health version | Reviewer | Gates | Result |
-| --- | ---- | -------- | ------ | ---------- | -------------- | -------- | ----- | ------ |
-|     |      |          |        |            |                |          |       |        |
+| SHA | Date | Operator | CI run | Deploy run | Health version | Review status | Gates | Result |
+| --- | ---- | -------- | ------ | ---------- | -------------- | ------------- | ----- | ------ |
+|     |      |          |        |            |                |               |       |        |
 
 **How to fill it.**
 
 - **SHA** — the full 40-character `main` commit that was deployed.
 - **CI run / Deploy run** — the workflow run URLs. In the local-build fallback path, write `local buildx` in place of the CI run URL.
 - **Health version** — the `version` reported by `https://planner.laratik.com/api/health` after the deploy.
-- **Reviewer** — who signed the `docs/contributing/pr-review-checklist.md` boxes, or `waived` when the release proceeded without one.
+- **Review status** — reviewer and sign-off if available; otherwise record `not performed`. Review is not a prerequisite for merge.
 - **Gates** — `green` / the list of failed or waived gates with the exact command for each.
 - **Result** — `deployed`, `risk accepted`, or `rolled back`.
 

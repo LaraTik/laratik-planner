@@ -4,6 +4,8 @@
 
 Accepted — 2026-10-24
 
+> **Merge prerequisite superseded by ADR 0025:** local review and local gates are not prerequisites for merge. The main-only CI, image, preflight, backup, and deployment controls remain required.
+
 ## Context
 
 ADR 0021 moved normal release image builds and deployments to the local
@@ -16,8 +18,8 @@ that verified image. The owner has requested using this hosted image path.
 ## Decision
 
 - Code review, `pnpm verify`, full local disposable-Postgres integration tests,
-  and applicable migration, browser, accessibility, visual, and independent
-  review gates remain local and must be recorded before merge.
+  and applicable migration, browser, accessibility, and visual checks remain
+  local evidence. Run them when practical; they are not merge prerequisites.
 - GitHub Actions remain `workflow_dispatch` only. Do not run any workflow for
   a branch or pull request.
 - After merge, manually dispatch CI with `main` selected. CI runs its existing
@@ -30,7 +32,8 @@ that verified image. The owner has requested using this hosted image path.
   both tags, then uses the existing VPS backup, migration, readiness, and
   application rollback procedure.
 - Never deploy a branch, PR, mutable `latest` tag, or image whose SHA differs
-  from the reviewed and locally verified `main` commit.
+  from the exact `main` commit whose CI succeeded. Readiness and review status
+  must remain truthful; only an independent reviewer may assign `Verified`.
 - Keep the local Buildx instructions as a recovery path. Bound Next build
   parallelism, inspect Docker VM memory before building, and do not respond to
   an OOM by blindly raising the V8 heap.
@@ -45,9 +48,10 @@ that verified image. The owner has requested using this hosted image path.
 - The workflow's GitHub token needs package write access only in the image
   publishing job. The deploy job retains read access and passes the existing
   VPS pull credential through the SSH action's environment forwarding.
-- ADR 0021 remains in force for local review, local test evidence, merge, and
-  release accountability; this decision supersedes only its local image
-  publication and deployment mechanism.
+- ADR 0021 remains in force for recording available local review and test
+  evidence and release accountability, as amended by ADR 0025. Review and
+  local checks are not merge prerequisites; this decision defines the main-only
+  image publication and deployment mechanism.
 
 ## Rollback
 
