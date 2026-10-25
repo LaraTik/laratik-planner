@@ -238,8 +238,9 @@ in one pass or extract code only to reduce file length.
 - ✅ Pre-commit hook catches lint/format/typecheck/unit-test issues early — keep it fast by keeping its scope tight (lint-staged on staged files, `vitest related` on staged sources, sentinel-driven `tsc --noEmit`). Skip with `git commit --no-verify` or `SKIP_TYPECHECK=1` for WIP / hotfixes.
 - ✅ Pre-push hook runs affected unit and integration checks selected from the pushed commit range; it does not run the full integration suite or E2E. The full integration suite is recommended once for a release candidate against disposable `planner_test`. Use `pnpm test:affected -- --layer browser` for local affected E2E and `pnpm test:e2e:release` for the full browser + visual release-candidate evidence. Do not dispatch GitHub Actions for branches or PRs. The only routine workflow dispatches are CI then Deploy against `main` after merge; record local evidence that is available. Skip hooks only for a documented reason.
 - ✅ Pre-merge checks are recommended, not a merge condition: inspect the diff and run applicable checks when practical. An independent review and completion of local release gates are not required before merging. Record which checks passed, failed, or were not run; never describe an incomplete gate as passed or mark work `Verified` / `READY` without its required evidence.
-- ✅ Merge finished work to `main` when requested or ready for integration. Push the resulting `main` SHA to `origin`; then manually dispatch the CI workflow on `main` to build, smoke-test, and publish the SHA-tagged app and migrator images. After CI succeeds for that exact SHA, manually dispatch Deploy on `main`. GitHub Actions never run automatically for branches or PRs; do not dispatch a branch ref. Follow the runbook and retain exact-SHA evidence. No finished work sits in a dirty tree or stale branch.
-- ✅ Branch and worktree lifecycle: a feature branch and its worktree are temporary scratch space. After its work lands on `main`, remove both — `git branch -d` and `git worktree remove` are correct for the common case. Squash-merges break the ancestry test, so use `./scripts/cleanup-worktrees.sh` (report by default, `--apply` to remove). It checks ancestry first, then patch equivalence plus a per-file content comparison; it refuses `main`, refuses dirty worktrees, and never discards unique work. A branch that still carries unmerged commits is unfinished work, not cleanup: rebase it onto `main` and finish it. See `docs/operations/release.md` § 4.
+- ✅ Work on `main` directly. Do not create a feature branch or a worktree unless the user explicitly asks for one. When the remote requires a pull request, push the local `main` commits through a short-lived branch, merge the PR, and delete the branch immediately — the branch is transport, not a workspace.
+- ✅ Commit finished work to `main` when requested or ready for integration. Push the resulting `main` SHA to `origin`; then manually dispatch the CI workflow on `main` to build, smoke-test, and publish the SHA-tagged app and migrator images. After CI succeeds for that exact SHA, manually dispatch Deploy on `main`. GitHub Actions never run automatically for branches or PRs; do not dispatch a branch ref. Follow the runbook and retain exact-SHA evidence. No finished work sits in a dirty tree.
+- ✅ Branch and worktree cleanup, when a branch was used deliberately or one is left over: `git branch -d` and `git worktree remove` are correct for the common case. Squash-merges break the ancestry test, so use `./scripts/cleanup-worktrees.sh` (report by default, `--apply` to remove). It checks ancestry first, then patch equivalence plus a per-file content comparison; it refuses `main`, refuses dirty worktrees, and never discards unique work. A branch that still carries unmerged commits is unfinished work, not cleanup: rebase it onto `main` and finish it. See `docs/operations/release.md` § 4.
 - ✅ Before a Docker production build, check the Buildx builder's memory (`docker info --format '{{.MemTotal}}'`). The production Next build is capped at two workers and a 3 GiB Node heap. If the Docker VM has less than 8 GiB available or reports allocation/OOM failures, increase Docker Desktop memory (12 GiB recommended on this 48 GiB host) before retrying. Do not blindly raise `NODE_OPTIONS`: concurrent Next workers and BuildKit need memory outside the V8 heap. See `docs/operations/runbook.md`.
 - ✅ Keep the remote Planner MCP current on every change: update the implementation, `docs/api/mcp.md`, `docs/api/README.md`, `docs/api/mcp-evaluation.xml`, affected bilingual Account UI copy, tests, and production-readiness evidence together. Follow [`docs/operations/mcp-maintenance.md`](docs/operations/mcp-maintenance.md); never ship a new tool, scope, error, or transport behavior with stale client documentation.
 - ✅ Staging before production: not yet (single-environment for v1, see Goal 14)
@@ -588,10 +589,10 @@ diff shapes, and extension recipe.
 ## Conventions
 
 - **Commits:** `<type>(<scope>): <description>`. Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `upgrade`. Scopes: `db`, `auth`, `content`, `planning`, `workflow`, `discussions`, `deliveries`, `publishing`, `notifications`, `ai`, `infra`, `ci`, `deps`, `i18n`, `format-payload`.
-- **Branches:** `main` is production. `feat/*` for features, `fix/*` for hotfixes, `chore/*` for chores. Squash-merge.
-- **PRs:** independent review and complete local release gates are not prerequisites for merge. Reference the goal number in the PR title. Record test and review status accurately; do not wait for or dispatch GitHub Actions for branches or PRs.
+- **Branches:** `main` is production. **Work on `main` directly** — no feature branch, no worktree — unless the user explicitly asks for one. When a branch is used deliberately, it is temporary transport: delete it and its worktree once the work is on `main`.
+- **PRs:** a pull request is a transport mechanism for a remote that requires one, not a workspace. Independent review and complete local release gates are not prerequisites for merge. Reference the goal number in the PR title when one is needed. Record test and review status accurately; do not wait for or dispatch GitHub Actions for branches or PRs.
 - **ADRs:** material deviations from the master prompt go in `docs/decisions/`. The first one (`docs/decisions/0001-vps-port.md`) records the choice to self-host on the LaraTik VPS instead of Supabase + Vercel.
-- **Merge on completion:** merge finished work to `main` without requiring independent local review or complete local release gates first. Run checks when practical and record their exact results; the independent reviewer remains the only role that may assign `Verified`. Push `main`, manually dispatch CI there to build/publish immutable SHA-tagged app/migrator images, then manually dispatch Deploy for the same SHA. GitHub does not run integration tests. Never dispatch branch or PR refs. No finished work sits in a dirty tree or stale branch; feature branches (`feat/*`, `fix/*`, `chore/*`) are temporary scratch space — remove the branch and its worktree with `./scripts/cleanup-worktrees.sh --apply` once the work is on `main`. The full ordered path is `docs/operations/release.md`.
+- **Commit on completion:** commit finished work straight to `main` without requiring independent local review or complete local release gates first. Run checks when practical and record their exact results; the independent reviewer remains the only role that may assign `Verified`. Push `main`, manually dispatch CI there to build/publish immutable SHA-tagged app/migrator images, then manually dispatch Deploy for the same SHA. GitHub does not run integration tests. Never dispatch branch or PR refs. No finished work sits in a dirty tree. The full ordered path is `docs/operations/release.md`.
 
 ## Product UI/UX Engineering Rules
 
@@ -864,6 +865,33 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 - Tests covering A1→A2, A1→B1, B1→A1, browser refresh, browser back, direct URL, workspace removed, stale cached API response live in `tests/unit/workspace-isolation.test.ts` and `tests/e2e/workspace.spec.ts`.
 
 ## Changelog
+
+### 2026-10-25 — work on `main` directly
+
+Every change travelled through a feature branch, a worktree, a pull request, a
+squash-merge, and a branch deletion. Each step was reasonable on its own;
+together they made an ordinary change expensive and gave a stranded branch or
+worktree somewhere to hide. The repository owner has now asked for the opposite
+default. ADR 0026.
+
+- **The default workspace is the `main` checkout.** Changes are made, verified,
+  and committed directly on `main`. No feature branch, no worktree — unless the
+  user explicitly asks for one.
+- **A pull request is transport, not a workspace.** Where the remote requires a
+  pull request to update `main`, the local `main` commits go through a
+  short-lived branch that is merged and deleted immediately.
+- **Cleanup is now the exception.** `scripts/cleanup-worktrees.sh` stays for
+  branches that were created deliberately or left over; there is nothing left to
+  accumulate in the normal path.
+- **Concurrency moves onto `main`.** Two sessions in one repository can now
+  collide on the same branch, so `git pull --ff-only origin main` before
+  starting and a clean tree before committing matter more than they did when
+  each session had its own branch. A pull that is not a fast-forward is a
+  stop-and-report condition, not something to force.
+
+Independent review and local release gates remain non-prerequisites for merge
+(ADR 0025), the `Verified` transition still requires an independent reviewer,
+and every hard deployment control remains in force.
 
 ### 2026-10-25 — the release path was blocked by its own record-keeping, not by its gates
 

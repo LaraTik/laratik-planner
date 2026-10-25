@@ -113,6 +113,7 @@ A condensed version of the patterns above, mirroring the `AGENTS.md` Hard Rules 
 - ✅ Enforce per-agency and per-workspace boundaries at the service layer, not the UI layer.
 - ✅ Test the service with a unit test that mocks the DB; test the boundary with an integration test against disposable Postgres.
 - ✅ Run `pnpm verify` (format:check, lint, typecheck, unit, build) before pushing.
+- ✅ Work on `main` directly. Do not create a feature branch or a worktree unless the user explicitly asks for one; a pull request, where the remote requires one, is transport and is deleted right after it merges. See ADR 0026.
 - ✅ Reference the goal number in the PR title and the gap audit ID when the work is part of a sweep.
 - ✅ Record material deviations with reason, impact, security / data implications, and approval requirement.
 - ✅ Preserve production identifiers / data. Every migration needs forward, compatibility, backup, and rollback evidence (see `docs/architecture/migrations.md`).
