@@ -1,11 +1,14 @@
 import { notFound, redirect } from "next/navigation";
-import { PageHeader } from "@/components/workspace/page-header";
 import { hasWorkspaceRole, isAgencyAdmin } from "@/lib/auth/policy";
 import { auth } from "@/lib/auth/config";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { findAgencyIdBySlug, getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
+import { getWorkspaceAssistantMonthSummary } from "@/features/content/server";
+import { workspaceMonthRange } from "@/lib/i18n/workspace-month";
+import { ALL_FORMATS, ALL_STATUSES } from "@/lib/content/status";
 import { WorkspaceAssistant } from "./workspace-assistant";
 import { KnowledgeLibrary } from "./knowledge-library";
+import type { WorkspaceAssistantMonthSnapshot } from "./workspace-assistant-dashboard";
 import { getAiFeatureSettings } from "@/lib/ai/feature-settings";
 import { toZonedTime } from "date-fns-tz";
 
@@ -16,12 +19,14 @@ export async function generateMetadata() {
 
 export default async function WorkspaceAiAssistantPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ agencySlug: string; slug: string }>;
+  searchParams: Promise<{ month?: string | string[] }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
-  const { agencySlug, slug } = await params;
+  const [{ agencySlug, slug }, query] = await Promise.all([params, searchParams]);
   const actor = { id: session.user.id };
   const workspace = await getAccessibleWorkspaceAtPath(actor, agencySlug, slug);
   if (!workspace) notFound();
@@ -35,13 +40,44 @@ export default async function WorkspaceAiAssistantPage({
   const aiSettings = await getAiFeatureSettings();
   const workspaceNow = toZonedTime(new Date(), workspace.timezone);
   const currentMonth = `${workspaceNow.getFullYear()}-${String(workspaceNow.getMonth() + 1).padStart(2, "0")}`;
+  const requestedMonth = typeof query.month === "string" ? query.month : "";
+  const requestedYear = Number(requestedMonth.slice(0, 4));
+  const selectedMonth =
+    /^\d{4}-(0[1-9]|1[0-2])$/.test(requestedMonth) && requestedYear >= 1000 && requestedYear <= 9998
+      ? requestedMonth
+      : currentMonth;
+  const [year, monthNumber] = selectedMonth.split("-").map(Number);
+  const previousDate = new Date(Date.UTC(year!, monthNumber! - 2, 1));
+  const previousMonth = `${previousDate.getUTCFullYear()}-${String(previousDate.getUTCMonth() + 1).padStart(2, "0")}`;
+  const loadMonthSnapshot = async (month: string): Promise<WorkspaceAssistantMonthSnapshot> => {
+    const [snapshotYear, snapshotMonth] = month.split("-").map(Number);
+    const range = workspaceMonthRange(snapshotYear!, snapshotMonth! - 1, workspace.timezone);
+    const summary = await getWorkspaceAssistantMonthSummary(actor, workspace.id, {
+      monthStart: range.start,
+      monthEnd: range.end,
+      timezone: workspace.timezone,
+    });
+    return {
+      month,
+      totalItems: summary.totalItems,
+      statusCounts: summary.statusCounts,
+      notReadyCount: summary.notReadyCount,
+      notReadyItems: summary.notReadyItems.map((item) => ({
+        ...item,
+        plannedPublishAt: item.plannedPublishAt.toISOString(),
+      })),
+      formatCounts: summary.formatCounts,
+      dailyCounts: summary.dailyCounts,
+      retrievedAt: new Date().toISOString(),
+    };
+  };
+  const [dashboardSnapshot, previousDashboardSnapshot] = await Promise.all([
+    loadMonthSnapshot(selectedMonth),
+    loadMonthSnapshot(previousMonth),
+  ]);
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        title={t("workspaceAssistant.title")}
-        description={t("workspaceAssistant.description")}
-      />
       <WorkspaceAssistant
         workspaceSlug={workspace.slug}
         workspaceTimezone={workspace.timezone}
@@ -53,8 +89,118 @@ export default async function WorkspaceAiAssistantPage({
             : [aiSettings?.model ?? "MiniMax-M3"]
         }
         preferenceScope={`${session.user.id}:${workspace.agencyId}`}
-        currentMonth={currentMonth}
+        currentMonth={selectedMonth}
         canManageWorkspace={canManageWorkspace}
+        dashboardSnapshot={dashboardSnapshot}
+        previousDashboardSnapshot={previousDashboardSnapshot}
+        statusLabels={Object.fromEntries(
+          ALL_STATUSES.map((status) => [status, t(`planningFilters.statusLabels.${status}`)]),
+        )}
+        formatLabels={Object.fromEntries(
+          ALL_FORMATS.map((format) => [format, t(`planningFilters.formatLabels.${format}`)]),
+        )}
+        dashboardLabels={{
+          heroTitle: t("workspaceAssistant.dashboard.heroTitle"),
+          heroDescription: t("workspaceAssistant.dashboard.heroDescription"),
+          quickContentAnalysis: t("workspaceAssistant.dashboard.quickContentAnalysis"),
+          quickContentAnalysisPrompt: t("workspaceAssistant.dashboard.quickContentAnalysisPrompt"),
+          quickSuggestions: t("workspaceAssistant.dashboard.quickSuggestions"),
+          quickSuggestionsPrompt: t("workspaceAssistant.dashboard.quickSuggestionsPrompt"),
+          quickPlanImprovement: t("workspaceAssistant.dashboard.quickPlanImprovement"),
+          quickPlanImprovementPrompt: t("workspaceAssistant.dashboard.quickPlanImprovementPrompt"),
+          quickReadyDrafts: t("workspaceAssistant.dashboard.quickReadyDrafts"),
+          quickReadyDraftsPrompt: t("workspaceAssistant.dashboard.quickReadyDraftsPrompt"),
+          addKnowledge: t("workspaceAssistant.dashboard.addKnowledge"),
+          searchKnowledge: t("workspaceAssistant.dashboard.searchKnowledge"),
+          openPromptLibrary: t("workspaceAssistant.dashboard.openPromptLibrary"),
+          quickActions: t("workspaceAssistant.dashboard.quickActions"),
+          promptCardsTitle: t("workspaceAssistant.dashboard.promptCardsTitle"),
+          promptCardsDescription: t("workspaceAssistant.dashboard.promptCardsDescription"),
+          heroPlaceholder: t("workspaceAssistant.dashboard.heroPlaceholder"),
+          monthSummaryTitle: t("workspaceAssistant.dashboard.monthSummaryTitle"),
+          monthLabel: t("workspaceAssistant.dashboard.monthLabel"),
+          generateReport: t("workspaceAssistant.dashboard.generateReport"),
+          comparePrevious: t("workspaceAssistant.dashboard.comparePrevious"),
+          overviewTitle: t("workspaceAssistant.dashboard.overviewTitle"),
+          overviewEmpty: t("workspaceAssistant.dashboard.overviewEmpty"),
+          overviewSummary: t("workspaceAssistant.dashboard.overviewSummary"),
+          dataSource: t("workspaceAssistant.dashboard.dataSource"),
+          exactCounts: t("workspaceAssistant.dashboard.exactCounts"),
+          updatedAt: t("workspaceAssistant.dashboard.updatedAt"),
+          totalItems: t("workspaceAssistant.dashboard.totalItems"),
+          published: t("workspaceAssistant.dashboard.published"),
+          readyToPublish: t("workspaceAssistant.dashboard.readyToPublish"),
+          inReview: t("workspaceAssistant.dashboard.inReview"),
+          inDesign: t("workspaceAssistant.dashboard.inDesign"),
+          strengthsTitle: t("workspaceAssistant.dashboard.strengthsTitle"),
+          recommendationsTitle: t("workspaceAssistant.dashboard.recommendationsTitle"),
+          strengthPublished: t("workspaceAssistant.dashboard.strengthPublished"),
+          strengthReady: t("workspaceAssistant.dashboard.strengthReady"),
+          strengthNoPublished: t("workspaceAssistant.dashboard.strengthNoPublished"),
+          strengthEmpty: t("workspaceAssistant.dashboard.strengthEmpty"),
+          recommendReview: t("workspaceAssistant.dashboard.recommendReview"),
+          recommendDesign: t("workspaceAssistant.dashboard.recommendDesign"),
+          recommendBlocked: t("workspaceAssistant.dashboard.recommendBlocked"),
+          recommendClear: t("workspaceAssistant.dashboard.recommendClear"),
+          notReadyTitle: t("workspaceAssistant.dashboard.notReadyTitle"),
+          notReadyCount: t("workspaceAssistant.dashboard.notReadyCount"),
+          showingFirstFive: t("workspaceAssistant.dashboard.showingFirstFive"),
+          contentTitle: t("workspaceAssistant.dashboard.contentTitle"),
+          format: t("workspaceAssistant.dashboard.format"),
+          status: t("workspaceAssistant.dashboard.status"),
+          plannedDate: t("workspaceAssistant.dashboard.plannedDate"),
+          openItem: t("workspaceAssistant.dashboard.openItem"),
+          emptyNotReady: t("workspaceAssistant.dashboard.emptyNotReady"),
+          compareTitle: t("workspaceAssistant.dashboard.compareTitle"),
+          currentMonth: t("workspaceAssistant.dashboard.currentMonth"),
+          previousMonth: t("workspaceAssistant.dashboard.previousMonth"),
+          noPreviousData: t("workspaceAssistant.dashboard.noPreviousData"),
+          closeComparison: t("workspaceAssistant.dashboard.closeComparison"),
+          toolsAndKnowledge: t("workspaceAssistant.dashboard.toolsAndKnowledge"),
+          advancedOptions: t("workspaceAssistant.dashboard.advancedOptions"),
+          messageLabel: t("workspaceAssistant.dashboard.messageLabel"),
+          model: t("workspaceAssistant.model"),
+          composerTitle: t("workspaceAssistant.dashboard.composerTitle"),
+          composerDescription: t("workspaceAssistant.dashboard.composerDescription"),
+          contentReference: t("workspaceAssistant.contentReference"),
+          contentReferenceHint: t("workspaceAssistant.contentReferenceHint"),
+          referenceAttached: t("workspaceAssistant.dashboard.referenceAttached"),
+          notReadyHelp: t("workspaceAssistant.dashboard.notReadyHelp"),
+          send: t("workspaceAssistant.send"),
+          responseLanguage: t("workspaceAssistant.responseLanguage"),
+          languageArabic: t("workspaceAssistant.languageArabic"),
+          languageEnglish: t("workspaceAssistant.languageEnglish"),
+          mode: t("workspaceAssistant.mode"),
+          modeAsk: t("workspaceAssistant.modeAsk"),
+          modePlan: t("workspaceAssistant.modePlan"),
+          modeApply: t("workspaceAssistant.modeApply"),
+          promptSearch: t("workspaceAssistant.dashboard.promptSearch"),
+          promptCategoryAll: t("workspaceAssistant.dashboard.promptCategoryAll"),
+          promptCategoryAnalysis: t("workspaceAssistant.dashboard.promptCategoryAnalysis"),
+          promptCategoryCalendar: t("workspaceAssistant.dashboard.promptCategoryCalendar"),
+          promptCategoryFormats: t("workspaceAssistant.dashboard.promptCategoryFormats"),
+          promptCategoryAudience: t("workspaceAssistant.dashboard.promptCategoryAudience"),
+          promptCategoryCreative: t("workspaceAssistant.dashboard.promptCategoryCreative"),
+          promptCategoryReports: t("workspaceAssistant.dashboard.promptCategoryReports"),
+          promptCategoryFavorites: t("workspaceAssistant.dashboard.promptCategoryFavorites"),
+          favoritePrompt: t("workspaceAssistant.dashboard.favoritePrompt"),
+          removeFavoritePrompt: t("workspaceAssistant.dashboard.removeFavoritePrompt"),
+          showAllPrompts: t("workspaceAssistant.showAllPrompts"),
+          showFewerPrompts: t("workspaceAssistant.showFewerPrompts"),
+          noPromptResults: t("workspaceAssistant.dashboard.noPromptResults"),
+          recentConversations: t("workspaceAssistant.dashboard.recentConversations"),
+          showConversationHistory: t("workspaceAssistant.dashboard.showConversationHistory"),
+          noRecentConversations: t("workspaceAssistant.dashboard.noRecentConversations"),
+          formatDistributionTitle: t("workspaceAssistant.dashboard.formatDistributionTitle"),
+          dailyDistributionTitle: t("workspaceAssistant.dashboard.dailyDistributionTitle"),
+          otherStatus: t("workspaceAssistant.dashboard.otherStatus"),
+          activeDates: t("workspaceAssistant.dashboard.activeDates"),
+          formatVariety: t("workspaceAssistant.dashboard.formatVariety"),
+          opportunitiesTitle: t("workspaceAssistant.dashboard.opportunitiesTitle"),
+          executionTitle: t("workspaceAssistant.dashboard.executionTitle"),
+          openNotReadyList: t("workspaceAssistant.dashboard.openNotReadyList"),
+          noChartData: t("workspaceAssistant.dashboard.noChartData"),
+        }}
         labels={{
           emptyTitle: t("workspaceAssistant.emptyTitle"),
           emptyDescription: t("workspaceAssistant.emptyDescription"),
@@ -205,6 +351,7 @@ export default async function WorkspaceAiAssistantPage({
           hideHistory: t("workspaceAssistant.hideHistory"),
           showHistory: t("workspaceAssistant.showHistory"),
         }}
+        itemHrefBase={`/app/a/${encodeURIComponent(agencySlug)}/w/${encodeURIComponent(workspace.slug)}/planning`}
         knowledgeLibrary={
           <KnowledgeLibrary
             workspaceSlug={workspace.slug}

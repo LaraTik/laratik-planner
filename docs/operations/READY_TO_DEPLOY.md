@@ -135,9 +135,9 @@ Never record secret values, real invitation URLs, or production user data in thi
 
 One row per deploy. This is the record the release checklist's per-deploy gate refers to.
 
-| SHA | Date | Operator | CI run | Deploy run | Health version | Review status | Gates | Result |
-| --- | ---- | -------- | ------ | ---------- | -------------- | ------------- | ----- | ------ |
-| `7c6077f1f9d3dd8f2afc47fd5fff25b419b4241b` | 2026-10-25 | Codex | [40196497788](https://github.com/LaraTik/laratik-planner/actions/runs/40196497788) | [40198393327](https://github.com/LaraTik/laratik-planner/actions/runs/40198393327) | `7c6077f` | not recorded; Verified not assigned | CI/images/smoke/preflight/backup/migration/health passed; browser/visual gates incomplete; Trend Radar secret unset | deployed, risk accepted; NOT READY |
+| SHA                                        | Date       | Operator               | CI run                                                                             | Deploy run                                                                         | Health version | Review status                                                   | Gates                                                                                                                                                                                              | Result                  |
+| ------------------------------------------ | ---------- | ---------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| `7c6077f1f9d3dd8f2afc47fd5fff25b419b4241b` | 2026-10-25 | Codex, user-authorized | [40196497788](https://github.com/LaraTik/laratik-planner/actions/runs/40196497788) | [40198393327](https://github.com/LaraTik/laratik-planner/actions/runs/40198393327) | `7c6077f`      | User reports review complete; independent sign-off not recorded | CI/images/preflight/backup/migrations/health green; `pnpm test:e2e:release` 296/303 (6 failed, 1 skipped); `pnpm test:visual` incomplete at 7/272 (5 mismatches); UAT and restore/rollback pending | Risk accepted; deployed |
 
 **How to fill it.**
 

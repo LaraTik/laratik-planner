@@ -52,6 +52,9 @@ test.describe("Workspace AI Assistant", () => {
   test("agency admins can permit a model and members retain an allowed preference", async ({
     page,
   }) => {
+    // This scenario compiles both the agency AI settings page and the workspace
+    // assistant route on a cold dev server before checking the persisted choice.
+    test.setTimeout(90_000);
     const workspace = await bootstrapRoleSession(page, "agency_admin", "assistant-model-access", {
       locale: "en",
     });
@@ -75,7 +78,7 @@ test.describe("Workspace AI Assistant", () => {
       locale: "en",
     });
     await page.goto(`/app/a/test-agency/w/${workspace.workspaceSlug}/ai-assistant`);
-    await page.getByRole("button", { name: "Tools and context" }).click();
+    await page.getByRole("button", { name: "Tools and knowledge" }).click();
     const library = page.getByTestId("assistant-knowledge-library");
     await expect(library.getByRole("heading", { name: "Workspace knowledge" })).toBeVisible();
     await library.getByRole("button", { name: "Add knowledge" }).click();
@@ -119,14 +122,15 @@ test.describe("Workspace AI Assistant", () => {
     });
     await page.goto(`/app/a/test-agency/w/${workspace.workspaceSlug}/ai-assistant`);
     await expect(page.getByRole("combobox", { name: "Response language" })).toHaveValue("ar");
-    await expect(page.getByTestId("assistant-mode")).toHaveValue("ask");
-    await expect(page.getByTestId("assistant-mode").getByRole("option")).toHaveCount(3);
+    await expect(page.getByTestId("assistant-dashboard-mode")).toHaveValue("ask");
+    await expect(page.getByTestId("assistant-dashboard-mode").getByRole("option")).toHaveCount(3);
+    await expect(page.getByRole("heading", { name: "Ready-to-use prompt library" })).toBeVisible();
+    expect(promptListRequestTimes.length).toBeGreaterThan(0);
     const toolsClickStartedAt = Date.now();
-    await page.getByRole("button", { name: "Tools and context" }).click();
+    await page.getByRole("button", { name: "Tools and knowledge" }).click();
     await expect(page.getByRole("heading", { name: "Prompt library" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Monthly plan summary" })).toBeVisible();
-    expect(promptListRequestTimes.length).toBeGreaterThan(0);
-    expect(promptListRequestTimes.every((requestedAt) => requestedAt >= toolsClickStartedAt)).toBe(
+    expect(promptListRequestTimes.every((requestedAt) => requestedAt < toolsClickStartedAt)).toBe(
       true,
     );
     await expectNoSeriousViolations(page);
@@ -157,10 +161,12 @@ test.describe("Workspace AI Assistant", () => {
       .locator("li")
       .filter({ has: page.getByRole("heading", { name: "Monthly team review" }) });
     await createdPrompt.getByRole("button", { name: "Use prompt" }).click();
-    await expect(page.getByPlaceholder("Ask a question about this month's plan…")).toHaveValue(
+    await expect(page.getByPlaceholder("Ask for an analysis, suggestion, or plan…")).toHaveValue(
       "Review {{plan_month}} and identify practical follow-up.",
     );
-    const monthInput = page.getByTestId("assistant-prompt-parameters").getByLabel("Plan month");
+    const monthInput = page
+      .getByTestId("assistant-dashboard-prompt-parameters")
+      .getByLabel("Plan month");
     await expect(monthInput).toHaveAttribute("aria-invalid", "true");
     await expect(page.getByRole("button", { name: "Ask assistant" })).toBeDisabled();
     await monthInput.fill("2026-11");
@@ -255,14 +261,14 @@ test.describe("Workspace AI Assistant", () => {
       });
     });
 
-    await page.getByLabel("Optional plan or content reference").fill("November launch");
+    await page.getByTestId("assistant-dashboard-content-reference").fill("November launch");
     await page
-      .getByPlaceholder("Ask a question about this month's plan…")
+      .getByPlaceholder("Ask for an analysis, suggestion, or plan…")
       .fill("Review this item.");
     await page.getByRole("button", { name: "Ask assistant" }).click();
     await expect(page.getByText("Several items match. Choose the one to include")).toBeVisible();
     await page.getByRole("button", { name: "Use this item" }).click();
-    await expect(page.getByLabel("Optional plan or content reference")).toHaveValue(
+    await expect(page.getByTestId("assistant-dashboard-content-reference")).toHaveValue(
       "November launch",
     );
     await page.getByRole("button", { name: "Ask assistant" }).click();
@@ -365,8 +371,10 @@ test.describe("Workspace AI Assistant", () => {
         }),
       });
     });
-    await page.getByTestId("assistant-mode").selectOption("plan");
-    await page.getByPlaceholder("Ask a question about this month's plan…").fill("Review my plan.");
+    await page.getByTestId("assistant-dashboard-mode").selectOption("plan");
+    await page
+      .getByPlaceholder("Ask for an analysis, suggestion, or plan…")
+      .fill("Review my plan.");
     await expect(page.getByRole("combobox", { name: "Response language" })).toHaveValue("ar");
     await page.getByRole("button", { name: "Ask assistant" }).click();
     await expect(page.getByText("The plan is ready for review.")).toBeVisible();
@@ -386,7 +394,7 @@ test.describe("Workspace AI Assistant", () => {
     await expect(page.getByRole("button", { name: "Apply this change" })).toHaveCount(2);
     await expect(page.getByRole("button", { name: "Apply this change" }).nth(0)).toBeDisabled();
     await expect(page.getByRole("button", { name: "Apply this change" }).nth(1)).toBeDisabled();
-    await page.getByTestId("assistant-mode").selectOption("apply");
+    await page.getByTestId("assistant-sticky-mode").selectOption("apply");
     const proposalSelection = page.getByLabel("Select this change");
     await proposalSelection.nth(0).click();
     await proposalSelection.nth(1).click();
@@ -401,7 +409,7 @@ test.describe("Workspace AI Assistant", () => {
     await page.goto(`/app/a/test-agency/w/${workspace.workspaceSlug}/ai-assistant`);
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-    await page.getByRole("button", { name: "الأدوات والسياق" }).click();
+    await page.getByRole("button", { name: "الأدوات والمعرفة" }).click();
     await expect(page.getByRole("heading", { name: "مكتبة المطالبات" })).toBeVisible();
     await expectNoSeriousViolations(page);
 
@@ -454,7 +462,7 @@ test.describe("Workspace AI Assistant", () => {
     const responseLanguage = page.getByRole("combobox", { name: "لغة الرد" });
     await expect(responseLanguage).toHaveValue("ar");
     await responseLanguage.selectOption("en");
-    await page.getByPlaceholder("اكتب سؤالاً عن خطة هذا الشهر…").fill("Review Instagram reach.");
+    await page.getByPlaceholder("اطلب تحليلًا أو اقتراحًا أو خطة…").fill("Review Instagram reach.");
     await page.getByRole("button", { name: "اسأل المساعد" }).click();
     await expect(page.getByText("Instagram reach is ready for review.")).toBeVisible();
     expect(assistantRequest).toMatchObject({ responseLocale: "en" });
@@ -545,7 +553,7 @@ test.describe("Workspace AI Assistant", () => {
     await language.selectOption("en");
     await expect.poll(() => languageUpdate).toEqual({ responseLocale: "en" });
     await page
-      .getByPlaceholder("Ask a question about this month's plan…")
+      .getByPlaceholder("Ask for an analysis, suggestion, or plan…")
       .fill("Review this plan.");
     await page.getByRole("button", { name: "Ask assistant" }).click();
     await expect(page.getByText("This response remains in English.")).toBeVisible();

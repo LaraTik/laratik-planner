@@ -175,8 +175,11 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     const seeded = await bootstrapTestSession(page);
     const route = workspaceRoute(seeded, "ai-assistant");
     await page.goto(route);
-    await expect(page.getByRole("heading", { name: "Workspace AI assistant" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Summarize plan" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "AI assistant for your workspace" }),
+    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ready-to-use prompt library" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "View all" })).toBeVisible();
     await expectClean(route, page);
   });
 
@@ -188,6 +191,7 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     await expect(
       page.getByRole("heading", { name: "مساعد الذكاء الاصطناعي لمساحة العمل" }),
     ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "مكتبة المطالبات الجاهزة" })).toBeVisible();
     await expectClean(`${route} [ar]`, page);
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
