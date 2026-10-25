@@ -11,7 +11,7 @@
 - Execute tracker items in dependency order. A full implementation pass does not remove evidence requirements.
 - Use atomic milestone commits and never mix unrelated work.
 - Never mark work complete from compilation alone or weaken/skip a test to obtain green output.
-- MiniMax may move work through `Tested`; only an independent reviewer may assign `Verified`. The reviewer is the repository owner, or any other person who did not write the change — the implementation agent can never review its own work. The review may be recorded as a GitHub PR review **or** a local review record (reviewer, date, exact SHA, confirmed boxes); see `docs/contributing/pr-review-checklist.md`.
+- `Verified` is an evidence status, not a merge gate. Only an independent reviewer may assign it; the repository owner or another person who did not write the change may review, but the implementation agent cannot review its own work. Missing review keeps the readiness status at `Tested` (or its accurate earlier state) and does not block merge. Record review as a GitHub PR review **or** a local review record (reviewer, date, exact SHA, confirmed boxes); see `docs/contributing/pr-review-checklist.md`.
 - Record every material deviation with reason, impact, security/data implications, and approval requirement.
 - Preserve production identifiers/data. Every migration needs forward, compatibility, backup, and rollback evidence.
 - End an implementation pass with the evidence bundle described in `docs/production-readiness/README.md`.

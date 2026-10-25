@@ -107,6 +107,62 @@ describe("Workspace AI Assistant session privacy and prompt governance", () => {
     }
   });
 
+  it("returns exact workspace-scoped status, format, and local-date plan distributions", async () => {
+    const { getWorkspaceAssistantMonthSummary } = await import("@/features/content/queries.server");
+    const { workspaceMonthRange } = await import("@/lib/i18n/workspace-month");
+    const timezone = "America/New_York";
+    const range = workspaceMonthRange(2026, 9, timezone);
+
+    await db.insert(schema.contentItems).values([
+      {
+        workspaceId: workspaceAId,
+        title: "October draft",
+        format: "static_post",
+        status: "draft",
+        plannedPublishAt: new Date("2026-10-02T03:30:00.000Z"),
+        contentOwnerId: plannerA.id,
+        createdBy: workspaceManagerA.id,
+      },
+      {
+        workspaceId: workspaceAId,
+        title: "October published video",
+        format: "short_form_video",
+        status: "published",
+        plannedPublishAt: new Date("2026-10-03T04:30:00.000Z"),
+        contentOwnerId: plannerA.id,
+        createdBy: workspaceManagerA.id,
+      },
+    ]);
+
+    const summary = await getWorkspaceAssistantMonthSummary(
+      { id: workspaceManagerA.id },
+      workspaceAId,
+      { monthStart: range.start, monthEnd: range.end, timezone },
+    );
+
+    expect(summary.totalItems).toBe(2);
+    expect(summary.statusCounts).toEqual({ draft: 1, published: 1 });
+    expect(summary.notReadyCount).toBe(1);
+    expect(summary.notReadyItems).toMatchObject([{ title: "October draft", status: "draft" }]);
+    expect(summary.formatCounts).toEqual(
+      expect.arrayContaining([
+        { format: "static_post", count: 1 },
+        { format: "short_form_video", count: 1 },
+      ]),
+    );
+    expect(summary.dailyCounts).toEqual([
+      { date: "2026-10-01", statusCounts: { draft: 1 } },
+      { date: "2026-10-03", statusCounts: { published: 1 } },
+    ]);
+    await expect(
+      getWorkspaceAssistantMonthSummary({ id: workspaceManagerB.id }, workspaceAId, {
+        monthStart: range.start,
+        monthEnd: range.end,
+        timezone,
+      }),
+    ).rejects.toThrow();
+  });
+
   afterAll(async () => {
     await db?.execute(sql`TRUNCATE agency, "user" CASCADE`);
   });

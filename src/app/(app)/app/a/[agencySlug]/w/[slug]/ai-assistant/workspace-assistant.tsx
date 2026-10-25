@@ -11,6 +11,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Bot,
   Copy,
@@ -47,6 +48,11 @@ import {
 import { AssistantMarkdown } from "./assistant-markdown";
 import { AssistantResponsePanel } from "./assistant-response-panel";
 import type { AssistantProposal, AssistantReply } from "./assistant-ui-types";
+import {
+  WorkspaceAssistantDashboard,
+  type WorkspaceAssistantDashboardLabels,
+  type WorkspaceAssistantMonthSnapshot,
+} from "./workspace-assistant-dashboard";
 
 type Labels = {
   emptyTitle: string;
@@ -397,6 +403,12 @@ export function WorkspaceAssistant({
   currentMonth,
   canManageWorkspace,
   labels,
+  dashboardLabels,
+  dashboardSnapshot,
+  previousDashboardSnapshot,
+  statusLabels,
+  formatLabels,
+  itemHrefBase,
   knowledgeLibrary,
 }: {
   workspaceSlug: string;
@@ -408,8 +420,17 @@ export function WorkspaceAssistant({
   currentMonth: string;
   canManageWorkspace: boolean;
   labels: Labels;
+  dashboardLabels: WorkspaceAssistantDashboardLabels;
+  dashboardSnapshot: WorkspaceAssistantMonthSnapshot;
+  previousDashboardSnapshot: WorkspaceAssistantMonthSnapshot;
+  statusLabels: Record<string, string>;
+  formatLabels: Record<string, string>;
+  itemHrefBase: string;
   knowledgeLibrary?: ReactNode;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const allowedModels = useMemo(
     () => (permittedModels.includes(model) ? permittedModels : [model]),
     [permittedModels, model],
@@ -429,7 +450,7 @@ export function WorkspaceAssistant({
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [archivedView, setArchivedView] = useState(false);
-  const [historyVisible, setHistoryVisible] = useState(true);
+  const [historyVisible, setHistoryVisible] = useState(false);
   const [mobileHistoryOpen, setMobileHistoryOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [prompts, setPrompts] = useState<Prompt[]>([]);
@@ -455,7 +476,12 @@ export function WorkspaceAssistant({
   const [promptParameterValues, setPromptParameterValues] = useState<Record<string, string>>({});
   const [promptSaveError, setPromptSaveError] = useState(false);
   const [search, setSearch] = useState("");
-  const [month, setMonth] = useState(currentMonth);
+  const requestedMonth = searchParams.get("month") ?? "";
+  const requestedYear = Number(requestedMonth.slice(0, 4));
+  const month =
+    /^\d{4}-(0[1-9]|1[0-2])$/.test(requestedMonth) && requestedYear >= 1000 && requestedYear <= 9998
+      ? requestedMonth
+      : currentMonth;
   const [reasoningEffort, setReasoningEffort] = useState<
     "low" | "medium" | "high" | "xhigh" | "max"
   >("medium");
@@ -561,6 +587,22 @@ export function WorkspaceAssistant({
     }
   }
 
+  function changeModel(nextModel: string) {
+    if (!allowedModels.includes(nextModel)) return;
+    saveAssistantModelPreference(preferenceKey, nextModel);
+    const nextDefinition = getAiModelDefinition(nextModel);
+    if (!nextDefinition?.reasoningEfforts.includes(reasoningEffort)) {
+      setReasoningEffort("medium");
+    }
+  }
+
+  function changeContentReference(value: string) {
+    setContentItemReference(value);
+    setSelectedContentItemId(null);
+    setContentCandidates([]);
+    setContentReferenceNotFound(false);
+  }
+
   async function changeResponseLocale(nextLocale: AssistantResponseLocale) {
     if (nextLocale === responseLocale) return;
     if (!conversationId) {
@@ -611,8 +653,8 @@ export function WorkspaceAssistant({
   }, [workspaceSlug, archivedView]);
 
   useEffect(() => {
-    if (toolsOpen && loadedPromptWorkspaceSlug !== workspaceSlug) void refreshPrompts();
-  }, [toolsOpen, loadedPromptWorkspaceSlug, workspaceSlug, refreshPrompts]);
+    if (loadedPromptWorkspaceSlug !== workspaceSlug) void refreshPrompts();
+  }, [loadedPromptWorkspaceSlug, workspaceSlug, refreshPrompts]);
 
   useEffect(() => {
     const updateTime = () => setCurrentTime(Date.now());
@@ -709,9 +751,10 @@ export function WorkspaceAssistant({
     event?.preventDefault();
     const message = (selected ?? draft).trim();
     if (!message || busy) return;
+    const effectivePromptId = promptId ?? (selected === undefined ? selectedPromptId : undefined);
+    const effectivePrompt = activePrompt?.id === effectivePromptId ? activePrompt : null;
     if (
-      activePrompt?.id === selectedPromptId &&
-      activePrompt.parameters.some((parameter) => {
+      effectivePrompt?.parameters.some((parameter) => {
         const value = (promptParameterValues[parameter.key] ?? parameter.defaultValue ?? "").trim();
         return (
           (parameter.required && !value) ||
@@ -764,8 +807,8 @@ export function WorkspaceAssistant({
             ? { contentItemReference: selectedContentItemId ?? contentItemReference.trim() }
             : {}),
           ...(conversationId ? { conversationId } : {}),
-          ...((promptId ?? selectedPromptId) ? { promptId: promptId ?? selectedPromptId } : {}),
-          ...(activePrompt?.id === (promptId ?? selectedPromptId) && activePrompt.parameters.length
+          ...(effectivePromptId ? { promptId: effectivePromptId } : {}),
+          ...(effectivePrompt?.parameters.length
             ? { promptParameters: promptParameterValues }
             : {}),
           ...(modelCapabilities?.reasoningEfforts.length ? { reasoningEffort } : {}),
@@ -809,7 +852,7 @@ export function WorkspaceAssistant({
       if (!response.ok || !("answer" in data)) throw new Error("assistant_request_failed");
       if ("runId" in data && data.runId) rememberActiveRun(data.runId);
       setConversationId(data.conversationId);
-      if (data.reviewedPlanMonth) setMonth(data.reviewedPlanMonth);
+      if (data.reviewedPlanMonth) changeDashboardMonth(data.reviewedPlanMonth);
       setReply(data);
       setStreamingText("");
       setMessages([...nextMessages, { role: "assistant", content: data.answer.answer }]);
@@ -1195,6 +1238,29 @@ export function WorkspaceAssistant({
   }));
   const workspacePrompts = loadedPromptWorkspaceSlug === workspaceSlug ? prompts : [];
   const displayedPrompts = [...workspacePrompts, ...builtInPrompts];
+  function changeDashboardMonth(nextMonth: string) {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(nextMonth)) return;
+    const query = new URLSearchParams(searchParams.toString());
+    if (nextMonth === currentMonth) query.delete("month");
+    else query.set("month", nextMonth);
+    const queryString = query.toString();
+    router.replace(`${pathname}${queryString ? `?${queryString}` : ""}`, { scroll: false });
+  }
+  function selectDashboardPrompt(promptId: string) {
+    const prompt = displayedPrompts.find((item) => item.id === promptId);
+    if (!prompt) return;
+    setSelectedPromptId(prompt.id);
+    setActivePrompt(prompt);
+    setPromptParameterValues(
+      Object.fromEntries(
+        prompt.parameters
+          .filter((parameter) => parameter.defaultValue)
+          .map((parameter) => [parameter.key, parameter.defaultValue ?? ""]),
+      ),
+    );
+    setDraft(prompt.goal);
+    setMode("ask");
+  }
   const filteredPrompts = displayedPrompts.filter((prompt) => {
     const query = promptSearch.trim().toLocaleLowerCase(locale);
     return (
@@ -1207,6 +1273,7 @@ export function WorkspaceAssistant({
   });
   const promptsToDisplay =
     showAllPrompts || promptSearch.trim() ? filteredPrompts : filteredPrompts.slice(0, 6);
+  const showDashboardComposer = !conversationId && messages.length === 0;
   const selectedProposals =
     reply?.proposals.filter((proposal) => selectedProposalIds.includes(proposal.id)) ?? [];
   const canApplySelectedProposals =
@@ -1583,506 +1650,589 @@ export function WorkspaceAssistant({
           {knowledgeLibrary}
         </DialogContent>
       </Dialog>
+      <WorkspaceAssistantDashboard
+        workspaceSlug={workspaceSlug}
+        workspaceTimezone={workspaceTimezone}
+        locale={locale}
+        month={month}
+        snapshot={dashboardSnapshot}
+        previousSnapshot={previousDashboardSnapshot}
+        prompts={displayedPrompts}
+        labels={dashboardLabels}
+        draft={draft}
+        busy={busy || archivedView}
+        canSubmit={promptParametersReady && contentCandidates.length === 0}
+        promptParameters={activePrompt?.id === selectedPromptId ? activePrompt.parameters : []}
+        promptParameterValues={promptParameterValues}
+        promptParameterLabels={{
+          title: labels.promptParameters,
+          invalid: labels.promptParameterInvalid,
+          missing: labels.promptParameterMissing,
+          resolved: labels.promptParameterResolved,
+          optional: labels.promptParameterOptional,
+        }}
+        onPromptParameterValueChange={(key, value) =>
+          setPromptParameterValues((current) => ({ ...current, [key]: value }))
+        }
+        onDraftChange={setDraft}
+        contentItemReference={contentItemReference}
+        onContentReferenceChange={changeContentReference}
+        contentReferenceAttached={Boolean(selectedContentItemId)}
+        contentCandidates={contentCandidates}
+        contentReferenceNotFound={contentReferenceNotFound}
+        contentReferenceLabels={{
+          notFound: labels.contentReferenceNotFound,
+          choose: labels.chooseContentReference,
+          use: labels.useContentReference,
+        }}
+        onSelectContentCandidate={(candidate) => {
+          setContentItemReference(candidate.title);
+          setSelectedContentItemId(candidate.id);
+          setContentCandidates([]);
+          setContentReferenceNotFound(false);
+        }}
+        onSubmit={(event) => void submit(event)}
+        onMonthChange={changeDashboardMonth}
+        onGenerateReport={() => void submit(undefined, quickPrompts[0][1], undefined, "ask")}
+        onSelectPrompt={selectDashboardPrompt}
+        onOpenKnowledge={() => {
+          setToolsOpen(true);
+          window.setTimeout(() => {
+            document
+              .querySelector('[data-testid="assistant-knowledge-library"]')
+              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }, 180);
+        }}
+        onOpenTools={() => setToolsOpen(true)}
+        recentConversations={archivedView ? [] : conversations}
+        currentConversationId={conversationId}
+        onOpenConversation={(id) => {
+          setMobileHistoryOpen(false);
+          void openConversation(id);
+        }}
+        onShowConversationHistory={() => {
+          if (window.matchMedia("(min-width: 1024px)").matches) setHistoryVisible(true);
+          else setMobileHistoryOpen(true);
+        }}
+        showComposer={showDashboardComposer}
+        responseLocale={responseLocale}
+        onResponseLocaleChange={(nextLocale) => void changeResponseLocale(nextLocale)}
+        mode={mode}
+        onModeChange={(nextMode) => void changeMode(nextMode)}
+        selectedModel={selectedModel}
+        permittedModels={allowedModels}
+        onModelChange={changeModel}
+        formatLabels={formatLabels}
+        statusLabels={statusLabels}
+        itemHrefBase={itemHrefBase}
+      />
       <div
-        className={`grid min-h-[70vh] gap-4 ${historyVisible ? "lg:grid-cols-[minmax(0,1fr)_minmax(15rem,18rem)]" : "lg:grid-cols-1"}`}
+        className={`grid min-h-0 gap-4 ${historyVisible ? "lg:grid-cols-[minmax(0,1fr)_minmax(15rem,18rem)]" : "lg:grid-cols-1"}`}
       >
         <main className="flex min-w-0 flex-col gap-4" dir={locale === "ar" ? "rtl" : "ltr"}>
-          <header className="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border p-3">
-            <div className="flex min-w-0 items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="lg:hidden"
-                aria-label={labels.assistantHistory}
-                title={labels.assistantHistory}
-                onClick={() => setMobileHistoryOpen(true)}
-              >
-                <History className="h-4 w-4" aria-hidden="true" />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="hidden lg:inline-flex"
-                aria-label={historyVisible ? labels.hideHistory : labels.showHistory}
-                title={historyVisible ? labels.hideHistory : labels.showHistory}
-                onClick={() => setHistoryVisible((current) => !current)}
-              >
-                <History className="h-4 w-4" aria-hidden="true" />
-              </Button>
-              <div className="min-w-0">
-                <h2 className="text-title-card text-fg-primary truncate font-semibold">
-                  {conversationId
-                    ? (conversations.find((item) => item.id === conversationId)?.title ??
-                      labels.assistant)
-                    : labels.newConversation}
-                </h2>
-                {conversationId && messages.length === 0 ? (
-                  <p className="text-label text-fg-muted">{labels.conversationRestored}</p>
-                ) : null}
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="text-label text-fg-secondary flex items-center gap-2">
-                <span>{labels.responseLanguage}</span>
-                <select
-                  value={responseLocale}
-                  onChange={(event) =>
-                    void changeResponseLocale(event.target.value as AssistantResponseLocale)
-                  }
-                  className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
-                  aria-label={labels.responseLanguage}
+          {messages.length > 0 || conversationId ? (
+            <header className="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border p-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="lg:hidden"
+                  aria-label={labels.assistantHistory}
+                  title={labels.assistantHistory}
+                  onClick={() => setMobileHistoryOpen(true)}
                 >
-                  <option value="ar">{labels.languageArabic}</option>
-                  <option value="en">{labels.languageEnglish}</option>
-                </select>
-              </label>
-              <Button type="button" variant="outline" onClick={() => setToolsOpen(true)}>
-                <Library className="h-4 w-4" aria-hidden="true" />
-                {labels.toolsAndContext}
-              </Button>
-            </div>
-          </header>
-          <div className="border-border bg-surface rounded-[var(--radius-card)] border p-4 sm:p-6">
-            {messages.length === 0 ? (
-              <div className="mx-auto max-w-2xl py-5 text-center">
-                <span className="bg-primary-subtle text-primary mx-auto mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full">
-                  <Sparkles className="h-5 w-5" aria-hidden="true" />
-                </span>
-                <h2 className="text-title-section text-fg-primary font-semibold">
-                  {labels.emptyTitle}
-                </h2>
-                <p className="text-body text-fg-secondary mx-auto mt-2 max-w-xl">
-                  {labels.emptyDescription}
-                </p>
-                <div className="mt-5 flex flex-wrap justify-center gap-2">
-                  {quickPrompts.map(([label, prompt, promptMode]) => (
-                    <Button
-                      key={label}
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setMode(promptMode);
-                        void submit(undefined, prompt, undefined, promptMode);
-                      }}
-                      disabled={busy || archivedView}
-                    >
-                      {label}
-                    </Button>
-                  ))}
+                  <History className="h-4 w-4" aria-hidden="true" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="hidden lg:inline-flex"
+                  aria-label={historyVisible ? labels.hideHistory : labels.showHistory}
+                  title={historyVisible ? labels.hideHistory : labels.showHistory}
+                  onClick={() => setHistoryVisible((current) => !current)}
+                >
+                  <History className="h-4 w-4" aria-hidden="true" />
+                </Button>
+                <div className="min-w-0">
+                  <h2 className="text-title-card text-fg-primary truncate font-semibold">
+                    {conversationId
+                      ? (conversations.find((item) => item.id === conversationId)?.title ??
+                        labels.assistant)
+                      : labels.newConversation}
+                  </h2>
+                  {conversationId && messages.length === 0 ? (
+                    <p className="text-label text-fg-muted">{labels.conversationRestored}</p>
+                  ) : null}
                 </div>
               </div>
-            ) : (
-              <ol className="mx-auto max-w-3xl space-y-4" aria-live="polite">
-                {messages.map((message, index) => (
-                  <li
-                    key={`${message.role}-${index}`}
-                    className={message.role === "user" ? "ms-auto max-w-[85%]" : "max-w-[95%]"}
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="text-label text-fg-secondary flex items-center gap-2">
+                  <span>{labels.responseLanguage}</span>
+                  <select
+                    value={responseLocale}
+                    onChange={(event) =>
+                      void changeResponseLocale(event.target.value as AssistantResponseLocale)
+                    }
+                    className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
+                    aria-label={labels.responseLanguage}
                   >
-                    <p className="text-label text-fg-muted mb-1 font-semibold">
-                      {message.role === "user" ? labels.you : labels.assistant}
-                    </p>
-                    <div
-                      className={`text-body rounded-[var(--radius-control)] px-3 py-2 ${message.role === "user" ? "bg-primary-subtle text-fg-primary" : "bg-surface-subtle text-fg-primary"}`}
-                    >
-                      {message.role === "assistant" ? (
-                        <AssistantMarkdown content={message.content} />
-                      ) : (
-                        <p className="whitespace-pre-wrap" dir="auto">
-                          {message.content}
-                        </p>
-                      )}
-                    </div>
-                    {message.role === "assistant" && index === messages.length - 1 ? (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => void copyResponse(message.content, index)}
-                        >
-                          <Copy className="h-4 w-4" aria-hidden="true" />
-                          {copiedResponseIndex === index
-                            ? labels.responseCopied
-                            : labels.copyResponse}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          disabled={busy || archivedView}
-                          onClick={() =>
-                            void submit(undefined, messages.at(-2)?.content, undefined, mode, true)
-                          }
-                        >
-                          <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                          {labels.regenerateResponse}
-                        </Button>
-                      </div>
-                    ) : null}
-                  </li>
-                ))}
-                {busy ? (
-                  <li role="status" className="text-body text-fg-muted">
-                    {labels.sending}
-                  </li>
-                ) : null}
-                {busy && streamingText ? (
-                  <li className="max-w-[95%]">
-                    <p className="text-label text-fg-muted mb-1 font-semibold">
-                      {labels.assistant}
-                    </p>
-                    <div
-                      className="bg-surface-subtle text-body text-fg-primary rounded-[var(--radius-control)] px-3 py-2"
-                      aria-label={labels.activityWriting}
-                    >
-                      <AssistantMarkdown content={streamingText} />
-                    </div>
-                  </li>
-                ) : null}
-              </ol>
-            )}
-
-            {error ? (
-              <p role="alert" className="text-body text-danger mt-4">
-                {labels.error}
-              </p>
-            ) : null}
-            {activity.length ? (
-              <details
-                className="border-border mx-auto mt-4 max-w-3xl rounded-[var(--radius-control)] border px-3 py-2"
-                open={busy}
-              >
-                <summary className="text-label text-fg-secondary cursor-pointer font-semibold">
-                  {labels.activityTimeline}
-                </summary>
-                <ol
-                  className="border-border mt-2 space-y-1 border-s-2 ps-3"
-                  aria-live="polite"
-                  aria-label={labels.activityProvider}
-                >
-                  {activity.map((event, index) => (
-                    <li
-                      key={`${typeof event === "string" ? event : `${event.name}-${event.status}`}-${index}`}
-                      className="text-label text-fg-muted"
-                    >
-                      {typeof event === "object"
-                        ? `${event.status === "started" ? labels.activityToolRunning : event.status === "completed" ? labels.activityToolCompleted : labels.activityToolFailed}: ${event.name === "planner_get_plan_summary" ? labels.activityToolPlanSummary : event.name === "planner_get_calendar_distribution" ? labels.activityToolSchedule : event.name === "planner_get_content_mix" ? labels.activityToolContentMix : event.name === "planner_get_workload_summary" ? labels.activityToolWorkload : event.name === "planner_list_plan_items" ? labels.activityToolItems : event.name === "planner_read_selected_content_item" ? labels.activityToolSelectedItem : event.name === "planner_get_brand_guidance" ? labels.activityToolBrand : "Planner context"}`
-                        : event === "context_resolved"
-                          ? labels.activityContext
-                          : event === "skills_selected"
-                            ? labels.activitySkills
-                            : event === "plan_analyzed"
-                              ? labels.activityAnalysis
-                              : event === "provider_started"
-                                ? labels.activityProvider
-                                : event === "response_delta"
-                                  ? labels.activityWriting
-                                  : event === "response_validated"
-                                    ? labels.activityValidated
-                                    : event === "run_failed"
-                                      ? labels.activityFailed
-                                      : event === "run_cancelled"
-                                        ? labels.activityCancelled
-                                        : labels.activityComplete}
-                    </li>
-                  ))}
-                </ol>
-              </details>
-            ) : null}
-            {runOutputUnavailable ? (
-              <p role="status" className="text-label text-fg-muted mx-auto mt-2 max-w-3xl">
-                {labels.runResultUnavailable}
-              </p>
-            ) : null}
-
-            {contentReferenceNotFound ? (
-              <p role="alert" className="text-body text-danger mt-4">
-                {labels.contentReferenceNotFound}
-              </p>
-            ) : null}
-            {contentCandidates.length ? (
-              <section
-                className="border-border mx-auto mt-4 max-w-3xl rounded-[var(--radius-control)] border p-3"
-                aria-label={labels.chooseContentReference}
-              >
-                <h3 className="text-body text-fg-primary font-semibold">
-                  {labels.chooseContentReference}
-                </h3>
-                <ul className="mt-2 grid gap-2 sm:grid-cols-2">
-                  {contentCandidates.map((candidate) => (
-                    <li
-                      key={candidate.id}
-                      className="bg-surface-subtle rounded-[var(--radius-control)] p-2"
-                    >
-                      <p className="text-body text-fg-primary font-medium">{candidate.title}</p>
-                      <p className="text-label text-fg-secondary mt-1">
-                        {candidate.format} · {candidate.status} ·{" "}
-                        {candidate.plannedPublishAt.slice(0, 10)}
-                      </p>
+                    <option value="ar">{labels.languageArabic}</option>
+                    <option value="en">{labels.languageEnglish}</option>
+                  </select>
+                </label>
+                <Button type="button" variant="outline" onClick={() => setToolsOpen(true)}>
+                  <Library className="h-4 w-4" aria-hidden="true" />
+                  {labels.toolsAndContext}
+                </Button>
+              </div>
+            </header>
+          ) : null}
+          {messages.length > 0 || busy || reply ? (
+            <div className="border-border bg-surface rounded-[var(--radius-card)] border p-4 sm:p-6">
+              {messages.length === 0 ? (
+                <div className="mx-auto max-w-2xl py-5 text-center">
+                  <span className="bg-primary-subtle text-primary mx-auto mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full">
+                    <Sparkles className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <h2 className="text-title-section text-fg-primary font-semibold">
+                    {labels.emptyTitle}
+                  </h2>
+                  <p className="text-body text-fg-secondary mx-auto mt-2 max-w-xl">
+                    {labels.emptyDescription}
+                  </p>
+                  <div className="mt-5 flex flex-wrap justify-center gap-2">
+                    {quickPrompts.map(([label, prompt, promptMode]) => (
                       <Button
+                        key={label}
                         type="button"
-                        size="sm"
-                        className="mt-2"
+                        variant="outline"
                         onClick={() => {
-                          setContentItemReference(candidate.title);
-                          setSelectedContentItemId(candidate.id);
-                          setContentCandidates([]);
-                          setContentReferenceNotFound(false);
+                          setMode(promptMode);
+                          void submit(undefined, prompt, undefined, promptMode);
                         }}
+                        disabled={busy || archivedView}
                       >
-                        {labels.useContentReference}
+                        {label}
                       </Button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <ol className="mx-auto max-w-3xl space-y-4" aria-live="polite">
+                  {messages.map((message, index) => (
+                    <li
+                      key={`${message.role}-${index}`}
+                      className={message.role === "user" ? "ms-auto max-w-[85%]" : "max-w-[95%]"}
+                    >
+                      <p className="text-label text-fg-muted mb-1 font-semibold">
+                        {message.role === "user" ? labels.you : labels.assistant}
+                      </p>
+                      <div
+                        className={`text-body rounded-[var(--radius-control)] px-3 py-2 ${message.role === "user" ? "bg-primary-subtle text-fg-primary" : "bg-surface-subtle text-fg-primary"}`}
+                      >
+                        {message.role === "assistant" ? (
+                          <AssistantMarkdown content={message.content} />
+                        ) : (
+                          <p className="whitespace-pre-wrap" dir="auto">
+                            {message.content}
+                          </p>
+                        )}
+                      </div>
+                      {message.role === "assistant" && index === messages.length - 1 ? (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => void copyResponse(message.content, index)}
+                          >
+                            <Copy className="h-4 w-4" aria-hidden="true" />
+                            {copiedResponseIndex === index
+                              ? labels.responseCopied
+                              : labels.copyResponse}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            disabled={busy || archivedView}
+                            onClick={() =>
+                              void submit(
+                                undefined,
+                                messages.at(-2)?.content,
+                                undefined,
+                                mode,
+                                true,
+                              )
+                            }
+                          >
+                            <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                            {labels.regenerateResponse}
+                          </Button>
+                        </div>
+                      ) : null}
                     </li>
                   ))}
-                </ul>
-              </section>
-            ) : null}
+                  {busy ? (
+                    <li role="status" className="text-body text-fg-muted">
+                      {labels.sending}
+                    </li>
+                  ) : null}
+                  {busy && streamingText ? (
+                    <li className="max-w-[95%]">
+                      <p className="text-label text-fg-muted mb-1 font-semibold">
+                        {labels.assistant}
+                      </p>
+                      <div
+                        className="bg-surface-subtle text-body text-fg-primary rounded-[var(--radius-control)] px-3 py-2"
+                        aria-label={labels.activityWriting}
+                      >
+                        <AssistantMarkdown content={streamingText} />
+                      </div>
+                    </li>
+                  ) : null}
+                </ol>
+              )}
 
-            {reply ? (
-              <AssistantResponsePanel
-                reply={reply}
-                locale={locale}
-                workspaceTimezone={workspaceTimezone}
-                currentTime={currentTime}
-                labels={labels}
-                mode={mode}
-                selectedProposalIds={selectedProposalIds}
-                selectedProposals={selectedProposals}
-                canApplySelectedProposals={canApplySelectedProposals}
-                proposalError={proposalError}
-                onSelectProposal={(proposalId, selected) =>
-                  setSelectedProposalIds((current) =>
-                    selected
-                      ? [...new Set([...current, proposalId])]
-                      : current.filter((id) => id !== proposalId),
-                  )
-                }
-                onApplySelectedProposals={(proposalIds) => void applySelectedProposals(proposalIds)}
-                onDecideProposal={(proposalId, decision) =>
-                  void decideProposal(proposalId, decision)
-                }
-              />
-            ) : null}
-          </div>
-          <form
-            className="border-border bg-surface flex flex-wrap items-end gap-2 rounded-[var(--radius-card)] border p-3"
-            onSubmit={(event) => void submit(event)}
-          >
-            <label className="text-label text-fg-secondary flex min-w-36 flex-col gap-1">
-              <span>{labels.mode}</span>
-              <select
-                value={mode}
-                onChange={(event) => void changeMode(event.target.value as typeof mode)}
-                className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
-                disabled={busy || archivedView}
-                aria-describedby="workspace-assistant-mode-description"
-                data-testid="assistant-mode"
-              >
-                <option value="ask">{labels.modeAsk}</option>
-                <option value="plan">{labels.modePlan}</option>
-                <option value="apply">{labels.modeApply}</option>
-              </select>
-            </label>
-            <label className="text-label text-fg-secondary flex min-w-36 flex-col gap-1">
-              <span>{labels.contentReference}</span>
-              <DirAwareInput
-                locale={locale}
-                value={contentItemReference}
-                onChange={(event) => {
-                  setContentItemReference(event.target.value);
-                  setSelectedContentItemId(null);
-                  setContentCandidates([]);
-                  setContentReferenceNotFound(false);
-                }}
-                placeholder={labels.contentReferenceHint}
-                maxLength={500}
-                className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
-                disabled={busy || archivedView}
-              />
-            </label>
-            <label className="text-label text-fg-secondary flex shrink-0 flex-col gap-1">
-              <span>{labels.planPeriod}</span>
-              <input
-                type="month"
-                value={month}
-                onChange={(event) => setMonth(event.target.value)}
-                className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
-              />
-            </label>
-            {activePrompt?.id === selectedPromptId && activePrompt.parameters.length ? (
-              <fieldset
-                className="border-border grid w-full gap-3 rounded-[var(--radius-control)] border p-3"
-                data-testid="assistant-prompt-parameters"
-              >
-                <legend className="text-body text-fg-primary px-1 font-semibold">
-                  {labels.promptParameters}
-                </legend>
-                {activePrompt.parameters.map((parameter) => {
-                  const value =
-                    promptParameterValues[parameter.key] ?? parameter.defaultValue ?? "";
-                  const invalidMonth =
-                    parameter.type === "month" &&
-                    Boolean(value) &&
-                    !/^\d{4}-(0[1-9]|1[0-2])$/.test(value);
-                  const missing = parameter.required && !value.trim();
-                  const state = invalidMonth
-                    ? "invalid"
-                    : missing
-                      ? "missing"
-                      : value
-                        ? "ready"
-                        : "optional";
-                  const stateLabel = invalidMonth
-                    ? labels.promptParameterInvalid
-                    : missing
-                      ? labels.promptParameterMissing
-                      : value
-                        ? labels.promptParameterResolved
-                        : labels.promptParameterOptional;
-                  return (
-                    <label
-                      key={parameter.key}
-                      className="text-label text-fg-secondary grid gap-1"
-                      data-parameter-state={state}
-                    >
-                      <span className="flex items-center justify-between gap-2">
-                        <span>{parameter.label}</span>
-                        <span
-                          className={
-                            state === "invalid"
-                              ? "text-danger"
-                              : state === "missing"
-                                ? "text-warning"
-                                : state === "ready"
-                                  ? "text-success"
-                                  : "text-fg-muted"
+              {error ? (
+                <p role="alert" className="text-body text-danger mt-4">
+                  {labels.error}
+                </p>
+              ) : null}
+              {activity.length ? (
+                <details
+                  className="border-border mx-auto mt-4 max-w-3xl rounded-[var(--radius-control)] border px-3 py-2"
+                  open={busy}
+                >
+                  <summary className="text-label text-fg-secondary cursor-pointer font-semibold">
+                    {labels.activityTimeline}
+                  </summary>
+                  <ol
+                    className="border-border mt-2 space-y-1 border-s-2 ps-3"
+                    aria-live="polite"
+                    aria-label={labels.activityProvider}
+                  >
+                    {activity.map((event, index) => (
+                      <li
+                        key={`${typeof event === "string" ? event : `${event.name}-${event.status}`}-${index}`}
+                        className="text-label text-fg-muted"
+                      >
+                        {typeof event === "object"
+                          ? `${event.status === "started" ? labels.activityToolRunning : event.status === "completed" ? labels.activityToolCompleted : labels.activityToolFailed}: ${event.name === "planner_get_plan_summary" ? labels.activityToolPlanSummary : event.name === "planner_get_calendar_distribution" ? labels.activityToolSchedule : event.name === "planner_get_content_mix" ? labels.activityToolContentMix : event.name === "planner_get_workload_summary" ? labels.activityToolWorkload : event.name === "planner_list_plan_items" ? labels.activityToolItems : event.name === "planner_read_selected_content_item" ? labels.activityToolSelectedItem : event.name === "planner_get_brand_guidance" ? labels.activityToolBrand : "Planner context"}`
+                          : event === "context_resolved"
+                            ? labels.activityContext
+                            : event === "skills_selected"
+                              ? labels.activitySkills
+                              : event === "plan_analyzed"
+                                ? labels.activityAnalysis
+                                : event === "provider_started"
+                                  ? labels.activityProvider
+                                  : event === "response_delta"
+                                    ? labels.activityWriting
+                                    : event === "response_validated"
+                                      ? labels.activityValidated
+                                      : event === "run_failed"
+                                        ? labels.activityFailed
+                                        : event === "run_cancelled"
+                                          ? labels.activityCancelled
+                                          : labels.activityComplete}
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              ) : null}
+              {runOutputUnavailable ? (
+                <p role="status" className="text-label text-fg-muted mx-auto mt-2 max-w-3xl">
+                  {labels.runResultUnavailable}
+                </p>
+              ) : null}
+
+              {contentReferenceNotFound ? (
+                <p role="alert" className="text-body text-danger mt-4">
+                  {labels.contentReferenceNotFound}
+                </p>
+              ) : null}
+              {contentCandidates.length ? (
+                <section
+                  className="border-border mx-auto mt-4 max-w-3xl rounded-[var(--radius-control)] border p-3"
+                  aria-label={labels.chooseContentReference}
+                >
+                  <h3 className="text-body text-fg-primary font-semibold">
+                    {labels.chooseContentReference}
+                  </h3>
+                  <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+                    {contentCandidates.map((candidate) => (
+                      <li
+                        key={candidate.id}
+                        className="bg-surface-subtle rounded-[var(--radius-control)] p-2"
+                      >
+                        <p className="text-body text-fg-primary font-medium">{candidate.title}</p>
+                        <p className="text-label text-fg-secondary mt-1">
+                          {candidate.format} · {candidate.status} ·{" "}
+                          {candidate.plannedPublishAt.slice(0, 10)}
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="mt-2"
+                          onClick={() => {
+                            setContentItemReference(candidate.title);
+                            setSelectedContentItemId(candidate.id);
+                            setContentCandidates([]);
+                            setContentReferenceNotFound(false);
+                          }}
+                        >
+                          {labels.useContentReference}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
+              {reply ? (
+                <AssistantResponsePanel
+                  reply={reply}
+                  locale={locale}
+                  workspaceTimezone={workspaceTimezone}
+                  currentTime={currentTime}
+                  labels={labels}
+                  mode={mode}
+                  selectedProposalIds={selectedProposalIds}
+                  selectedProposals={selectedProposals}
+                  canApplySelectedProposals={canApplySelectedProposals}
+                  proposalError={proposalError}
+                  onSelectProposal={(proposalId, selected) =>
+                    setSelectedProposalIds((current) =>
+                      selected
+                        ? [...new Set([...current, proposalId])]
+                        : current.filter((id) => id !== proposalId),
+                    )
+                  }
+                  onApplySelectedProposals={(proposalIds) =>
+                    void applySelectedProposals(proposalIds)
+                  }
+                  onDecideProposal={(proposalId, decision) =>
+                    void decideProposal(proposalId, decision)
+                  }
+                />
+              ) : null}
+            </div>
+          ) : null}
+          <details className="border-border bg-surface rounded-[var(--radius-card)] border p-3">
+            <summary className="text-label text-fg-secondary cursor-pointer font-semibold">
+              {dashboardLabels.advancedOptions}
+            </summary>
+            <form
+              className="border-border bg-surface flex flex-wrap items-end gap-2 rounded-[var(--radius-card)] border p-3"
+              onSubmit={(event) => void submit(event)}
+            >
+              <label className="text-label text-fg-secondary flex min-w-36 flex-col gap-1">
+                <span>{labels.mode}</span>
+                <select
+                  value={mode}
+                  onChange={(event) => void changeMode(event.target.value as typeof mode)}
+                  className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
+                  disabled={busy || archivedView}
+                  aria-describedby="workspace-assistant-mode-description"
+                  data-testid="assistant-mode"
+                >
+                  <option value="ask">{labels.modeAsk}</option>
+                  <option value="plan">{labels.modePlan}</option>
+                  <option value="apply">{labels.modeApply}</option>
+                </select>
+              </label>
+              <label className="text-label text-fg-secondary flex min-w-36 flex-col gap-1">
+                <span>{labels.contentReference}</span>
+                <DirAwareInput
+                  locale={locale}
+                  value={contentItemReference}
+                  onChange={(event) => changeContentReference(event.target.value)}
+                  placeholder={labels.contentReferenceHint}
+                  maxLength={500}
+                  className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
+                  disabled={busy || archivedView}
+                />
+              </label>
+              <label className="text-label text-fg-secondary flex shrink-0 flex-col gap-1">
+                <span>{labels.planPeriod}</span>
+                <input
+                  type="month"
+                  value={month}
+                  onChange={(event) => changeDashboardMonth(event.target.value)}
+                  className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
+                />
+              </label>
+              {activePrompt?.id === selectedPromptId && activePrompt.parameters.length ? (
+                <fieldset
+                  className="border-border grid w-full gap-3 rounded-[var(--radius-control)] border p-3"
+                  data-testid="assistant-prompt-parameters"
+                >
+                  <legend className="text-body text-fg-primary px-1 font-semibold">
+                    {labels.promptParameters}
+                  </legend>
+                  {activePrompt.parameters.map((parameter) => {
+                    const value =
+                      promptParameterValues[parameter.key] ?? parameter.defaultValue ?? "";
+                    const invalidMonth =
+                      parameter.type === "month" &&
+                      Boolean(value) &&
+                      !/^\d{4}-(0[1-9]|1[0-2])$/.test(value);
+                    const missing = parameter.required && !value.trim();
+                    const state = invalidMonth
+                      ? "invalid"
+                      : missing
+                        ? "missing"
+                        : value
+                          ? "ready"
+                          : "optional";
+                    const stateLabel = invalidMonth
+                      ? labels.promptParameterInvalid
+                      : missing
+                        ? labels.promptParameterMissing
+                        : value
+                          ? labels.promptParameterResolved
+                          : labels.promptParameterOptional;
+                    return (
+                      <label
+                        key={parameter.key}
+                        className="text-label text-fg-secondary grid gap-1"
+                        data-parameter-state={state}
+                      >
+                        <span className="flex items-center justify-between gap-2">
+                          <span>{parameter.label}</span>
+                          <span
+                            className={
+                              state === "invalid"
+                                ? "text-danger"
+                                : state === "missing"
+                                  ? "text-warning"
+                                  : state === "ready"
+                                    ? "text-success"
+                                    : "text-fg-muted"
+                            }
+                          >
+                            {stateLabel}
+                          </span>
+                        </span>
+                        <DirAwareInput
+                          locale={locale}
+                          type={parameter.type === "month" ? "month" : "text"}
+                          value={value}
+                          required={parameter.required}
+                          aria-invalid={invalidMonth || missing}
+                          aria-describedby={`assistant-prompt-param-${parameter.key}-state`}
+                          onChange={(event) =>
+                            setPromptParameterValues((current) => ({
+                              ...current,
+                              [parameter.key]: event.target.value,
+                            }))
                           }
+                          className={`text-body bg-surface min-h-11 rounded-[var(--radius-control)] border px-3 ${state === "invalid" ? "border-danger" : state === "missing" ? "border-warning" : state === "ready" ? "border-success" : "border-border"}`}
+                        />
+                        <span
+                          id={`assistant-prompt-param-${parameter.key}-state`}
+                          className="text-label text-fg-muted"
+                          role={invalidMonth || missing ? "alert" : "status"}
                         >
                           {stateLabel}
                         </span>
-                      </span>
-                      <DirAwareInput
-                        locale={locale}
-                        type={parameter.type === "month" ? "month" : "text"}
-                        value={value}
-                        required={parameter.required}
-                        aria-invalid={invalidMonth || missing}
-                        aria-describedby={`assistant-prompt-param-${parameter.key}-state`}
-                        onChange={(event) =>
-                          setPromptParameterValues((current) => ({
-                            ...current,
-                            [parameter.key]: event.target.value,
-                          }))
-                        }
-                        className={`text-body bg-surface min-h-11 rounded-[var(--radius-control)] border px-3 ${state === "invalid" ? "border-danger" : state === "missing" ? "border-warning" : state === "ready" ? "border-success" : "border-border"}`}
-                      />
-                      <span
-                        id={`assistant-prompt-param-${parameter.key}-state`}
-                        className="text-label text-fg-muted"
-                        role={invalidMonth || missing ? "alert" : "status"}
-                      >
-                        {stateLabel}
-                      </span>
-                    </label>
-                  );
-                })}
-              </fieldset>
-            ) : null}
-            <label className="sr-only" htmlFor={inputId}>
-              {labels.placeholder}
-            </label>
-            <label className="text-label text-fg-secondary flex shrink-0 items-center gap-2">
-              <span>{labels.model}</span>
-              <select
-                value={selectedModel}
-                onChange={(event) => {
-                  const next = event.target.value;
-                  if (!allowedModels.includes(next)) return;
-                  saveAssistantModelPreference(preferenceKey, next);
-                  const nextDefinition = getAiModelDefinition(next);
-                  if (!nextDefinition?.reasoningEfforts.includes(reasoningEffort)) {
-                    setReasoningEffort("medium");
-                  }
-                }}
-                className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
-                aria-label={labels.model}
-              >
-                {allowedModels.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {modelCapabilities?.reasoningEfforts.length ? (
+                      </label>
+                    );
+                  })}
+                </fieldset>
+              ) : null}
+              <label className="sr-only" htmlFor={`${inputId}-advanced`}>
+                {labels.placeholder}
+              </label>
               <label className="text-label text-fg-secondary flex shrink-0 items-center gap-2">
-                <span>{labels.reasoning}</span>
+                <span>{labels.model}</span>
                 <select
-                  value={reasoningEffort}
-                  onChange={(event) =>
-                    setReasoningEffort(event.target.value as typeof reasoningEffort)
-                  }
+                  value={selectedModel}
+                  onChange={(event) => changeModel(event.target.value)}
                   className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
+                  aria-label={labels.model}
                 >
-                  {modelCapabilities.reasoningEfforts.map((effort) => (
-                    <option key={effort} value={effort}>
-                      {effort === "low"
-                        ? labels.reasoningLow
-                        : effort === "medium"
-                          ? labels.reasoningMedium
-                          : effort === "high"
-                            ? labels.reasoningHigh
-                            : effort === "xhigh"
-                              ? labels.reasoningExtraHigh
-                              : labels.reasoningMax}
+                  {allowedModels.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
                     </option>
                   ))}
                 </select>
               </label>
-            ) : null}
-            <DirAwareTextarea
-              id={inputId}
-              locale={locale}
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              placeholder={labels.placeholder}
-              maxLength={1_000}
-              rows={2}
-              className="border-border bg-surface text-body min-h-11 min-w-0 flex-1 resize-y rounded-[var(--radius-control)] border px-3 py-2"
-              disabled={busy || archivedView}
-            />
-            <Button
-              type="submit"
-              disabled={busy || archivedView || !draft.trim() || !promptParametersReady}
-              aria-label={labels.send}
-            >
-              <Send className="h-4 w-4" aria-hidden="true" />
-              <span className="hidden sm:inline">{labels.send}</span>
-            </Button>
-            {busy ? (
+              {modelCapabilities?.reasoningEfforts.length ? (
+                <label className="text-label text-fg-secondary flex shrink-0 items-center gap-2">
+                  <span>{labels.reasoning}</span>
+                  <select
+                    value={reasoningEffort}
+                    onChange={(event) =>
+                      setReasoningEffort(event.target.value as typeof reasoningEffort)
+                    }
+                    className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
+                  >
+                    {modelCapabilities.reasoningEfforts.map((effort) => (
+                      <option key={effort} value={effort}>
+                        {effort === "low"
+                          ? labels.reasoningLow
+                          : effort === "medium"
+                            ? labels.reasoningMedium
+                            : effort === "high"
+                              ? labels.reasoningHigh
+                              : effort === "xhigh"
+                                ? labels.reasoningExtraHigh
+                                : labels.reasoningMax}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              <DirAwareTextarea
+                id={`${inputId}-advanced`}
+                locale={locale}
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                placeholder={labels.placeholder}
+                maxLength={1_000}
+                rows={2}
+                className="border-border bg-surface text-body min-h-11 min-w-0 flex-1 resize-y rounded-[var(--radius-control)] border px-3 py-2"
+                disabled={busy || archivedView}
+              />
               <Button
-                type="button"
-                variant="outline"
-                disabled={!activeRunId}
-                onClick={() => void stopRun()}
+                type="submit"
+                disabled={busy || archivedView || !draft.trim() || !promptParametersReady}
+                aria-label={labels.send}
               >
-                {labels.stop}
+                <Send className="h-4 w-4" aria-hidden="true" />
+                <span className="hidden sm:inline">{labels.send}</span>
               </Button>
-            ) : null}
-          </form>
-          <div className="text-label text-fg-muted flex flex-wrap items-center justify-between gap-2">
-            <p id="workspace-assistant-mode-description" className="inline-flex items-center gap-1">
-              <Bot className="h-3.5 w-3.5" aria-hidden="true" />
-              {mode === "ask"
-                ? labels.modeAskDescription
-                : mode === "plan"
-                  ? labels.modePlanDescription
-                  : labels.modeApplyDescription}
-            </p>
-            <p>{labels.privacy}</p>
-          </div>{" "}
+              {busy ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!activeRunId}
+                  onClick={() => void stopRun()}
+                >
+                  {labels.stop}
+                </Button>
+              ) : null}
+            </form>
+            <div className="text-label text-fg-muted flex flex-wrap items-center justify-between gap-2">
+              <p
+                id="workspace-assistant-mode-description"
+                className="inline-flex items-center gap-1"
+              >
+                <Bot className="h-3.5 w-3.5" aria-hidden="true" />
+                {mode === "ask"
+                  ? labels.modeAskDescription
+                  : mode === "plan"
+                    ? labels.modePlanDescription
+                    : labels.modeApplyDescription}
+              </p>
+              <p>{labels.privacy}</p>
+            </div>{" "}
+          </details>
         </main>
         {historyVisible ? (
           <aside
@@ -2124,6 +2274,84 @@ export function WorkspaceAssistant({
           </aside>
         ) : null}
       </div>
+      {!showDashboardComposer ? (
+        <form
+          className="border-border bg-surface/95 sticky bottom-2 z-20 flex flex-wrap items-center gap-2 rounded-[var(--radius-card)] border p-2 shadow-lg backdrop-blur"
+          onSubmit={(event) => void submit(event)}
+        >
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label={dashboardLabels.toolsAndKnowledge}
+            title={dashboardLabels.toolsAndKnowledge}
+            onClick={() => setToolsOpen(true)}
+          >
+            <Library className="h-4 w-4" aria-hidden="true" />
+          </Button>
+          <label className="text-label text-fg-secondary flex shrink-0 items-center gap-2">
+            <span className="sr-only">{labels.model}</span>
+            <select
+              value={selectedModel}
+              onChange={(event) => changeModel(event.target.value)}
+              className="border-border bg-surface text-body min-h-11 max-w-36 rounded-[var(--radius-control)] border px-2"
+              aria-label={labels.model}
+            >
+              {allowedModels.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-label text-fg-secondary flex shrink-0 items-center gap-2">
+            <span className="sr-only">{labels.mode}</span>
+            <select
+              value={mode}
+              onChange={(event) => void changeMode(event.target.value as typeof mode)}
+              className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
+              aria-label={labels.mode}
+              data-testid="assistant-sticky-mode"
+              disabled={busy || archivedView}
+            >
+              <option value="ask">{labels.modeAsk}</option>
+              <option value="plan">{labels.modePlan}</option>
+              <option value="apply">{labels.modeApply}</option>
+            </select>
+          </label>
+          <label className="sr-only" htmlFor={inputId}>
+            {dashboardLabels.messageLabel}
+          </label>
+          <DirAwareInput
+            id={inputId}
+            locale={locale}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder={dashboardLabels.heroPlaceholder}
+            maxLength={1_000}
+            className="border-border bg-surface text-body min-h-11 min-w-0 flex-1 rounded-[var(--radius-control)] border px-3"
+            disabled={busy || archivedView}
+          />
+          <Button
+            type="submit"
+            disabled={busy || archivedView || !draft.trim() || !promptParametersReady}
+            aria-label={labels.send}
+          >
+            <Send className="h-4 w-4" aria-hidden="true" />
+            <span className="hidden sm:inline">{labels.send}</span>
+          </Button>
+          {busy ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!activeRunId}
+              onClick={() => void stopRun()}
+            >
+              {labels.stop}
+            </Button>
+          ) : null}
+        </form>
+      ) : null}
       <Dialog open={mobileHistoryOpen} onOpenChange={setMobileHistoryOpen}>
         <DialogContent className="max-h-[85vh] w-[min(26rem,calc(100vw-2rem))] overflow-y-auto">
           <DialogHeader>

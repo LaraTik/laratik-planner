@@ -252,6 +252,102 @@ export async function countWorkspaceContent(
 }
 
 /**
+ * Return exact status totals and a small upcoming-item sample for the
+ * workspace AI dashboard. All reads stay within the same workspace and
+ * month boundary, and the list excludes archived and cancelled items.
+ */
+export async function getWorkspaceAssistantMonthSummary(
+  actor: Actor,
+  workspaceId: string,
+  input: { monthStart: Date; monthEnd: Date; timezone: string },
+) {
+  await requirePolicy(
+    hasWorkspaceRole(actor, workspaceId, [...INTERNAL_WORKSPACE_ROLES]),
+    "list_content",
+  );
+  const conditions = [
+    eq(contentItems.workspaceId, workspaceId),
+    isNull(contentItems.archivedAt),
+    sql`${contentItems.plannedPublishAt} >= ${input.monthStart}`,
+    sql`${contentItems.plannedPublishAt} < ${input.monthEnd}`,
+  ];
+  const localPlanDate =
+    sql<string>`to_char(${contentItems.plannedPublishAt} at time zone ${input.timezone}, 'YYYY-MM-DD')`.as(
+      "plan_date",
+    );
+  const dailyBuckets = db
+    .select({ planDate: localPlanDate, status: contentItems.status })
+    .from(contentItems)
+    .where(and(...conditions))
+    .as("daily_buckets");
+  const [statusRows, notReadyItems, formatRows, dailyRows] = await Promise.all([
+    db
+      .select({ status: contentItems.status, itemCount: count() })
+      .from(contentItems)
+      .where(and(...conditions))
+      .groupBy(contentItems.status),
+    db
+      .select({
+        id: contentItems.id,
+        title: contentItems.title,
+        format: contentItems.format,
+        status: contentItems.status,
+        plannedPublishAt: contentItems.plannedPublishAt,
+      })
+      .from(contentItems)
+      .where(
+        and(
+          ...conditions,
+          sql`${contentItems.status} NOT IN ('ready_to_publish', 'partially_published', 'published', 'cancelled')`,
+        ),
+      )
+      .orderBy(asc(contentItems.plannedPublishAt), asc(contentItems.id))
+      .limit(5),
+    db
+      .select({ format: contentItems.format, itemCount: count() })
+      .from(contentItems)
+      .where(and(...conditions))
+      .groupBy(contentItems.format),
+    db
+      .select({
+        planDate: dailyBuckets.planDate,
+        status: dailyBuckets.status,
+        itemCount: count(),
+      })
+      .from(dailyBuckets)
+      .groupBy(dailyBuckets.planDate, dailyBuckets.status)
+      .orderBy(asc(dailyBuckets.planDate)),
+  ]);
+  const statusCounts = Object.fromEntries(
+    statusRows.map((row) => [row.status, row.itemCount]),
+  ) as Record<string, number>;
+  const excludedFromNotReady = new Set([
+    "ready_to_publish",
+    "partially_published",
+    "published",
+    "cancelled",
+  ]);
+  const notReadyCount = statusRows.reduce(
+    (total, row) => total + (excludedFromNotReady.has(row.status) ? 0 : row.itemCount),
+    0,
+  );
+  const dailyCountsByDate = new Map<string, Record<string, number>>();
+  for (const row of dailyRows) {
+    const counts = dailyCountsByDate.get(row.planDate) ?? {};
+    counts[row.status] = row.itemCount;
+    dailyCountsByDate.set(row.planDate, counts);
+  }
+  return {
+    totalItems: statusRows.reduce((total, row) => total + row.itemCount, 0),
+    statusCounts,
+    notReadyCount,
+    notReadyItems,
+    formatCounts: formatRows.map((row) => ({ format: row.format, count: row.itemCount })),
+    dailyCounts: [...dailyCountsByDate].map(([date, counts]) => ({ date, statusCounts: counts })),
+  };
+}
+
+/**
  * FEAT-12 (GAP-FULL-REVIEW-2026-08-25) — the "Unassigned Design Queue"
  * page (§3 Stitch frame, master prompt §14 `listUnassignedDesignWork`).
  *

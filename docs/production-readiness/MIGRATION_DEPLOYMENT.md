@@ -1,5 +1,34 @@
 # Migration and deployment evidence
 
+## M3.8 Workspace AI and advertising deployment — 2026-10-25
+
+The user authorized merge and deployment of the Workspace AI Assistant and
+related workspace updates despite incomplete local browser/visual evidence.
+The exact `main` SHA was
+`7c6077f1f9d3dd8f2afc47fd5fff25b419b4241b`. Main-only CI
+[40196497788](https://github.com/LaraTik/laratik-planner/actions/runs/40196497788)
+passed and published the app and migrator images for this SHA. Deploy
+[40198393327](https://github.com/LaraTik/laratik-planner/actions/runs/40198393327)
+passed the exact-SHA checks and production deployment.
+
+Provider preflight confirmed Google SMTP was configured. Before the migration
+step, the workflow created and verified
+`/var/backups/laratik-planner/planner-20261025-133758.sql.gz`. The migration
+command completed successfully. No migration files changed between the prior
+deployed SHA `1bfc9e324813d08a4ac43453165af808631ff1b6` and this release.
+
+The deployment health check passed on retry 2. A separate public health check
+returned `ok: true`, version `7c6077f`, with PostgreSQL, schema, storage, R2,
+and rate-limit checks ready. The VPS container uses
+`ghcr.io/laratik/laratik-planner:7c6077f1f9d3dd8f2afc47fd5fff25b419b4241b`
+and reports `running healthy`; root filesystem usage is 32% (74 GB / 232 GB).
+
+This records production backup creation and forward deployment, not a restore
+or rollback drill. Browser/visual gates, MiniMax model/tool/privacy UAT,
+separated-account UAT, and independent reviewer sign-off remain open. The
+release is risk-accepted, not **READY**; see
+[`TEST_EVIDENCE.md`](./TEST_EVIDENCE.md) and [`UAT_RELEASE.md`](./UAT_RELEASE.md).
+
 ## Workspace AI Assistant production deployment — 2026-10-25
 
 The user-authorized, risk-accepted PR #48 release was squash-merged as main

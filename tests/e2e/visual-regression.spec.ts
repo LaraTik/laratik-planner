@@ -758,12 +758,20 @@ test.describe("visual regression (Workspace AI Arabic RTL)", () => {
         ),
         `Workspace AI assistant Arabic RTL overflows at ${viewport.width}px`,
       ).toBe(true);
-      await assertNoCriticalA11y(page, `Workspace AI assistant Arabic RTL @ ${viewport.width}px`);
       await applyMask(page);
-      await expect(page).toHaveScreenshot(
-        ["arabic", `workspace-ai-assistant-${viewport.name}.png`],
-        { fullPage: true, maxDiffPixelRatio: 0.01 },
-      );
+      if (isCaptureMode) {
+        await logA11yIfBroken(page, `Workspace AI assistant Arabic RTL @ ${viewport.width}px`);
+        await page.screenshot({
+          path: path.join(SNAPSHOT_DIR, "arabic", `workspace-ai-assistant-${viewport.name}.png`),
+          fullPage: true,
+        });
+      } else {
+        await assertNoCriticalA11y(page, `Workspace AI assistant Arabic RTL @ ${viewport.width}px`);
+        await expect(page).toHaveScreenshot(
+          ["arabic", `workspace-ai-assistant-${viewport.name}.png`],
+          { fullPage: true, maxDiffPixelRatio: 0.01 },
+        );
+      }
     }
   });
 });

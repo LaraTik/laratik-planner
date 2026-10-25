@@ -2,17 +2,36 @@
 
 ## Product request and reference
 
-The redesign request describes an Arabic-first AI Workspace Copilot with four
-areas: the existing StudioFlow app navigation, a compact conversation-history
-panel, a primary conversation workspace, and tools/context that open only when
-needed. It also requires a fixed Arabic response default independent of
-interface locale or the language of source data, an explicit per-conversation
-language choice, citations, reviewable changes, and user confirmation before
-any Planner write.
+The redesign request describes an Arabic-first AI Workspace Copilot with the
+existing workspace navigation, a clear route back to recent conversations, a
+dashboard-led planning view, and tools/context that open when needed. It also
+requires Arabic as the default response language regardless of interface
+locale or source-data language, an explicit per-conversation language choice,
+citations, reviewable changes, and user confirmation before any Planner write.
 
-The supplied screenshot depicts the pre-redesign page. It is useful as a
-current-state reference, while the target is specified in the accompanying
-text. It does not provide target pixel measurements or a target screenshot.
+The supplied screenshot is the visual and section-order reference for the
+Assistant page. Match its hierarchy inside the existing LaraTik application
+shell and retain that shell's navigation and design tokens.
+
+## User-directed screenshot layout update — 2026-10-25
+
+The owner explicitly asked to apply the attached dashboard design and section
+order. The page now follows the screenshot's sequence: dashboard hero and
+knowledge actions, an Arabic-default composer with explicit language and
+workspace-item reference controls, searchable prompt library, recent
+conversations, monthly plan summary, status totals, calendar and format charts,
+plan insights, execution actions, and the not-ready item table. The full
+conversation history remains available through the existing desktop panel and
+mobile dialog; the sticky composer appears while a conversation is active.
+
+The dashboard reads exact status, format, and workspace-local calendar
+aggregates from the authorized workspace content table and displays at most
+five upcoming items in its not-ready list. It does not make an AI-provider
+request while loading. Report generation remains an explicit user action;
+assistant proposals still require the existing review and confirmation flow
+before Planner writes. This layout adds no schema or production-data
+mutation. Bilingual browser, accessibility, and visual evidence for the new
+layout must be recorded against the exact release commit.
 
 ## Audit of the current screen
 
@@ -21,8 +40,8 @@ text. It does not provide target pixel measurements or a target screenshot.
   than a compact return path.
 - The answer was rendered as plain text. Findings and recommendations shared
   one section, while the evidence list and activity timeline stayed expanded.
-- The interface locale was the only available language signal; session
-  metadata did not store a response language.
+- Response language is stored per conversation and remains independent of the
+  interface locale, source names, and source-data language.
 - Session text is intentionally browser-memory-only. Reopening a session
   restores its metadata and saved proposals, not the transcript.
 - The existing service already resolves an explicit plan/content reference,
@@ -32,13 +51,16 @@ text. It does not provide target pixel measurements or a target screenshot.
 
 ## Implemented direction
 
-- Keep the app shell and its right-side StudioFlow navigation unchanged.
-- Place the conversation and composer first. On wide screens, a compact
-  conversation panel sits at the inline end and can be hidden. On smaller
-  screens, history opens in a dialog.
-- Move prompt search, saved prompt authoring, knowledge management, and
-  context tools into a Tools and context dialog. Prompt execution returns the
-  user to the conversation.
+- Keep the current app shell and its right-side RTL navigation unchanged.
+- Use the requested dashboard-first section order. Show four recent
+  conversations in compact cards; retain searchable, pinnable full history in
+  the desktop panel and mobile dialog.
+- Load the prompt gallery for the page, with search and category filters.
+  Keep prompt authoring, knowledge management, and context tools available
+  through the Tools and context dialog.
+- Show one composer at a time: the page-level composer for a new conversation
+  and the sticky composer while a conversation is active. Include an explicit
+  response-language choice and a workspace content reference field.
 - Render assistant output as safe Markdown with GitHub-flavored tables,
   wrapped local table overflow, code-direction handling, and no raw HTML.
 - Separate deterministic findings, model findings, and recommendations.
@@ -77,13 +99,13 @@ the current user in the requested workspace.
 - Chat output must preserve lists, headings, code, and tables without
   horizontal page overflow. Citations must resolve to the corresponding
   source record.
-- Prompt and knowledge panels must be on-demand; history must remain usable at
-  desktop and mobile widths.
+- Prompt cards, recent conversations, and knowledge tools must remain usable
+  at desktop and mobile widths.
 - A proposed Planner change remains a preview until the user chooses an
   existing apply control; access checks and revision checks remain in force.
-- Required release gates still include migration drill, disposable database
-  integration tests, bilingual browser and accessibility checks, refreshed
-  visual baselines, the full browser matrix, independent review, MiniMax/model
-  and privacy UAT, separated-account UAT, and production backup/rollback
-  evidence. A local build or the focused language unit tests do not close
-  those gates.
+- Release evidence still tracks disposable-database integration, bilingual
+  browser and accessibility checks, refreshed visual baselines, the full
+  browser matrix, MiniMax/model and privacy UAT, separated-account UAT, and
+  production backup/rollback. Independent review and complete local gates are
+  not prerequisites for merge; missing or failed evidence remains visible and
+  does not make the release `Verified` or `READY`.

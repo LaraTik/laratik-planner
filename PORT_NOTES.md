@@ -250,7 +250,32 @@ is stored. The language setting is scoped by the existing owner/workspace
 session lookup. Response-language conflicts are rejected before provider use.
 The migration changes no existing content or proposal records.
 
-Approval requirement: the product owner requested and authorized this
-feature/redesign. The independent production-readiness reviewer and the
-existing MiniMax/privacy, separated-account, browser/device, migration, and
-backup/rollback gates must still pass before merge or deployment.
+Approval: the product owner requested and authorized this feature/redesign.
+Independent review and completion of local release gates are not prerequisites
+for merge. Keep readiness evidence accurate; production deployment still uses
+the hard controls in `AGENTS.md`.
+
+## Workspace AI Assistant dashboard reference update (2026-10-25)
+
+Reason: after the conversation workspace shipped, the product owner explicitly
+requested that the supplied Arabic dashboard screenshot become the page-level
+layout target. This supersedes the earlier conversation-first decision for
+the Workspace AI Assistant route.
+
+Impact: the page now leads with knowledge actions, suggested prompts, an exact
+monthly plan summary and comparison, status totals, data-derived plan signals,
+and a short not-ready list. The existing message composer stays available at
+the bottom, and conversation history and tools remain accessible. LaraTik
+shell navigation, shared tokens, English/Arabic catalogs, and RTL behavior are
+preserved. The screenshot is not a current LaraTik Planner Stitch screen.
+
+Security/data implications: the dashboard reads aggregate status totals and
+up to five item titles from the selected workspace and month through the
+existing content authorization policy. It makes no provider call on page
+load, adds no schema, and performs no Planner writes. Assistant proposals
+still require the existing user review and confirmation path.
+
+Approval: the product owner explicitly authorized implementation directly on
+`main`. Independent review and completion of local release gates do not block
+merge. The production readiness status remains governed by its evidence and is
+unchanged by that merge policy.

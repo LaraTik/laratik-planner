@@ -81,6 +81,17 @@ mismatches appeared on unrelated surfaces (`/app/w/acme/planning`,
 `/app/platform/overview`, and `/app/w/acme/brand-kit`). No other visual
 baselines were changed. The full visual release matrix remains open.
 
+### Workspace Assistant screenshot-led layout — 2026-10-25
+
+The workspace owner explicitly selected the attached Arabic dashboard as the
+layout target for `/app/a/[agencySlug]/w/[slug]/ai-assistant`. This is a
+page-specific app design request; the route remains app-only because the
+current LaraTik Planner Stitch project has no dedicated screen. The existing
+five responsive baselines describe the superseded conversation-first layout
+and are stale for this target. No new screenshots, accessibility results, or
+visual-parity pass have been recorded yet. No Stitch MCP refresh was performed
+because the user supplied a page reference, not an upstream Stitch change.
+
 ## Shared visual contract
 
 - Canvas `#F7F7F5`; white surfaces; `#DDE1E6` borders.
