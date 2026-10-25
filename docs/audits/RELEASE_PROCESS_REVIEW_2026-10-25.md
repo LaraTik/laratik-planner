@@ -11,7 +11,8 @@
 > - **F1–F5 were shipped** in [ADR 0024](../decisions/0024-release-path-and-review-evidence.md): one canonical release path, a form-agnostic review record, the branch/worktree cleanup procedure and `scripts/cleanup-worktrees.sh`, a one-row deploy log, and the ADR index.
 > - **F1 was then superseded in part by [ADR 0025](../decisions/0025-no-pre-merge-gates.md)** (2026-10-25): the repository owner removed independent review _and_ complete local release gates as **prerequisites for merging** altogether. The waiver-narrative symptom F1 described is therefore gone by policy, not by making the artifact easier to produce. The `Verified` rule and every hard deployment control are unchanged.
 > - The branch and worktree cleanup described in F2 was performed afterwards; the repository now holds only `main` and the `origin` remote.
-> - Read ADR 0025 and `docs/operations/release.md` for what the rules are _now_. This document explains what was wrong and why.
+> - [ADR 0026](../decisions/0026-work-on-main-directly.md) then removed the branch layer itself: the default workspace is now `main`, and a branch or worktree is created only when the user explicitly asks for one. That closes F2's root cause — there is nothing left to accumulate.
+> - Read ADR 0025, ADR 0026, and `docs/operations/release.md` for what the rules are _now_. This document explains what was wrong and why.
 
 ## 1. The finding in one table
 

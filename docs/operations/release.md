@@ -48,18 +48,25 @@ To claim **`Verified`**, the checklist must be confirmed by a reviewer who did n
 
 > **Never** assign `Verified` without that review, and never let the implementation agent self-certify. A merge can proceed while review remains incomplete.
 
-## 3. Merge to `main`
+## 3. Commit on `main`
+
+**Work on `main` directly.** No feature branch, no worktree — unless the user explicitly asks for one.
 
 ```bash
 git checkout main
 git pull --ff-only origin main
-git merge --squash <feature-branch>      # or: gh pr merge --squash
+# ... make the change ...
+git add -A
 git commit -m "<type>(<scope>): <description>"
 ```
 
-**Success criteria:** `main` holds the change, the tree is clean, and the merge is a single squash commit (repo convention — see `AGENTS.md` § Conventions).
+**Success criteria:** the change is committed on `main`, the tree is clean, and the commit message follows the convention in `AGENTS.md` § Conventions.
 
-## 4. Clean up merged branches and worktrees
+> If the remote requires a pull request, push the local `main` commits through a short-lived branch, open the PR against `main`, merge it, and delete the branch immediately. The work is still done on `main`; the branch is a transport, not a workspace.
+
+## 4. Clean up
+
+The default workflow creates no branches, so there is normally **nothing to clean**. Run this only when a branch or worktree was created deliberately, or when one is left over from earlier work:
 
 ```bash
 ./scripts/cleanup-worktrees.sh            # report only — safe, read-only
@@ -68,9 +75,9 @@ git commit -m "<type>(<scope>): <description>"
 
 The script checks ancestry first, then falls back to **patch equivalence plus a per-file content comparison** — a squash-merged branch is only patch-equivalent to `main`, never an ancestor, so `git branch -d` refuses it. The script never touches `main`, never removes a dirty worktree, and never removes a branch that still carries unmerged work.
 
-**Success criteria:** `git worktree list` shows only the main checkout, and `git branch` shows no stale feature branch.
+**Success criteria:** `git worktree list` shows only the main checkout, and `git branch` shows no leftover branch.
 
-> A branch that still carries real changes is **not** cleanup — it is unfinished work. Rebase it onto the new `main` and finish it. See `docs/audits/RELEASE_PROCESS_REVIEW_2026-10-25.md` §3.
+> A branch that still carries real changes is **not** cleanup — it is unfinished work. Rebase it onto `main` and finish it. See `docs/audits/RELEASE_PROCESS_REVIEW_2026-10-25.md` §3.
 
 ## 5. Push
 
