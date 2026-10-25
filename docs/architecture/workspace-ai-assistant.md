@@ -38,25 +38,26 @@ descriptions.
 
 ## Current status
 
-The 2026-10-25 Arabic-first workspace redesign is in progress on a feature
-branch and is not yet release-verified. Its target layout, conversation-language
-rule, additive data impact, and remaining acceptance gates are recorded in
+The 2026-10-25 Arabic-first workspace redesign is merged in PR #48 and deployed
+on main SHA `1bfc9e324813d08a4ac43453165af808631ff1b6`. The target layout,
+conversation-language rule, additive data impact, and remaining acceptance
+gates are recorded in
 [`workspace-ai-assistant-redesign-2026-10-25.md`](workspace-ai-assistant-redesign-2026-10-25.md).
-The page now separates the conversation, history, and on-demand tools/context
-surfaces. It does not change the capability boundary above or persist
-transcript text.
+The page prioritizes the conversation, keeps history compact and hideable, and
+opens prompt and knowledge tools on demand. It does not change the capability
+boundary above or persist transcript text.
 
-The code is implemented on PR #44. The latest clean application code evidence
-is SHA `3c43f49b6e15bc131b62032536d28d665a340ac0`; the branch currently ends at
-`6c73c9082d9a895bc5e8bb4bf9dbeb3db6c1f32d` after documentation-only commits.
-Local verification, integration, and the Assistant migration drill are
-recorded in `docs/production-readiness/TEST_EVIDENCE.md`.
+Main-only CI and Deploy both passed for the exact SHA. The pre-migration
+backup, production migration, and post-deploy health result are recorded in
+[`docs/production-readiness/MIGRATION_DEPLOYMENT.md`](../production-readiness/MIGRATION_DEPLOYMENT.md)
+and [`docs/production-readiness/TEST_EVIDENCE.md`](../production-readiness/TEST_EVIDENCE.md).
 
-This is not a production release approval. The full browser release matrix,
-non-production MiniMax model/tool and privacy checks, separated-account UAT,
-production backup/rollback evidence, and a recorded independent PR approval
-remain open. Check the current verdict in `PRODUCTION_READINESS_TRACKER.md`
-before merging or deploying.
+The deployment was risk accepted. The full browser and visual release gates
+remain failed/incomplete; MiniMax model/tool/privacy checks, separated-account
+UAT, production restore/rollback proof, and an independent GitHub review record
+remain open. The app is deployed, but production readiness remains **NOT
+READY**. See `PRODUCTION_READINESS_TRACKER.md` and
+`docs/production-readiness/UAT_RELEASE.md` for the current verdict.
 
 ## Deferred work
 
