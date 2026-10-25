@@ -137,7 +137,7 @@ One row per deploy. This is the record the release checklist's per-deploy gate r
 
 | SHA | Date | Operator | CI run | Deploy run | Health version | Review status | Gates | Result |
 | --- | ---- | -------- | ------ | ---------- | -------------- | ------------- | ----- | ------ |
-|     |      |          |        |            |                |               |       |        |
+| `7c6077f1f9d3dd8f2afc47fd5fff25b419b4241b` | 2026-10-25 | Codex | [40196497788](https://github.com/LaraTik/laratik-planner/actions/runs/40196497788) | [40198393327](https://github.com/LaraTik/laratik-planner/actions/runs/40198393327) | `7c6077f` | not recorded; Verified not assigned | CI/images/smoke/preflight/backup/migration/health passed; browser/visual gates incomplete; Trend Radar secret unset | deployed, risk accepted; NOT READY |
 
 **How to fill it.**
 
