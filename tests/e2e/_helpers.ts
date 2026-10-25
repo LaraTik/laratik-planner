@@ -127,6 +127,8 @@ export type SeedResult = {
    * `/app/w/${seeded.workspaceSlug}/planning/${seeded.contentItemId}`.
    */
   contentItemId: string;
+  /** Calendar month for the canonical seeded item in the workspace timezone. */
+  contentItemMonth: string;
   /** Ready private media fixture used by the stored-delivery E2E journey. */
   deliveryMediaAssetId?: string;
   /** Signed agency context returned by the dev seed endpoint. */
