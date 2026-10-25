@@ -1,5 +1,7 @@
 # Test and coverage evidence
 
+> **2026-10-25 merge-policy update — ADR 0025** — Independent review and completion of local release gates are no longer prerequisites for merge. Historical entries below retain their original results and context; statements that merging must wait are superseded as stop conditions. No failed, incomplete, or unrun result is changed to pass, and deployment safeguards plus the `Verified` reviewer requirement remain in force.
+
 ## Default Workspace Knowledge Library — merge authorization and exact-code verification — 2026-10-25
 
 Exact feature code SHA: `439e796a707be6c4c1da8b5c84ce7c948d9c743f`

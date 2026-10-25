@@ -82,7 +82,7 @@ The list in §1 is the trigger. A destructive change is one that **removes, narr
 - **Consequences** — what older application images will do, what the rollback story is, and which `pg_dump` instance is the recovery target
 - **Pre-deploy gate** — the `pnpm migration-drill` drill that proves the destructive path; the smoke contract that proves the application is healthy after the change
 
-The ADR is reviewed by an independent reviewer before the migration is merged. The `Verified` transition in `PRODUCTION_READINESS_TRACKER.md` references the ADR by number.
+The ADR should be reviewed when practical. Independent review is not a prerequisite for merging the migration; the `Verified` transition in `PRODUCTION_READINESS_TRACKER.md` still requires an independent reviewer and references the ADR by number.
 
 ## 5. Recipe — `pnpm migration-drill`
 

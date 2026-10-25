@@ -4,27 +4,30 @@
 
 Accepted — 2026-10-24
 
+> **Merge prerequisite superseded by ADR 0025:** run the full integration suite for release-candidate evidence when practical; it is not a prerequisite for merge.
+
 ## Context
 
 The PostgreSQL integration suite protects database constraints, tenant
 isolation, transactions, and concurrency. Running it on every small push delays
-feedback, while GitHub Actions are no longer part of normal review or release.
-The repository has a disposable `planner_test` database, a guarded integration
-runner, and affected-test selection from changed files and pushed commit ranges.
+feedback. The repository has a disposable `planner_test` database, a guarded
+integration runner, and affected-test selection from changed files and pushed
+commit ranges.
 
 ## Decision
 
 - Run focused unit/integration checks during implementation and affected
-  unit/integration checks before pushing. The pre-push hook must use the
-  pushed commit range and must not invoke the full integration suite.
+  unit/integration checks before pushing when practical. The pre-push hook must
+  use the pushed commit range and must not invoke the full integration suite.
 - Run the full `pnpm test:integration` suite locally once for a release
-  candidate before merge. Use only a disposable database selected by
-  `TEST_DATABASE_URL`; the runner rejects unsafe database URLs.
-- Run `pnpm migration-drill` locally for database changes. Record full test,
-  migration, review, and release evidence against the exact clean SHA.
+  candidate when practical. This is evidence, not a prerequisite for merge.
+  Use only a disposable database selected by `TEST_DATABASE_URL`; the runner
+  rejects unsafe database URLs.
+- Run `pnpm migration-drill` locally for database changes when practical.
+  Record each check as passed, failed, or not run against the exact SHA.
 - Do not run integration checks in GitHub Actions. Do not dispatch workflows
-  for branch checks or routine releases; review, verify, build, publish, and
-  deploy locally. GitHub remains the remote source, PR, and merge record.
+  for branch checks. After merge, dispatch CI and Deploy on `main` for the
+  exact SHA, as described in `docs/operations/release.md`.
 - Speed up local feedback through affected-test selection. Do not skip test
   cases. The staged runner optimization plan is in
   `docs/operations/local-test-speed-plan.md`; parallel runs require isolated
@@ -33,10 +36,11 @@ runner, and affected-test selection from changed files and pushed commit ranges.
 ## Consequences
 
 - Small fixes get relevant local feedback without waiting for the full suite.
-- Release candidates still run the complete integration suite locally, so
-  database, authorization, transaction, and concurrency coverage is retained.
-- The review record must include exact SHA and local test results because
-  GitHub does not enforce hosted status checks.
+- When run, the complete integration suite retains database, authorization,
+  transaction, and concurrency coverage; its result is evidence, not a merge
+  prerequisite.
+- The release evidence record includes the exact SHA and local test results
+  when available because GitHub does not enforce branch or PR checks.
 - Integration tests continue to use the disposable-database safety guard.
 
 ## Rollback

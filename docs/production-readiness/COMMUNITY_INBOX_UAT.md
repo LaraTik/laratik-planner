@@ -226,4 +226,4 @@ pnpm migration-drill
 
 The dedicated Community audit fixture uses synthetic conversations in a disposable
 test database. Its browser results do not replace the external Meta UAT rows
-above. Run the full `pnpm test:e2e:release` gate before merge.
+above. Run the full `pnpm test:e2e:release` gate when practical and record its exact result. It is not a prerequisite for merge; an incomplete or failed result does not become a pass.

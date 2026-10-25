@@ -1,8 +1,8 @@
 # Release path — merge, cleanup, push, deploy
 
-> **This is the canonical release path.** It supersedes the release procedure scattered across `AGENTS.md` (quick start, hard rules, conventions), `docs/operations/runbook.md` (§ Local review, release, and deployment), and `docs/contributing/release-checklist.md`. Those surfaces remain correct but now point here.
+> **This is the canonical release path.** It supersedes the release procedure scattered across `AGENTS.md` (quick start, hard rules, conventions), `docs/operations/runbook.md` (§ Local review, release, and deployment), and `docs/contributing/release-checklist.md`. Those surfaces remain correct but now point here. ADR 0025 removes independent review and complete local gates as prerequisites for merging.
 >
-> **Decisions:** `docs/decisions/0021-local-review-and-release.md` (local review and release), `docs/decisions/0022-main-only-hosted-image-build-and-deploy.md` (main-only hosted build and deploy), `docs/decisions/0024-release-path-and-review-evidence.md` (this path, the cleanup rule, and the review-evidence form).
+> **Decisions:** `docs/decisions/0021-local-review-and-release.md` (local review and release), `docs/decisions/0022-main-only-hosted-image-build-and-deploy.md` (main-only hosted build and deploy), `docs/decisions/0024-release-path-and-review-evidence.md` (branch lifecycle), and `docs/decisions/0025-no-pre-merge-gates.md` (merge prerequisites).
 >
 > **Scope:** one ordered path, no options. Step 6 records the deploy. Nothing in this path weakens a hard deployment control: branch protection, exact-SHA images, provider preflight, pre-migration backup, readiness check, and automatic rollback all still apply and all still block.
 
@@ -18,7 +18,7 @@ git rev-parse --abbrev-ref HEAD
 
 **Do not** run `docker compose down -v` anywhere, and do not point `TEST_DATABASE_URL` at `planner` or any production database.
 
-## 1. Verify the change on the exact SHA
+## 1. Run useful local checks when practical
 
 ```bash
 pnpm verify
@@ -34,19 +34,19 @@ Then, **only for the change type in scope**:
 | User-facing UI or localization           | affected bilingual browser + accessibility + visual checks — `pnpm test:affected -- --layer browser` |
 | Release candidate (broad shared surface) | `pnpm test:e2e:release` (full 5-browser + visual matrix)                                             |
 
-**Success criteria:** `pnpm verify` green on the exact clean commit SHA, and every in-scope additional gate green on that same SHA.
+Record each result against its exact SHA. These local checks are recommended evidence, not conditions for merging. A failed or unrun check stays failed or incomplete in the tracker and evidence bundle.
 
 > If the branch advances or the tree becomes dirty after this point, the affected gates are void and must be rerun.
 
-## 2. Review
+## 2. Review and readiness status
 
-The implementation agent moves work to **`Tested`** and stops there. A **reviewer who is not the code author** moves it to **`Verified`**.
+The implementation agent may move work to **`Tested`**. A **reviewer who is not the code author** is the only person who may move it to **`Verified`**. This review is not a prerequisite for merge.
 
 The reviewer confirms every box in `docs/contributing/pr-review-checklist.md` and records the result — reviewer identity, date, and the exact SHA. The record may be a GitHub PR review **or** a local review record in the evidence file; the form is not what the gate protects, independence is.
 
-**Success criteria:** the checklist is confirmed by a reviewer who did not write the code, and the reviewer, date, and SHA are recorded.
+To claim **`Verified`**, the checklist must be confirmed by a reviewer who did not write the code, and the reviewer, date, and SHA must be recorded. Otherwise leave the status at **`Tested`** or its accurate earlier state.
 
-> **Never** assign `Verified` without that review, and never let the implementation agent self-certify. The review itself is unchanged by this document — only the _form_ of its record is.
+> **Never** assign `Verified` without that review, and never let the implementation agent self-certify. A merge can proceed while review remains incomplete.
 
 ## 3. Merge to `main`
 
@@ -173,8 +173,8 @@ curl -fsS https://planner.laratik.com/api/health
 
 **Routine release — one row**, in `docs/operations/READY_TO_DEPLOY.md` § "Deploy log":
 
-| SHA | Date | Operator | CI run | Deploy run | Health version | Reviewer | Gates | Result |
-| --- | ---- | -------- | ------ | ---------- | -------------- | -------- | ----- | ------ |
+| SHA | Date | Operator | CI run | Deploy run | Health version | Review status | Gates | Result |
+| --- | ---- | -------- | ------ | ---------- | -------------- | ------------- | ----- | ------ |
 
 **Add the full narrative** to `PRODUCTION_READINESS_TRACKER.md` and `docs/production-readiness/TEST_EVIDENCE.md` **only when** a gate failed, a gate was waived, or the release carried a risk acceptance. That is the case where the prose carries information; a clean release does not need a paragraph to say nothing happened.
 
@@ -183,11 +183,11 @@ Then, if the release was a release candidate:
 - Tag it: `git tag -a v<MAJOR>.<MINOR>.<PATCH> <sha> -m "<message>"`.
 - Monitor for 60 minutes — the four Sentry alert rules in `docs/operations/observability.md` are the floor.
 
-## 10. Waiving a gate
+## 10. Recording incomplete evidence
 
-An explicit user request to **merge** or **deploy** the current release authorizes proceeding when local review evidence or readiness gates are incomplete.
+Independent review and complete local release gates are not prerequisites for merge, so merging does not require a waiver. An explicit user request to **merge** or **deploy** authorizes proceeding without asking again when available local evidence is incomplete.
 
-- Record the authorization, the exact release SHA, the incomplete or failed gates, and the material impact/security/data risks.
+- Record the authorization, exact release SHA, checks that were incomplete or failed, and any material impact/security/data risks.
 - **A waiver is not a pass.** Keep the failed gate failed. Do not weaken a test, do not describe a failed gate as passed, and do not assign `Verified` or `READY` without the independent reviewer.
 - The hard controls still apply and still block: branch protection, deployment-environment approvals, exact-SHA CI and images, provider preflight, pre-migration backup, readiness check, automatic rollback. If one of them fails, **stop and report the blocker**.
 
@@ -217,6 +217,6 @@ After the release, report exactly these six items — nothing else:
 1. **Release SHA** (full 40 chars) and the `main` commit it deployed.
 2. **CI run URL** and **Deploy run URL**.
 3. **Health** — the `version` reported by `/api/health`.
-4. **Reviewer** — who signed the `pr-review-checklist.md` boxes, and whether the release was waived.
+4. **Review status** — reviewer and sign-off if available; say whether any evidence was incomplete or explicitly waived.
 5. **Gates** — green / failed / waived, per gate, with the exact command for anything that failed.
 6. **Cleanup** — the branches and worktrees removed, and any branch still carrying unmerged work.

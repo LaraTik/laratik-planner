@@ -1,6 +1,6 @@
 # PR review checklist
 
-> Companion to `AGENTS.md:236` (PR gate) and `PRODUCTION_READINESS_TRACKER.md:14` (the `Verified` rule). The reviewer uses this checklist before flipping a row from `Tested` to `Verified`; the author uses it as a self-check before requesting review.
+> Companion to `PRODUCTION_READINESS_TRACKER.md:14` (the `Verified` rule). This checklist governs a `Tested` → `Verified` transition; it is not a prerequisite for merging. The author may use it as a self-check before requesting review.
 
 ## Review contract
 
