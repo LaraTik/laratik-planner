@@ -6,12 +6,14 @@ Exact tested code SHA: `13f5129d7828507e3b8259604d33803b6d3bfaae` (PR #48).
 This run used the already-pushed, clean feature-branch commit. No application
 code changed during verification.
 
-| Check                                                      | Result                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Full Chromium E2E (`pnpm test:e2e:release`, browser phase) | Failed: 296 passed, 6 failed, 1 skipped out of 303 in 27.1 minutes. All 9 Workspace AI Assistant cases passed. Failures: workspace settings page load timed out; agency switch from a workspace page timed out; authenticated Arabic shell did not show the expected “إضافة دفعة” heading; platform overview KPI assertion failed; social analytics page load timed out; first-login redirect stayed on `/set-password` until timeout. |
-| Full visual matrix (`pnpm test:visual`)                    | Interrupted after 12/272 cases because five screenshot comparisons had already failed. Seven passed and five mismatched: workspace planning, workspace settings, agency AI settings, platform overview, and workspace brand kit. No snapshots were updated. This is incomplete evidence, not a pass.                                                                                                                                   |
-| Focused Workspace Assistant Arabic/RTL visual              | Passed previously on the unchanged application code across all five viewport widths, including overflow and critical accessibility assertions.                                                                                                                                                                                                                                                                                         |
-| Release state                                              | Not ready. The full browser and visual gates remain failed/incomplete. The user reports review is complete, but PR #48 has no GitHub review decision or checks recorded. MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback evidence remain open. Do not merge, dispatch CI, or deploy.                                                                                                             |
+| Check                                                          | Result                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Full Chromium E2E (`pnpm test:e2e:release`, browser phase)     | Failed: 296 passed, 6 failed, 1 skipped out of 303 in 27.1 minutes. All 9 Workspace AI Assistant cases passed. Failures: workspace settings page load timed out; agency switch from a workspace page timed out; authenticated Arabic shell did not show the expected “إضافة دفعة” heading; platform overview KPI assertion failed; social analytics page load timed out; first-login redirect stayed on `/set-password` until timeout. |
+| Full visual matrix (`pnpm test:visual`)                        | Interrupted after 12/272 cases because five screenshot comparisons had already failed. Seven passed and five mismatched: workspace planning, workspace settings, agency AI settings, platform overview, and workspace brand kit. No snapshots were updated. This is incomplete evidence, not a pass.                                                                                                                                   |
+| Full disposable-Postgres integration (`pnpm test:integration`) | Passed, exit 0, on the candidate checkout SHA `6aaa2f84a53c9acbaffac425937eea88a3cd4a1a`; includes Workspace Assistant integration coverage (13/13).                                                                                                                                                                                                                                                                                   |
+| Migration drill (`pnpm migration-drill`)                       | Passed all five scenarios on PostgreSQL 16, applying 104/104 migrations from zero and validating repair, in-place upgrade, backup/restore, and failed-migration abort.                                                                                                                                                                                                                                                                 |
+| Focused Workspace Assistant Arabic/RTL visual                  | Passed previously on the unchanged application code across all five viewport widths, including overflow and critical accessibility assertions.                                                                                                                                                                                                                                                                                         |
+| Release state                                                  | User-authorized, risk-accepted merge/deploy is in progress. The full browser and visual gates remain failed/incomplete; PR #48 has no GitHub review decision or checks recorded; MiniMax model/tool/privacy UAT and separated-account UAT remain open. This does not make the release `READY` or the gates passed. Exact-SHA CI/images, provider preflight, migration backup, health, and rollback controls remain required.           |
 
 The browser failures are outside the Assistant’s nine passing journeys except
 for the general Arabic-shell assertion. Page-load failures showed only the
@@ -27,6 +29,23 @@ Commands:
 NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test pnpm test:e2e:release
 NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test pnpm test:visual
 ```
+
+## Explicit user authorization to merge and deploy — 2026-10-25
+
+The user directed that explicit requests to merge or deploy should be treated
+as authorization and asked to proceed with PR #48. This authorizes a
+risk-accepted release despite the failed/incomplete E2E and visual gates and
+the missing GitHub review decision. It does not mark those gates as passed or
+complete the outstanding MiniMax privacy/model/tool and separated-account UAT.
+The application contains migration `0103_workspace_assistant_language_pinning`;
+its migration drill passed all five scenarios against disposable PostgreSQL
+16, including from-zero 104/104, repair, in-place upgrade, backup/restore with
+104 ledger rows, and failed-migration abort. The full disposable-Postgres
+integration suite also passed (exit 0), including Workspace Assistant
+integration coverage 13/13. Live data-processing behavior for
+the MiniMax provider remains unverified. The production Deploy workflow's
+exact-SHA CI/image verification, provider preflight, pre-migration backup,
+readiness, and rollback controls remain required.
 
 ## Workspace AI Assistant browser recheck — exact clean checkout SHA — 2026-10-25
 
