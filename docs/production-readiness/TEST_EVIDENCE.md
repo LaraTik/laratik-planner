@@ -1,5 +1,36 @@
 # Test and coverage evidence
 
+## Workspace AI Assistant refactor — exact clean SHA — 2026-10-25
+
+Exact clean code SHA: `784e427fd7f8750a878d10852dbcc6fae1c6fe90` (PR #48).
+This UI-only follow-up isolates the structured response/evidence/proposal panel
+and loads workspace prompt data only when Tools and context opens. Prompt
+requests are fenced by workspace slug so a late response cannot replace the
+active workspace's prompt list. No schema or migration changed.
+
+| Check                               | Result                                                                                                                                                                                                                                                                                                                                                                                        |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                       | Passed, exit 0: Prettier, ESLint, TypeScript, 625 unit files / 5,338 tests, and production build.                                                                                                                                                                                                                                                                                             |
+| Pre-push affected-core gate         | Passed, exit 0. The missing test-ownership mapping escalated to the full unit suite; selected disposable-Postgres integrations passed, including Workspace Assistant 13/13.                                                                                                                                                                                                                   |
+| Focused prompt-library Chromium E2E | Passed 1/1. Verified there was no prompt-list GET before opening Tools and context, then created a private prompt and checked mobile layout.                                                                                                                                                                                                                                                  |
+| Focused Arabic/RTL visual           | Passed 1/1 across all five responsive viewports, including overflow and critical accessibility assertions.                                                                                                                                                                                                                                                                                    |
+| Review and release state            | PR #48 remains a draft with three review requests pending, no independent review decision, and no GitHub checks. Full browser/device and visual release coverage, live MiniMax model/tool/privacy UAT, separated-account UAT, and production backup/rollback evidence remain open. M3.8 remains **In Progress**. Do not merge or deploy; no GitHub Actions build or deployment was triggered. |
+
+Commands:
+
+```sh
+NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test pnpm test:e2e:isolated -- --project=chromium --grep 'English prompt library supports private prompt creation and mobile widths'
+
+NODE_ENV=test TEST_DATABASE_URL=postgresql://planner:***@127.0.0.1:5432/planner_test pnpm test:e2e:isolated -- tests/e2e/visual-regression.spec.ts --project=visual-chromium --grep 'workspace AI assistant renders Arabic RTL across the full responsive matrix'
+```
+
+The earlier full Chromium release run at SHA
+`57619cfa41d4a39cb7dd976591a906cb3fc8bb9d` had five failures and one skip;
+the no-membership `/app` route still reproduced a skeleton-only render with a
+Next.js destination-stream error. A separate full visual attempt stopped at
+24/272 after snapshot mismatches on other routes. Those broad gates remain
+incomplete and are not represented as passing on this SHA.
+
 ## Workspace AI Assistant exact-SHA release verification — 2026-10-25
 
 Exact checked-out code SHA: `57619cfa41d4a39cb7dd976591a906cb3fc8bb9d` (PR #48).
