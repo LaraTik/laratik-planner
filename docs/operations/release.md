@@ -50,7 +50,7 @@ To claim **`Verified`**, the checklist must be confirmed by a reviewer who did n
 
 ## 3. Commit on `main`
 
-**Work on `main` directly.** No feature branch, no worktree — unless the user explicitly asks for one.
+**Work on `main` directly.** No feature branch, no worktree — unless the user explicitly asks for one. The commits belong to `main`; a branch is only ever transport for a remote that refuses a direct push.
 
 ```bash
 git checkout main
@@ -62,7 +62,33 @@ git commit -m "<type>(<scope>): <description>"
 
 **Success criteria:** the change is committed on `main`, the tree is clean, and the commit message follows the convention in `AGENTS.md` § Conventions.
 
-> If the remote requires a pull request, push the local `main` commits through a short-lived branch, open the PR against `main`, merge it, and delete the branch immediately. The work is still done on `main`; the branch is a transport, not a workspace.
+### This remote requires a pull request
+
+`git push origin main` is **rejected** on this repository:
+
+```
+remote: error: GH006: Protected branch update failed for refs/heads/main.
+remote: - Changes must be made through a pull request.
+```
+
+The branch-protection API can mislead here: it reports `required_approving_review_count: 0` and no required status checks, but the "require a pull request" rule still applies, and `enforce_admins` is on — so an admin is subject to it too. Do not read that API response as "a direct push will work".
+
+The transport flow for this remote:
+
+```bash
+BR="rel/<short-slug>-$(date +%Y%m%d)"
+git branch "$BR"
+git push -u origin "$BR"
+gh pr create --base main --head "$BR" --title "<type>(<scope>): <description>" --body-file <body>
+gh pr merge <pr> --rebase --delete-branch   # branch protection requires linear history
+git fetch --prune origin && git reset --hard origin/main
+```
+
+**Use `--rebase`, not `--squash`.** `required_linear_history` is on, and a rebase merge replays the individual commits, so a deliberately split history (for example a feature commit and a separate infra commit) survives the merge. A squash merge collapses them into one and loses that split. The merged tree is identical either way.
+
+The pre-push hook runs on the transport push too. If it has already passed on the identical range, `SKIP_PREPUSH=1` is permitted and must be recorded in the evidence bundle.
+
+> The work is still done on `main`; the branch is a transport, not a workspace. Delete it and its worktree once the commits are on `main`.
 
 ## 4. Clean up
 
