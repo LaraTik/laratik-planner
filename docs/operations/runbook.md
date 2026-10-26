@@ -473,8 +473,10 @@ Pre-push runs local unit and integration checks for the pushed commit range,
 not the staging index, so a normal push after committing cannot silently skip
 those checks. It does not run E2E. Run `pnpm test:affected -- --layer browser`
 for normal local browser feedback or `pnpm test:e2e:release` for a release
-candidate. Hook skips require a documented reason; local evidence is the
-release authority.
+candidate. Local evidence records readiness; it is not a merge prerequisite.
+After explicit user authorization to merge/deploy, a failed or unavailable hook
+may be skipped with `SKIP_PREPUSH=1` and its exact result documented. Main-only
+CI and production deployment controls remain mandatory.
 
 #### Local integration setup
 

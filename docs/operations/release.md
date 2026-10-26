@@ -85,7 +85,7 @@ The script checks ancestry first, then falls back to **patch equivalence plus a 
 git push origin main
 ```
 
-The pre-push hook runs the affected unit and integration checks for the pushed range against the disposable `planner_test` database.
+The pre-push hook runs the affected unit and integration checks for the pushed range against the disposable `planner_test` database. This is useful local evidence, not a merge or push prerequisite. If the user has explicitly authorized merge/deploy and the hook fails or cannot run, record the exact failure and push with `SKIP_PREPUSH=1`; this does not bypass server-side branch protection or the exact-SHA CI required before deployment.
 
 **Verify the test database resolves to the intended server before trusting the result:**
 
@@ -95,7 +95,7 @@ psql "$TEST_DATABASE_URL" -tAc 'select current_database()'   # must print: plann
 
 If a native Postgres is already bound to `127.0.0.1:5432`, it wins over Docker's `0.0.0.0` bind and every check silently runs against the wrong server. `docker exec … pg_isready` still passes in that case — the database name is the only reliable signal.
 
-**Success criteria:** the push completes and the hook's affected checks passed against `planner_test`.
+**Success criteria:** the push completes. Record whether the hook passed, failed, or was skipped; do not report a failed or skipped check as passed.
 
 ## 6. Build and publish images (CI, on `main`)
 
@@ -192,7 +192,7 @@ Then, if the release was a release candidate:
 
 ## 10. Recording incomplete evidence
 
-Independent review and complete local release gates are not prerequisites for merge, so merging does not require a waiver. An explicit user request to **merge** or **deploy** authorizes proceeding without asking again when available local evidence is incomplete.
+Independent review and complete local release gates are not prerequisites for merge, so merging does not require a waiver. An explicit user request to **merge** or **deploy** authorizes proceeding without asking again when available local evidence is incomplete, including when a local pre-push hook fails.
 
 - Record the authorization, exact release SHA, checks that were incomplete or failed, and any material impact/security/data risks.
 - **A waiver is not a pass.** Keep the failed gate failed. Do not weaken a test, do not describe a failed gate as passed, and do not assign `Verified` or `READY` without the independent reviewer.
