@@ -258,6 +258,9 @@ Example carousel create:
     "visualDirection": "…",
     "onImageText": "…",
     "requiredImageLinks": ["https://example.com/required-image"],
+    "requiredImageUploads": [
+      { "id": "3f1b9d2e-7c48-4a51-9f0b-2d6c8e4a1b37", "title": "hero-shot.png" }
+    ],
     "designReadyLink": "https://example.com/finished-design",
     "publicationStatus": "no",
     "additionalNotes": "…",
