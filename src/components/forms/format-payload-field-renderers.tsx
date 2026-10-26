@@ -7,6 +7,10 @@ import { TranslationFieldButton } from "@/components/forms/translation-field-but
 import { NavigableArrayField } from "@/components/forms/navigable-array-field";
 import { CaptionField } from "@/components/forms/caption-field";
 import { HashtagEditor } from "@/components/forms/hashtag-editor";
+import {
+  ReferenceImageUploader,
+  type ReferenceImage,
+} from "@/components/forms/reference-image-uploader";
 import { resolveLocale, getByCode, type LocaleCode } from "@/lib/i18n/locales";
 import { FIELD_MAX_LENGTHS, type FieldMaxLengthKey } from "@/lib/format-payload/schemas";
 
@@ -43,6 +47,12 @@ export interface FieldRendererProps {
   editable: boolean;
   aiEnabled: boolean;
   contentItemId: string;
+  /**
+   * The workspace that owns the post. Needed by the surfaces that write to
+   * the workspace's own storage (the reference-image upload), because the
+   * upload contract is workspace-scoped rather than post-scoped.
+   */
+  workspaceId?: string | undefined;
   enumValues?: ReadonlyArray<string>;
   numberMin?: number;
   numberMax?: number;
@@ -861,6 +871,105 @@ function UrlListFieldRenderer({
   );
 }
 
+/**
+ * Read the uploaded-reference list out of a format payload.
+ *
+ * The payload is free-form JSON in the database, so the shape is validated
+ * here rather than trusted: an entry whose id is not a media-asset id, or
+ * whose title is missing, is dropped instead of rendering a broken
+ * thumbnail — and, more importantly, instead of putting a value on the
+ * payload that the save-time Zod schema would reject.
+ */
+function readReferenceImages(value: unknown): ReferenceImage[] {
+  if (!Array.isArray(value)) return [];
+  const out: ReferenceImage[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const record = item as Record<string, unknown>;
+    if (typeof record.id !== "string") continue;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(record.id))
+      continue;
+    out.push({
+      id: record.id,
+      title: typeof record.title === "string" && record.title.length > 0 ? record.title : record.id,
+    });
+  }
+  return out;
+}
+
+/**
+ * "Required image / design reference" — one field, two ways to fill it.
+ *
+ * The planner can point the designer at a reference with a URL or hand over
+ * the file itself. Both belong to the same creative instruction, so they
+ * render as one section: the upload affordance first (it is the primary
+ * action — the designer wants the actual file, not a link to one), the URL
+ * list directly beneath it.
+ *
+ * They are stored separately — `requiredImageLinks` (URLs, the planning
+ * workbook contract) and `requiredImageUploads` (media-asset ids) — because
+ * an uploaded image has no durable public URL to put in a URL list, and the
+ * XLSX export depends on `requiredImageLinks` staying a list of links.
+ */
+function RequiredImagesFieldRenderer({
+  fieldKey,
+  label,
+  hint,
+  payload,
+  locale,
+  editable,
+  contentItemId,
+  workspaceId,
+  t,
+  onField,
+}: FieldRendererProps) {
+  const linkArr = Array.isArray(payload[fieldKey]) ? (payload[fieldKey] as unknown[]) : [];
+  const linkValue = linkArr.filter((x): x is string => typeof x === "string").join("\n");
+  const uploads = readReferenceImages(payload.requiredImageUploads);
+  const resolvedHint = hint ?? t("formatEditor.fields.requiredImageLinksMeta.hint");
+  const listHint = t("formatEditor.fields.requiredImageLinksListHint");
+  return (
+    <div className="space-y-3" data-testid={`field-${fieldKey}`}>
+      <div className="space-y-0.5">
+        <p className="text-body text-fg-primary font-semibold">{label}</p>
+        <p className="text-label text-fg-muted">{resolvedHint}</p>
+      </div>
+      {editable && workspaceId ? (
+        <ReferenceImageUploader
+          workspaceId={workspaceId}
+          contentItemId={contentItemId}
+          value={uploads}
+          onChange={(next) => onField("requiredImageUploads", next.length > 0 ? next : undefined)}
+        />
+      ) : null}
+      <div className="space-y-1.5">
+        <label htmlFor={fieldKey} className="text-label text-fg-secondary block font-semibold">
+          {t("formatEditor.fields.requiredImageLinksLabel")}
+        </label>
+        <DirAwareTextarea
+          id={fieldKey}
+          locale={locale}
+          value={linkValue}
+          readOnly={!editable}
+          onChange={(e) => {
+            const next = e.target.value
+              .split(/\r?\n/)
+              .map((s) => s.trim())
+              .filter((s) => s.length > 0);
+            onField(fieldKey, next.length > 0 ? next : undefined);
+          }}
+          rows={Math.min(6, Math.max(2, linkValue.split("\n").length + 1))}
+          placeholder={t("formatEditor.fields.requiredImageLinksMeta.placeholder")}
+          aria-describedby={listHint ? `${fieldKey}-hint` : undefined}
+        />
+        <p id={`${fieldKey}-hint`} className="text-label text-fg-muted">
+          {listHint}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function LocationFieldRenderer({
   label,
   payload,
@@ -1080,7 +1189,7 @@ export const RENDERERS: Record<string, FieldRenderer> = {
   // Composite / array fields.
   location: LocationFieldRenderer,
   references: UrlListFieldRenderer,
-  requiredImageLinks: UrlListFieldRenderer,
+  requiredImageLinks: RequiredImagesFieldRenderer,
   weekday: PlainTextFieldRenderer,
   platforms: PlainTextFieldRenderer,
   designReadyLink: PlainTextFieldRenderer,

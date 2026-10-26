@@ -1119,6 +1119,7 @@ export default async function ContentDetailPage({
                       <FormatAwareContentEditor
                         saveAction={updateFormatPayloadAction.bind(null, slug)}
                         contentItemId={item.id}
+                        workspaceId={ws.id}
                         format={item.format}
                         initial={(() => {
                           try {
@@ -1178,6 +1179,7 @@ export default async function ContentDetailPage({
                     <FormatAwareContentEditor
                       saveAction={updateFormatPayloadAction.bind(null, slug)}
                       contentItemId={item.id}
+                      workspaceId={ws.id}
                       format={item.format}
                       initial={(() => {
                         try {

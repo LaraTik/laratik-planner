@@ -35,6 +35,35 @@ Legacy fields such as `hook`, `scenes`, `slideOutline`, and `references` remain
 accepted for compatibility with older records, but the workbook import and the
 current production editor do not create or display them for these four formats.
 
+### Uploaded reference images
+
+`requiredImageLinks` is a list of URLs because the workbook stores links. A
+planner often wants to hand the designer the actual file instead, so the
+**Required image / design reference** field also accepts an upload. Those
+references live in a second key:
+
+```jsonc
+"requiredImageUploads": [
+  { "id": "3f1b7a52-0c4e-4a2b-9f2d-8a1c5e7b4d10", "title": "hero-reference" }
+]
+```
+
+- `id` is a **media-asset id**, not a URL. An uploaded image is served through
+  the session-gated media proxy (`/api/media/assets/{id}`), so it has no
+  durable public URL to put in a URL list.
+- `title` is the file the planner picked. It is stored beside the id so the
+  field can label each thumbnail without a second round trip for asset
+  metadata on every render.
+- The key is separate on purpose: `requiredImageLinks` stays a list of
+  absolute URLs so the XLSX import/export contract is unchanged, and an
+  existing row keeps its shape.
+- Uploading a reference also links the asset to the post
+  (`media_asset_links.target_type = "content_item"`), so the image appears in
+  the post's media folder in the Media library.
+
+Both keys are accepted on `static_post`, `carousel`, `story`, and
+`short_form_video` — the four formats that carry the workbook field.
+
 ## Why not add columns?
 
 Three reasons that argue for jsonb (`format_payload`) instead of new

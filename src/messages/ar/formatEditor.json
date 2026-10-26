@@ -79,7 +79,7 @@
       "placeholder": "https://…"
     },
     "requiredImageLinksMeta": {
-      "hint": "رابط واحد من عمود الصورة المطلوبة في كل سطر. ضع روابط التصميم الجاهز في الحقل المنفصل.",
+      "hint": "أضف الصور التي يجب على المصمم استخدامها. ارفع الملف مباشرة، أو الصق رابطًا.",
       "placeholder": "https://…"
     },
     "hashtagsMeta": {
@@ -137,7 +137,13 @@
     "segments": "الشرائح الزمنية",
     "qaPrompts": "أسئلة وأجوبة",
     "outline": "المخطط",
-    "keyTakeaways": "النتائج الرئيسية"
+    "keyTakeaways": "النتائج الرئيسية",
+    "requiredImageUploadsLabel": "الصور المرفوعة",
+    "requiredImageUploadsHint": "PNG أو JPG أو WEBP أو GIF · حتى 50 ميغابايت لكل ملف",
+    "requiredImageUploadsEmpty": "لم يتم رفع أي صورة بعد.",
+    "requiredImageLinksLabel": "روابط الصور",
+    "requiredImageLinksListHint": "رابط واحد في كل سطر",
+    "requiredImageRemove": "إزالة {title}"
   },
   "editor": {
     "save": "حفظ تفاصيل المحتوى",

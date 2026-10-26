@@ -8,25 +8,20 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import {
+  checksumFor,
+  uploadFailureMessage,
+  uploadMediaFile,
+} from "@/components/media/client-upload";
+import {
   classifyMediaKind,
   contentTypeFromFilename,
-  extensionFromFilename,
   MEDIA_SIZE_LIMITS,
-  sanitizeAssetTitle,
   titleFromFilename,
   type MediaKind,
 } from "@/lib/media/contract";
 
 type QueueStatus = "queued" | "uploading" | "verifying" | "processing" | "ready" | "failed";
 
-/**
- * Bounded backoff for re-reading an asset that registered as `processing`.
- * Storage read blips are short, so ~11s of in-session polling resolves the
- * overwhelming majority without the user touching anything. Anything still
- * pending after this is recovered by the cron `processPendingMediaAssets`
- * sweep; the upload itself is never lost.
- */
-const REGISTER_POLL_DELAYS_MS = [400, 1000, 2000, 3000, 5000] as const;
 type QueueItem = {
   id: string;
   file: File;
@@ -72,85 +67,10 @@ type DuplicateHint = {
   sameWorkspace: boolean;
 };
 
-type Translator = ReturnType<typeof useLocaleT>;
-
-function uploadFailureMessage(t: Translator, code?: string): string {
-  switch (code) {
-    case "media.file_too_large":
-      return t("media.fileTooLarge");
-    case "media.permission_denied":
-      return t("media.uploadPermissionDenied");
-    case "storage.quota_exceeded":
-      return t("media.storageQuotaExceeded");
-    case "storage.unavailable":
-      return t("media.storageUnavailable");
-    case "storage.object_verification_failed":
-      return t("media.verificationFailed");
-    case "storage.intent_expired":
-    case "storage.intent_not_found":
-      return t("media.uploadExpired");
-    case "upload_failed":
-      return t("media.transferFailed");
-    case "upload_aborted":
-      return t("media.uploadCanceled");
-    default:
-      return t("media.uploadError");
-  }
-}
-
-async function uploadResponseError(response: Response, t: Translator): Promise<Error> {
-  const payload = (await response.json().catch(() => null)) as { code?: string } | null;
-  return new Error(uploadFailureMessage(t, payload?.code));
-}
-
 function formatBytes(value: number) {
   if (value < 1024 ** 2) return `${Math.max(1, Math.round(value / 1024))} KB`;
   if (value < 1024 ** 3) return `${(value / 1024 ** 2).toFixed(1)} MB`;
   return `${(value / 1024 ** 3).toFixed(1)} GB`;
-}
-
-async function checksumFor(file: File): Promise<string | undefined> {
-  if (file.size > 100 * 1024 * 1024 || !globalThis.crypto?.subtle) return undefined;
-  // The checksum only powers advisory duplicate detection; the upload itself
-  // is valid without it and the server treats its absence as normal. Digesting
-  // is therefore never allowed to fail the upload — a large-file read error
-  // must degrade to "no checksum", not to a raw runtime message in the row.
-  try {
-    const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
-    return btoa(String.fromCharCode(...new Uint8Array(digest)));
-  } catch {
-    return undefined;
-  }
-}
-
-function putFileWithProgress(
-  url: string,
-  file: File,
-  headers: Record<string, string> | undefined,
-  onProgress: (percent: number) => void,
-  onRequest: (request: XMLHttpRequest) => void,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const request = new XMLHttpRequest();
-    onRequest(request);
-    request.open("PUT", url);
-    Object.entries(headers ?? {}).forEach(([name, value]) => request.setRequestHeader(name, value));
-    request.upload.addEventListener("progress", (event) => {
-      if (event.lengthComputable)
-        onProgress(Math.min(99, Math.round((event.loaded / event.total) * 100)));
-    });
-    request.addEventListener("load", () => {
-      if (request.status >= 200 && request.status < 300) {
-        onProgress(100);
-        resolve();
-      } else {
-        reject(new Error("upload_failed"));
-      }
-    });
-    request.addEventListener("error", () => reject(new Error("upload_failed")));
-    request.addEventListener("abort", () => reject(new Error("upload_aborted")));
-    request.send(file);
-  });
 }
 
 export function MediaUploadForm({
@@ -250,107 +170,27 @@ export function MediaUploadForm({
           // The upload remains authoritative when the advisory is unavailable.
         }
       }
-      const sign = await fetch("/api/uploads/sign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workspaceId,
-          kind: item.kind,
-          ext: extensionFromFilename(item.file.name),
-          fileSize: item.file.size,
-          contentType: item.contentType,
-          originalName: item.file.name,
-          ...(contentItemId ? { contentItemId } : {}),
-          ...(checksumSha256 ? { checksumSha256 } : {}),
-        }),
+      const outcome = await uploadMediaFile({
+        workspaceId,
+        file: item.file,
+        kind: item.kind,
+        title: item.title,
+        contentType: item.contentType,
+        ...(contentItemId ? { contentItemId } : {}),
+        ...(folderId ? { folderId } : {}),
+        ...(checksumSha256 ? { checksumSha256 } : {}),
+        onPhase: (phase) => update(item.id, { status: phase }),
+        onProgress: (progress) => update(item.id, { progress }),
+        registerRequest: (request) => activeRequests.current.set(item.id, request),
       });
-      if (!sign.ok) throw await uploadResponseError(sign, t);
-      const signed = (await sign.json()) as {
-        uploadUrl: string;
-        proxyUploadUrl?: string;
-        uploadIntentId: string;
-        requiredHeaders?: Record<string, string>;
-      };
-      try {
-        await putFileWithProgress(
-          signed.uploadUrl,
-          item.file,
-          signed.requiredHeaders,
-          (progress) => update(item.id, { progress }),
-          (request) => activeRequests.current.set(item.id, request),
-        );
-      } catch (error) {
-        // A missing/stale R2 CORS rule presents as a browser network failure,
-        // even though the server-side upload contract is healthy. Retry the
-        // same intent through the same-origin streaming transport so the user
-        // gets a recoverable upload instead of a misleading connection error.
-        if (error instanceof Error && error.message === "upload_failed" && signed.proxyUploadUrl) {
-          await putFileWithProgress(
-            signed.proxyUploadUrl,
-            item.file,
-            signed.requiredHeaders,
-            (progress) => update(item.id, { progress }),
-            (request) => activeRequests.current.set(item.id, request),
-          );
-        } else {
-          throw error;
-        }
-      }
-      update(item.id, { status: "verifying" });
-      const complete = await fetch("/api/uploads/complete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ intentId: signed.uploadIntentId, workspaceId }),
-      });
-      if (!complete.ok) throw await uploadResponseError(complete, t);
-      const result = (await complete.json()) as { objectId: string };
-      // Registration is idempotent, so this POST doubles as the status probe
-      // for an asset the server could not finish validating inline.
-      const registerAsset = async () => {
-        const response = await fetch("/api/media/assets", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            workspaceId,
-            storageObjectId: result.objectId,
-            title: sanitizeAssetTitle(item.title),
-            ...(folderId ? { folderId } : {}),
-            ...(contentItemId ? { contentItemId } : {}),
-          }),
-        });
-        if (!response.ok) throw await uploadResponseError(response, t);
-        const body = (await response.json()) as {
-          asset?: { id?: string; status?: string };
-        };
-        return body.asset ?? {};
-      };
 
-      // `processing` is a real, recoverable state — the bytes are stored and
-      // catalogued, only content validation is outstanding, because storage
-      // was briefly unreadable during registration. Poll the idempotent
-      // register here so the file surfaces in the picker on its own; without
-      // this the row sat at "processing" with no recovery short of a manual
-      // page reload, which is what users reported as a failed upload.
-      let asset = await registerAsset();
-      for (const delay of REGISTER_POLL_DELAYS_MS) {
-        if (asset.status !== "processing") break;
-        update(item.id, { status: "processing" });
-        await new Promise((resolve) => setTimeout(resolve, delay));
-        asset = await registerAsset();
-      }
-
-      if (asset.status === "failed") {
+      if (outcome.status === "failed") {
         update(item.id, { status: "failed", error: t("media.verificationFailed") });
         return;
       }
-      if (asset.status === "ready" && asset.id) {
+      if (outcome.status === "ready") {
         update(item.id, { status: "ready" });
-        onAssetReady?.({
-          id: asset.id,
-          title: sanitizeAssetTitle(item.title),
-          kind: item.kind,
-          byteSize: item.file.size,
-        });
+        onAssetReady?.(outcome.asset);
         return;
       }
       // Still pending after the bounded poll: the row is committed and the
@@ -360,11 +200,7 @@ export function MediaUploadForm({
       update(item.id, {
         status: "failed",
         error:
-          error instanceof Error
-            ? error.message === "upload_failed" || error.message === "upload_aborted"
-              ? uploadFailureMessage(t, error.message)
-              : error.message
-            : t("media.uploadError"),
+          error instanceof Error ? uploadFailureMessage(t, error.message) : t("media.uploadError"),
       });
     } finally {
       activeRequests.current.delete(item.id);
