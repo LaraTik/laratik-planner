@@ -85,6 +85,12 @@ export interface FormatAwareContentEditorProps {
   t?: (key: string, params?: Record<string, string | number>) => string;
   saveAction: (previous: ActionState, formData: FormData) => Promise<ActionState>;
   contentItemId: string;
+  /**
+   * The workspace that owns the post. The reference-image upload writes to
+   * the workspace's own storage, and the upload contract is workspace-scoped,
+   * so the field needs to know which workspace it is writing into.
+   */
+  workspaceId?: string | undefined;
   format: ContentFormat;
   initial: Record<string, unknown>;
   editable: boolean;
@@ -270,6 +276,7 @@ export function FormatAwareContentEditor({
   t: tProp,
   saveAction,
   contentItemId,
+  workspaceId,
   format,
   initial: initialPayload,
   editable,
@@ -400,6 +407,7 @@ export function FormatAwareContentEditor({
         : {}),
       aiEnabled,
       contentItemId,
+      workspaceId,
       t,
       onField: setField,
       onTranslation: setFieldTranslation,

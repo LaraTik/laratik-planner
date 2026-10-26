@@ -369,6 +369,7 @@ Per StudioFlow §11/§17/§23: Quick Create has exactly 4 fields (title, format,
 - Do NOT add columns to `content_item` for these fields. The schema is already jsonb-shaped (§8: "default `{ schemaVersion: 1 }` enforced in service"). Adding columns duplicates the JSONB, breaks the format-driven UX, and requires a backfill migration.
 - The per-format schemas are the source of truth: see `docs/content/format-payload-schemas.md`. Update that file when a format gains a field; the implementation derives from it.
 - The `brief` field is a one-line text intent. It is separate from `formatPayload` (the structured creative contract). Rewriting the brief for clarity does not reset creative's notes, and vice versa.
+- **Uploaded reference images are a separate payload key.** `requiredImageLinks` stays a list of absolute URLs (the workbook / XLSX contract). Files uploaded through the **Required image / design reference** field are stored as `requiredImageUploads: [{ id, title }]` — a media-asset id plus the file name. An uploaded image is served through the session-gated media proxy and has no durable public URL, so it must not be pushed into a URL list. The upload transport is shared with the Media library (`src/components/media/client-upload.ts`); do not re-implement the sign → transfer → verify → register sequence per surface.
 
 ### Save path
 

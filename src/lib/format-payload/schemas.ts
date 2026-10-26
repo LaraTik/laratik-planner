@@ -77,6 +77,31 @@ const WorkbookPlanningFields = {
   platforms: z.string().trim().max(1_000).optional(),
   onImageText: z.string().trim().max(10_000).optional(),
   requiredImageLinks: z.array(z.string().url().max(500)).max(20).optional(),
+  /**
+   * Reference images the planner uploaded directly from the "Required image /
+   * design reference" field.
+   *
+   * These are deliberately a SEPARATE list from `requiredImageLinks`. That
+   * field is a URL list because the planning workbook stores links, and the
+   * XLSX import/export contract depends on it staying a list of absolute
+   * URLs. An uploaded image has no durable public URL — it is served through
+   * the session-gated media proxy — so it is stored as a media-asset id and
+   * resolved to a thumbnail at render time. Keeping the two apart means an
+   * existing row keeps its shape and the workbook contract is unchanged.
+   *
+   * The title is stored alongside the id so the field can label each
+   * thumbnail with the file the planner picked without a second round trip
+   * for asset metadata on every render.
+   */
+  requiredImageUploads: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        title: z.string().trim().min(1).max(160),
+      }),
+    )
+    .max(20)
+    .optional(),
   designReadyLink: z.string().trim().url().max(500).optional(),
   publicationStatus: z.string().trim().max(80).optional(),
 } as const;

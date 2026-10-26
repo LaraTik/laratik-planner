@@ -12,6 +12,40 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Added — "Required image / design reference" accepts an uploaded image, not only a URL
+
+The **Required image / design reference** field on a post could only take a
+link. A planner who had the actual file — the hero shot the designer must
+use, the exact product cut-down — had to upload it somewhere else and paste
+a URL, and the designer received a link rather than the reference.
+
+- **The field now takes the file itself.** It offers an upload affordance
+  directly above the link list, accepts images only (PNG / JPG / WEBP / GIF,
+  up to 50 MB), and uploads on selection. The upload runs through the same
+  media contract the Media library uses — sign → transfer → verify →
+  register — so the image lands in the workspace's media catalogue and is
+  linked to the post, which means it also appears in the post's folder in
+  the Media library.
+- **Uploads are their own list, and the URL list is untouched.**
+  `requiredImageLinks` stays a list of absolute URLs because the planning
+  workbook and the XLSX export depend on that shape, and an existing row
+  keeps its shape. The uploaded references live in `requiredImageUploads`
+  as `{ id, title }` — a media-asset id plus the file the planner picked.
+  The id is used because an uploaded image is served through the
+  session-gated media proxy and has no durable public URL to put in a URL
+  list; the title is stored beside it so each thumbnail can be labelled
+  without a second round trip for asset metadata on every render.
+- **The two halves read as one section.** The upload affordance sits above
+  the link list, the thumbnails below it, and the whole field carries one
+  label and one hint. Each reference shows its own thumbnail (the 480px
+  preview when one exists, the original otherwise, so a legacy asset is
+  never a broken-image glyph) and can be removed on its own. The field
+  applies to all four formats that carry it — `static_post`, `carousel`,
+  `story`, and `short_form_video` — not just one.
+- **A failed upload never reaches the payload.** The error is shown in place
+  next to the file that failed, with the reason, and the reference is not
+  added to the post.
+
 ### Fixed — the workspace assistant no longer fails with "Check AI availability" when the model simply ran out of output budget
 
 Every workspace assistant request failed with "The assistant could not

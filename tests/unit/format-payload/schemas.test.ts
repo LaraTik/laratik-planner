@@ -213,6 +213,55 @@ describe("format-payload/schemas", () => {
       expect(fieldMaxLength("referenceUrl")).toBe(500);
     });
 
+    /**
+     * The "Required image / design reference" field accepts an uploaded
+     * reference alongside the URL list. The two are stored separately: the
+     * URL list is the planning-workbook contract, and an uploaded image has
+     * no durable public URL to put in it.
+     */
+    it("keeps uploaded reference images in their own list", () => {
+      const result = FormatPayloadByFormat.static_post.safeParse({
+        schemaVersion: 1,
+        requiredImageLinks: ["https://cdn.example.test/reference.png"],
+        requiredImageUploads: [
+          { id: "3f1b7a52-0c4e-4a2b-9f2d-8a1c5e7b4d10", title: "hero-reference" },
+        ],
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.requiredImageLinks).toEqual(["https://cdn.example.test/reference.png"]);
+        expect(result.data.requiredImageUploads).toHaveLength(1);
+      }
+    });
+
+    it("rejects an uploaded reference whose id is not a media-asset id", () => {
+      const result = FormatPayloadByFormat.static_post.safeParse({
+        schemaVersion: 1,
+        requiredImageUploads: [{ id: "not-a-uuid", title: "hero-reference" }],
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects an uploaded reference without a title", () => {
+      const result = FormatPayloadByFormat.static_post.safeParse({
+        schemaVersion: 1,
+        requiredImageUploads: [{ id: "3f1b7a52-0c4e-4a2b-9f2d-8a1c5e7b4d10" }],
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("carries uploaded references on every workbook format that has the field", () => {
+      for (const format of ["static_post", "carousel", "story", "short_form_video"] as const) {
+        const result = FormatPayloadByFormat[format].safeParse({
+          schemaVersion: 1,
+          requiredImageUploads: [
+            { id: "3f1b7a52-0c4e-4a2b-9f2d-8a1c5e7b4d10", title: "hero-reference" },
+          ],
+        });
+        expect(result.success, format).toBe(true);
+      }
+    });
+
     it("aligns the long-form video `description` cap with the schema (10 000)", () => {
       // The YouTube API allows 5 000 chars; 10 000 is a
       // safety margin for future expansion. The test pins

@@ -82,7 +82,7 @@
       "placeholder": "https://…"
     },
     "requiredImageLinksMeta": {
-      "hint": "One Required image URL per line. Keep finished-design links in the separate field.",
+      "hint": "Add the images the designer must use. Upload the file itself, or paste a link.",
       "placeholder": "https://…"
     },
     "hashtagsMeta": {
@@ -137,7 +137,13 @@
     "scheduledStart": "Scheduled start",
     "expectedDuration": "Expected duration",
     "segments": "Segments",
-    "outline": "Outline"
+    "outline": "Outline",
+    "requiredImageUploadsLabel": "Uploaded images",
+    "requiredImageUploadsHint": "PNG, JPG, WEBP or GIF · up to 50 MB each",
+    "requiredImageUploadsEmpty": "No images uploaded yet.",
+    "requiredImageLinksLabel": "Image links",
+    "requiredImageLinksListHint": "One URL per line",
+    "requiredImageRemove": "Remove {title}"
   },
   "editor": {
     "save": "Save content details",

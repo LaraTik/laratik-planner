@@ -225,12 +225,16 @@ version to `1`.
 
 The supported top-level fields depend on `format` (`caption`, `weekday`,
 `platforms`, `visualDirection`, `onImageText`, `requiredImageLinks`,
-`designReadyLink`, `publicationStatus`, `additionalNotes`, and legacy
-format-specific fields such as `hook`, `slideOutline`, `scenes`, and
-`references`). Workbook imports should use the flat production fields and must
-not infer Hook, Scenes, or slide outlines from long source text. Keep
-`requiredImageLinks` limited to Required image URLs and keep the finished
-design URL in `designReadyLink`. The
+`requiredImageUploads`, `designReadyLink`, `publicationStatus`,
+`additionalNotes`, and legacy format-specific fields such as `hook`,
+`slideOutline`, `scenes`, and `references`). Workbook imports should use the
+flat production fields and must not infer Hook, Scenes, or slide outlines from
+long source text. Keep `requiredImageLinks` limited to Required image URLs and
+keep the finished design URL in `designReadyLink`. `requiredImageUploads`
+carries reference images uploaded through the Planner as
+`[{ "id": "<media-asset id>", "title": "<file name>" }]`; the id is a
+media-asset id, not a URL, because an uploaded image is served through the
+session-gated media proxy. The
 `translations` map is also supported, but v1 accepts only `en` and `ar`, in
 line with the product locale contract. Use `additionalNotes` or the source
 caption to preserve source-plan text in other languages until those locales
