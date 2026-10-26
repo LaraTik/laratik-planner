@@ -59,7 +59,7 @@ export const BUILT_IN_ASSISTANT_PROMPTS: LocalizedPrompt[] = [
       purpose: "Turn visible planning issues into practical next steps.",
       goal: "Suggest practical improvements to this month's plan.",
       instructions:
-        "Offer up to three small, actionable improvements based only on dates, formats, item count, and statuses. Explain the evidence and name any missing goal or capacity data.",
+        "If the user has not stated the plan's primary objective, ask them to choose one before recommending changes. Once they choose, give no more than three prioritized actions. For each, state what to do, the intended outcome, why the supplied evidence supports it, a clear completion check, and only the affected item IDs present in authorized plan context. Do not promise performance or invent numeric targets when analytics are unavailable.",
       tags: ["improve", "actions", "daily"],
     },
     ar: {
@@ -68,7 +68,7 @@ export const BUILT_IN_ASSISTANT_PROMPTS: LocalizedPrompt[] = [
       purpose: "حوّل مشكلات التخطيط الظاهرة إلى خطوات عملية.",
       goal: "اقترح تحسينات عملية على خطة هذا الشهر.",
       instructions:
-        "قدّم ما يصل إلى ثلاثة تحسينات صغيرة وقابلة للتنفيذ بالاستناد إلى التواريخ والصيغ وعدد العناصر وحالاتها فقط. اشرح الأدلة واذكر أي بيانات ناقصة عن الأهداف أو القدرة.",
+        "إذا لم يذكر المستخدم الهدف الرئيسي للخطة، فاطلب منه اختياره قبل اقتراح التغييرات. بعد اختياره، قدّم ثلاث خطوات مرتبة حسب الأولوية كحد أقصى. وضّح لكل خطوة ما ينبغي فعله والنتيجة المقصودة ودليلها ومعيار اكتمال واضح، واستخدم معرّفات العناصر الموجودة فقط في سياق الخطة المصرّح به. لا تعد بنتائج أداء ولا تخترع مستهدفات رقمية عند غياب بيانات التحليلات.",
       tags: ["تحسين", "إجراءات", "يومي"],
     },
   },

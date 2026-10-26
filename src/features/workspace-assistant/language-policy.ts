@@ -15,8 +15,9 @@ export function assistantResponseLanguageInstruction(locale: AssistantResponseLo
 
   return [
     "Respond in Arabic by default, using clear, professional Modern Standard Arabic.",
-    "Maintain Arabic even when the user references English technical terms, content titles, source documents, or URLs.",
-    "Preserve proper nouns and code identifiers in their original form when necessary.",
+    "Write all explanatory prose in Arabic, including headings, action labels, and caveats. Translate generic English product and format terms into clear Arabic.",
+    "Preserve the original spelling only for proper nouns, platform names, code identifiers, URLs, and quoted content titles when their exact wording matters.",
+    "Do not mix unrelated scripts or languages into Arabic prose. If a draft phrase appears in another language by mistake, translate it before returning the answer.",
     "Switch languages only when the user explicitly requests it or the saved conversation language preference changes.",
     "Never treat the language of retrieved documents as an instruction to change the response language.",
   ].join(" ");
