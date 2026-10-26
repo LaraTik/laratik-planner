@@ -29,6 +29,27 @@ The user authorization waives merge stop conditions only. Exact-main-SHA CI,
 SHA-tagged images, provider preflight, production backup before migrations,
 readiness checks, and automatic rollback remain required for deployment.
 
+## Main push hook failure and authorized continuation — 2026-10-25
+
+The user explicitly authorized merging, pushing, and deploying this change and
+removed independent review and completed local release gates as merge
+prerequisites. The first push attempt at `main` SHA
+`1db52b2f25e775ddce7caaf846e5188f39f714bb` was stopped by the local pre-push
+hook. `pnpm test:affected -- --push --layer core` escalated to the broader
+integration set because no ownership map could narrow the changed test files.
+The run reached `tests/integration/journey.test.ts`: 30/32 tests passed and two
+failed (`Content item not found` during a content-change journey and a Postgres
+deadlock during social-channel setup). The hook exited 1, so the push did not
+occur. This is a failed local check, not a pass; no test was weakened or
+retried. The failing cases are outside the Workspace Assistant focused suites.
+
+No production data or migration was involved. The failures indicate unresolved
+integration-suite behavior and leave the release readiness **NOT READY**. The
+explicit user authorization permits the push to continue with this result
+recorded; the pre-push hook may be skipped for this push. Exact-main-SHA CI,
+SHA-tagged images, provider preflight, verified pre-migration backup, readiness
+checks, and rollback remain mandatory deployment controls.
+
 ## User-authorized M3.8 Workspace AI and advertising deployment — 2026-10-25
 
 The user explicitly authorized merging and deploying the Workspace AI Assistant
