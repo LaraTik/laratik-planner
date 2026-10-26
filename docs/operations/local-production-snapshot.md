@@ -21,6 +21,18 @@ database. The reusable scrubbed dump and marker are stored under the git-ignored
 uses its own Postgres container and data volume, separate from `planner` and
 `planner_test`, and listens only on `127.0.0.1:5434` by default.
 
+That container is **long-lived by design** — the script creates it with
+`--restart unless-stopped` and never removes it, so it survives reboots and
+keeps running long after the preview is over. A forgotten snapshot container is
+one of the most common reasons `docker ps` shows more planner containers than
+expected. Stop it when the preview is done:
+
+```bash
+docker rm -f laratik-planner-pg-snapshot
+```
+
+The next `capture` / `restore` / `run` recreates it on demand.
+
 ## Restore and run again
 
 Restore the saved copy without contacting production:

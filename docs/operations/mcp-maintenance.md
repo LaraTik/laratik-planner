@@ -109,7 +109,7 @@ database for tests; never point test commands at production.
    pnpm lint
    pnpm typecheck
    pnpm vitest run tests/unit/mcp-access-tokens-card.test.tsx tests/unit/i18n/catalogs.test.ts
-   TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5432/planner_test NODE_ENV=test pnpm test:integration tests/integration/mcp-http-smoke.test.ts
+   TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5436/planner_test NODE_ENV=test pnpm test:integration tests/integration/mcp-http-smoke.test.ts
    ```
 
 3. Run the full required verification for the repository:

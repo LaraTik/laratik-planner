@@ -18,8 +18,21 @@ services:
       POSTGRES_PASSWORD: planner_dev_only
       POSTGRES_DB: planner
     ports:
-      - "5432:5432"
+      # Published on 5436, NOT the conventional 5432, and bound to loopback
+      # only. A native PostgreSQL (Homebrew / Postgres.app) very often owns
+      # 127.0.0.1:5432 on a developer machine, and the more specific loopback
+      # bind beats Docker's 0.0.0.0 bind — so a 5432 publish silently routes
+      # the app to the native server while the container looks healthy. A
+      # dedicated port makes "which Postgres am I on" answerable with one
+      # `current_setting('data_directory')` call.
+      - "127.0.0.1:5436:5432"
     volumes:
+      # Relative to THIS file, so the mount always follows the checkout it
+      # was started from. Running the compose file from a deleted worktree
+      # leaves the container bound to a directory that no longer exists, and
+      # every connection then fails with
+      # `FATAL: could not open file "global/pg_filenode.map": Operation not permitted`
+      # while the health check (pg_isready only) still reports "healthy".
       - ./tmp/pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U planner -d planner"]

@@ -60,12 +60,24 @@ Two rules that shape everything below:
 PLANNER_TOKEN=<read-only token> python3 scripts/daily-report.py
 ```
 
-## Local disposable test database
+## Local database — one container, two databases
 
-Integration tests, the migration drill, isolated Playwright E2E, and the
-visual suite all use a separate `planner_test` database. Start the dev
-Postgres container and provision it once (the Docker command works even when
-the host does not have `psql` installed):
+**The planner's local Docker footprint is ONE container.** `docker compose -f
+docker-compose.dev.yml up -d postgres` starts `laratik-planner-pg-dev`, and that
+container serves _both_ databases:
+
+| Database       | Purpose                                                         |
+| -------------- | --------------------------------------------------------------- |
+| `planner`      | The development database the app itself talks to.               |
+| `planner_test` | Integration tests, migration drill, isolated E2E, visual suite. |
+
+The app runs natively (`pnpm dev`) — it is never containerised locally. Mailpit
+is the only other service, and it is opt-in: start it only when you are
+testing the magic-link email flow. Everything else (the production-snapshot
+server, a disposable fallback database) is **on-demand and must be torn down
+when the run that needed it is over** — a container that is left running is
+what makes the planner look like it owns four or five containers when it owns
+one.
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d postgres
@@ -74,16 +86,19 @@ docker exec laratik-planner-pg-dev psql -U planner -d postgres -tAc \
   "SELECT 1 FROM pg_database WHERE datname = 'planner_test'" | grep -q 1 || \
   docker exec laratik-planner-pg-dev psql -U planner -d postgres \
   -c "CREATE DATABASE planner_test"
-export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5432/planner_test
+export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5436/planner_test
+```
 
-# Verify the URL actually reaches the container before trusting a local
-# result. If a native Postgres (Homebrew / Postgres.app / another container)
-# is already bound to 127.0.0.1:5432, the more specific loopback bind wins
-# over Docker's 0.0.0.0:5432 and every check silently runs against the wrong
-# server — `docker exec … pg_isready` still passes, so the failure only
-# surfaces as `database "planner_test" does not exist` on a database you
-# just created. Pick a free port for the test container if the two collide.
-psql "$TEST_DATABASE_URL" -tAc 'select current_database()'
+**The container publishes Postgres on `127.0.0.1:5436`, not `5432`.** A native
+PostgreSQL (Homebrew, Postgres.app) very often owns `127.0.0.1:5432` on a
+developer machine, and the more specific loopback bind beats Docker's
+`0.0.0.0` bind — so a `5432` publish silently routes every connection to the
+native server while the container still reports itself healthy. The dedicated
+port makes the target answerable with one query:
+
+```bash
+psql "$TEST_DATABASE_URL" -tAc 'select current_database(), current_setting($$data_directory$$)'
+# planner_test | /var/lib/postgresql/data   ← the container, not a Homebrew path
 ```
 
 **When the dev container cannot be used.** Two failures look like a working
@@ -93,14 +108,21 @@ database but are not:
   exists (for example a deleted worktree). Every connection then answers
   `FATAL: could not open file "global/pg_filenode.map": Operation not permitted`,
   and the container still reports itself healthy because the health check only
-  runs `pg_isready`.
-- A native PostgreSQL owns `127.0.0.1:5432`, so the host URL resolves to the
-  wrong server. Confirm the target with `select current_database(),
-current_setting('data_directory')` — the data directory must be the
-  container's `/var/lib/postgresql/data`, not a Homebrew path.
+  runs `pg_isready`. The bind mount in `docker-compose.dev.yml` is relative to
+  the compose file, so it follows the checkout it was started from — recreate
+  the container from the repository root rather than from a stale worktree.
+- Another server already owns the planner port. Confirm the target with
+  `select current_database(), current_setting('data_directory')` — the data
+  directory must be the container's `/var/lib/postgresql/data`, not a Homebrew
+  path.
 
-In both cases start a disposable server on a free host port with a Docker-managed
-volume instead of a host bind mount:
+In both cases the **first** attempt should be to repair the dev container — recreate
+it from the repository root, and move the native server off the planner port rather
+than routing the app around it. Only if the dev container cannot be repaired at all,
+start a disposable server on a free host port with a Docker-managed volume instead
+of a host bind mount, and **remove it when the run is over**. This fallback is what
+creates a _second_ Postgres, so it is deliberately the exception and not the
+default:
 
 ```bash
 docker volume create laratik-planner-pgdata-test
@@ -110,13 +132,20 @@ docker run -d --name laratik-planner-pg-test \
   -v laratik-planner-pgdata-test:/var/lib/postgresql/data postgres:16-alpine
 export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5435/planner_test
 psql "$TEST_DATABASE_URL" -tAc 'select current_database(), current_setting($$data_directory$$)'
+
+# … run the gates …
+docker rm -f laratik-planner-pg-test
 ```
 
 The pre-push hook honours `TEST_DATABASE_URL` when it is exported, so exporting
 it points the hook at the same disposable server.
 
 Run `NODE_ENV=test pnpm migration-drill` and `pnpm test:integration` before
-browser checks. The `test:e2e:isolated`, `test:e2e:critical`, and `test:visual`
+browser checks. **Stop the dev server first** when it is pointed at
+`planner_test`: the dev server holds a connection on the same database, and
+the integration suite's `TRUNCATE` blocks behind it, so the suite appears to
+hang with no output. A dev server on `planner` (the default) does not
+conflict. The `test:e2e:isolated`, `test:e2e:critical`, and `test:visual`
 scripts all use `scripts/run-e2e-tests.ts`; it refuses non-test URLs, applies
 migrations, and injects deterministic test-only Auth.js secrets. Never point
 `TEST_DATABASE_URL` at `planner` or a production database.

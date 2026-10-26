@@ -6,7 +6,7 @@
 # missing relation. Never run this with DATABASE_URL=planner.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-export DATABASE_URL="${TEST_DATABASE_URL:-postgresql://planner:planner_dev_only@127.0.0.1:5432/planner_test}"
+export DATABASE_URL="${TEST_DATABASE_URL:-postgresql://planner:planner_dev_only@127.0.0.1:5436/planner_test}"
 export AUTH_SECRET="laratik-e2e-auth-secret-not-for-production-2026"
 export AGENCY_COOKIE_SECRET="laratik-e2e-agency-cookie-secret-not-for-production-2026"
 export AUTH_TRUST_HOST="true"

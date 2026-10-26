@@ -3,8 +3,11 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const HOOK_PATH = resolve(process.cwd(), ".husky/pre-push");
+// The dev Postgres publishes on 5436 (see docker-compose.dev.yml): a native
+// PostgreSQL usually owns 127.0.0.1:5432, and the more specific loopback
+// bind would silently redirect the hook at the wrong server.
 const DEFAULT_TEST_DATABASE_URL =
-  "postgresql://planner:planner_dev_only@127.0.0.1:5432/planner_test";
+  "postgresql://planner:planner_dev_only@127.0.0.1:5436/planner_test";
 
 function runHook(testDatabaseUrl?: string): string {
   const localSha = execFileSync("git", ["rev-parse", "HEAD"], {
