@@ -129,6 +129,8 @@ The **pre-push hook** runs affected unit + integration tests against `TEST_DATAB
 
 The documentation already names the trap; the missing piece is that the check is opt-in. `psql "$TEST_DATABASE_URL" -tAc 'select current_database()'` before trusting a push result should be part of the release path, not a note.
 
+> **Corrected 2026-10-26.** The pre-push default is now `…@127.0.0.1:5436/planner_test` — a dedicated loopback port, so the native-Postgres bind conflict described above can no longer happen — and the `AGENTS.md` section is now "Local database — one container, two databases". The advice in this section (check `current_database()` / `data_directory` before trusting a push result) still stands.
+
 ## 9. Recommendation
 
 Ship the four mechanical fixes (F1–F4) plus the ADR numbering repair (F5) as one reviewed change, then adopt `docs/operations/release.md` as the single path. The gates that protect production data — backup, rollback, exact-SHA images, preflight, audit, tenant isolation — stay exactly as they are; what changes is that a normal merge no longer requires a waiver narrative, and a merged branch can actually be deleted.

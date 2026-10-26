@@ -86,13 +86,41 @@ Full production walkthrough (including the prod redirect URI): `docs/operations/
 ## What's running where
 
 ```
-localhost:3000  Next.js dev server (HMR)
+localhost:3000  Next.js dev server (HMR) — runs natively, never containerised
 localhost:1025  Mailpit SMTP
 localhost:8025  Mailpit web UI — http://localhost:8025
-localhost:5432  Postgres (Docker via docker-compose.dev.yml, OR homebrew)
+localhost:5436  Postgres (Docker via docker-compose.dev.yml)
 ```
 
-The Postgres port is shared between Docker and a local install. If you run both, change the port mapping in `docker-compose.dev.yml` to avoid the conflict. The repo's AGENTS.md assumes Docker, but the local `.env` works against either — `DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5432/planner` is host-agnostic.
+**One container.** The planner's local Docker footprint is a single Postgres
+container, `laratik-planner-pg-dev`, started with
+`docker compose -f docker-compose.dev.yml up -d postgres`. It serves both the
+development database (`planner`) and the disposable test database
+(`planner_test`). Mailpit is the only other service and it is opt-in — start
+it only when you are testing the magic-link email flow.
+
+The container publishes Postgres on **5436**, not the conventional 5432. A
+native PostgreSQL (Homebrew, Postgres.app) very often owns `127.0.0.1:5432` on
+a developer machine, and the more specific loopback bind beats Docker's
+`0.0.0.0` bind — so a 5432 publish silently sends every connection to the
+native server while the container still reports itself healthy. The dedicated
+port makes the target unambiguous:
+
+```bash
+psql "$DATABASE_URL" -tAc 'select current_database(), current_setting($$data_directory$$)'
+# planner | /var/lib/postgresql/data   ← the container
+```
+
+The local `.env` points at that port:
+`DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5436/planner`.
+If you prefer a native PostgreSQL, stop the container and point `DATABASE_URL`
+at your own server — but never publish the container on 5432 while a native
+server holds the loopback bind.
+
+Anything else you start for a one-off job — the production-snapshot server, a
+fallback test database — should be removed when that job ends. Leftover
+containers are what make the planner look like it owns four or five containers
+when it owns one.
 
 For a reusable, credential-scrubbed copy of production data, see
 [`local-production-snapshot.md`](local-production-snapshot.md). Its `run`

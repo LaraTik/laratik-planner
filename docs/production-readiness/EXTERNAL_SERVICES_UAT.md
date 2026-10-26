@@ -229,7 +229,7 @@ the process environment and never prints them.
 9. Run the sanitized local substitute when live credentials are unavailable:
 
    ```bash
-   TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5432/planner_test \
+   TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5436/planner_test \
      pnpm test:integration -- tests/integration/advertising-credential-lifecycle.test.ts \
        tests/integration/advertising-tenant-guards.test.ts
    pnpm exec vitest run tests/unit/advertising-meta-provider.test.ts \

@@ -424,18 +424,19 @@ pnpm install --frozen-lockfile
 pnpm exec playwright install --with-deps chromium firefox webkit
 
 # Keep this in the shell that runs the checks (or add it to direnv/.env.test).
-export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@localhost:5432/planner_test
+export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@localhost:5436/planner_test
 
 # PROVE the URL reaches the container before trusting any local result.
 # `docker exec … pg_isready` only proves the container is healthy — it says
-# nothing about which server the port actually resolves to. If a native
-# Postgres (Homebrew, Postgres.app, another project's container) is already
-# bound to 127.0.0.1:5432, the more specific loopback bind wins over Docker's
-# 0.0.0.0:5432 and every check silently runs against the wrong server. The
-# symptom is a migration that dies on `CREATE SCHEMA IF NOT EXISTS "drizzle"`
-# with "database planner_test does not exist" on a database you just created.
-docker exec laratik-test-pg psql -U planner -d planner_test -tAc 'select 1' >/dev/null 2>&1
-psql "$TEST_DATABASE_URL" -tAc 'select current_database()'
+# nothing about which server the port actually resolves to. The dev compose
+# publishes Postgres on 127.0.0.1:5436 precisely so that a native Postgres
+# (Homebrew, Postgres.app, another project's container) sitting on
+# 127.0.0.1:5432 cannot win the loopback bind and silently redirect every
+# check. The symptom of getting that wrong is a migration that dies on
+# `CREATE SCHEMA IF NOT EXISTS "drizzle"` with "database planner_test does not
+# exist" on a database you just created.
+docker exec laratik-planner-pg-dev psql -U planner -d planner_test -tAc 'select 1' >/dev/null 2>&1
+psql "$TEST_DATABASE_URL" -tAc 'select current_database(), current_setting($$data_directory$$)'
 
 # Verify the disposable database and migration pipeline before browser tests.
 NODE_ENV=test pnpm migration-drill
@@ -500,7 +501,7 @@ docker exec laratik-planner-pg-dev psql -U planner -d postgres -tAc \
 # The pre-push hook automatically uses this local planner_test URL when
 # TEST_DATABASE_URL is unset. Set it explicitly only when using another
 # disposable database (the .env.example template includes the override).
-export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@localhost:5432/planner_test
+export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@localhost:5436/planner_test
 
 # Verify locally before relying on the pre-push gate:
 pnpm test:integration
@@ -513,9 +514,12 @@ installation already bound to the same loopback port:
 psql "$TEST_DATABASE_URL" -tAc 'select current_database(), inet_server_addr(), inet_server_port()'
 ```
 
-If Docker and native PostgreSQL both claim `5432`, use a disposable test
-container on a free host port and point `TEST_DATABASE_URL` at that port. Do
-not infer correctness from `docker exec … pg_isready`; that only proves the
+The dev container publishes Postgres on `127.0.0.1:5436`, so a native
+PostgreSQL on `5432` cannot intercept it. If something else already claims
+`5436`, use a disposable test container on a free host port and point
+`TEST_DATABASE_URL` at that port — then remove the disposable container when
+the run is over, so the planner keeps exactly one long-lived container. Do not
+infer correctness from `docker exec … pg_isready`; that only proves the
 container is healthy, not that the host URL reaches it. This distinction is
 required before trusting isolated browser or migration results.
 

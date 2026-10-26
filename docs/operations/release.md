@@ -93,7 +93,7 @@ The pre-push hook runs the affected unit and integration checks for the pushed r
 psql "$TEST_DATABASE_URL" -tAc 'select current_database()'   # must print: planner_test
 ```
 
-If a native Postgres is already bound to `127.0.0.1:5432`, it wins over Docker's `0.0.0.0` bind and every check silently runs against the wrong server. `docker exec … pg_isready` still passes in that case — the database name is the only reliable signal.
+The local dev Postgres publishes on `127.0.0.1:5436`, deliberately not on the conventional `5432`: a native PostgreSQL bound to `127.0.0.1:5432` wins Docker's `0.0.0.0` bind, and every check would then silently run against the wrong server while `docker exec … pg_isready` still passed. `select current_database(), current_setting('data_directory')` is the reliable signal — the data directory must be the container's `/var/lib/postgresql/data`, not a Homebrew path.
 
 **Success criteria:** the push completes. Record whether the hook passed, failed, or was skipped; do not report a failed or skipped check as passed.
 

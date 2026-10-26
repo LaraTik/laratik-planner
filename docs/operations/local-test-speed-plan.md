@@ -14,7 +14,7 @@ integration tests from the pushed commit range.
 pnpm exec vitest run tests/unit/workspace-assistant-route.test.ts
 
 # One focused database integration file (disposable planner_test only)
-TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5432/planner_test \
+TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5436/planner_test \
   pnpm test:integration -- tests/integration/workspace-assistant.test.ts
 
 # Tests selected from changed files / the push range
@@ -38,7 +38,7 @@ feedback is clean. It remains required locally before release while the suite
 shares one database and its isolation has not been proven for parallel runs.
 
 ```bash
-TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5432/planner_test \
+TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5436/planner_test \
   pnpm test:integration
 ```
 

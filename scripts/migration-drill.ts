@@ -47,7 +47,7 @@ loadEnv({ path: resolve(process.cwd(), ".env") });
 // "test" or "ci" — otherwise we'd silently target a production DB.
 // The gate below also requires NODE_ENV=test or a "test"/"ci" substring
 // in the resolved URL.
-const DEFAULT_TEST_DB_URL = "postgresql://planner:planner_dev_only@127.0.0.1:5432/planner_test";
+const DEFAULT_TEST_DB_URL = "postgresql://planner:planner_dev_only@127.0.0.1:5436/planner_test";
 
 const TEST_DB_URL = (() => {
   if (process.env.TEST_DATABASE_URL) return process.env.TEST_DATABASE_URL;

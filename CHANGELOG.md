@@ -46,6 +46,41 @@ a URL, and the designer received a link rather than the reference.
   next to the file that failed, with the reason, and the reference is not
   added to the post.
 
+### Fixed — the local planner's Docker footprint was four or five containers, and the dev database was split across two servers
+
+The planner's local Docker footprint is meant to be **one** container. On a
+machine with a native PostgreSQL installed it was neither one container nor
+one database, and the two facts were easy to misread: several containers
+looked like the app's stack, and the container that looked like the app's
+database was not the one the app was talking to.
+
+- **The dev Postgres published on `5432`, where a native PostgreSQL
+  usually wins.** A native server bound to `127.0.0.1:5432` beats Docker's
+  `0.0.0.0:5432` bind, so every connection went to the native server while
+  the container still reported itself healthy — and `pg_isready` inside the
+  container passed, so nothing in the loop showed the mismatch. The dev
+  compose now publishes Postgres on **`127.0.0.1:5436`**, bound to loopback
+  only, and the local `.env` points at it. `select current_database(),
+current_setting('data_directory')` now answers "which server am I on"
+  with one query instead of one guess.
+- **The dev container's data directory could point at a deleted worktree.**
+  The bind mount is relative to the compose file, so a container started
+  from a worktree that has since been removed kept a mount into a
+  directory that no longer existed. Every connection then failed with
+  `FATAL: could not open file "global/pg_filenode.map": Operation not
+permitted` while the health check — which only runs `pg_isready` — still
+  said "healthy". The mount now follows the checkout the compose file was
+  started from, and the compose file documents the failure mode.
+- **One container serves both local databases.** `planner` and
+  `planner_test` live in the same `laratik-planner-pg-dev` container, so
+  the disposable test server is no longer needed for the normal path. The
+  fallback recipe (a disposable server on a free port with a Docker-managed
+  volume) is still documented for when the dev container genuinely cannot
+  be used, and it now says to remove the container when the run ends.
+- **Leftover containers are gone.** The planner's own stack is now one
+  container plus an opt-in Mailpit; the one-off snapshot server and the
+  ad-hoc test servers are on-demand and documented as such.
+
 ### Fixed — the workspace assistant no longer fails with "Check AI availability" when the model simply ran out of output budget
 
 Every workspace assistant request failed with "The assistant could not
