@@ -35,6 +35,9 @@ import {
   createWorkspaceAssistantTools,
   discoverWorkspaceAssistantSkills,
   estimateWorkspaceAssistantInputTokens,
+  inferPlanningObjective,
+  isPlanImprovementRequest,
+  planningObjectiveSchema,
   DEFAULT_ASSISTANT_RESPONSE_LOCALE,
   type AssistantResponseLocale,
 } from "@/features/workspace-assistant";
@@ -59,11 +62,6 @@ import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { createMiniMaxToolProvider } from "@/lib/ai/minimax-tool-provider";
 import { runAgentToolConversation } from "@/lib/ai/tool-orchestrator";
 import { listActiveWorkspaceAssistantSkills } from "@/features/workspace-assistant/skill-governance.server";
-import {
-  inferPlanningObjective,
-  isPlanImprovementRequest,
-  planningObjectiveSchema,
-} from "@/features/workspace-assistant/planning-objective";
 
 export async function GET(request: NextRequest) {
   const workspaceSlug = z
@@ -380,6 +378,9 @@ async function processAssistantRequest(
     promptContext: selectedPrompt
       ? `${selectedPrompt.name} ${selectedPrompt.purpose} ${expandedGoal ?? ""} ${expandedInstructions ?? ""}`
       : undefined,
+    // The saved prompt template replaces the message; the user's own wording is
+    // what tells an explicit per-item edit apart from a strategic plan review.
+    userMessage: parsed.data.message,
   });
   const rate = await enforceRateLimit({
     scope: "ai_generation",

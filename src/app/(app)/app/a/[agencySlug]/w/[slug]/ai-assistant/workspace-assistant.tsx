@@ -37,10 +37,10 @@ import {
 import {
   DEFAULT_ASSISTANT_RESPONSE_LOCALE,
   getBuiltInAssistantPrompts,
+  type AssistantPlanningObjective,
   type AssistantPromptParameter,
   type AssistantResponseLocale,
 } from "@/features/workspace-assistant";
-import type { AssistantPlanningObjective } from "@/features/workspace-assistant/planning-objective";
 import { getAiModelDefinition } from "@/lib/ai/model-registry";
 import {
   AssistantHistoryPanel,

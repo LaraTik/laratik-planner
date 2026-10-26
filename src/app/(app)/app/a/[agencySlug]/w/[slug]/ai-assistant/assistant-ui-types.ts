@@ -1,4 +1,4 @@
-import type { AssistantPlanningObjective } from "@/features/workspace-assistant/planning-objective";
+import type { AssistantPlanningObjective } from "@/features/workspace-assistant";
 
 export type AssistantProposal = {
   id: string;

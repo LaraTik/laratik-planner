@@ -82,6 +82,53 @@ export function inferPlanningObjective(message: string): AssistantPlanningObject
 }
 
 /**
+ * Scope markers that name one specific content item instead of the plan.
+ *
+ * The determiner has to be `selected` / `this` / `that` (or a definite article
+ * in front of an unmistakably per-item noun) so that plan-level phrases such as
+ * "improve the content mix" or "improve the plan" are not mistaken for an edit
+ * of a single item.
+ */
+const ITEM_SCOPE_PATTERN =
+  /\b(?:selected|this|that)\s+(?:\w+\s+){0,2}?(?:draft|post|item|content|asset|caption|brief|title|date|delivery|design|version|thumbnail|schedule)\b/iu;
+const DEFINITE_ITEM_SCOPE_PATTERN = /\bthe\s+(?:draft|post|caption|brief|thumbnail)\b/iu;
+const ARABIC_ITEM_SCOPE_PATTERN =
+  /(?:العنصر|المنشور|المسودة|العنوان|الموعد|التاريخ|الفكرة|الوصف|النص)\s*المحدد(?:ة)?|(?:هذا|هذه)\s+(?:المنشور|العنصر|المسودة|العنوان|الموعد|التاريخ)/u;
+
+/**
+ * Intent verbs that ask for one item to be changed. Mirrors the edit-preview
+ * gate in the assistant route and adds the verbs used for dates and titles.
+ */
+const EDIT_INTENT_PATTERN =
+  /\b(?:edit|rewrite|improve|change|update|revise|suggest|move|reschedule|rename|retitle|recaption|adjust|shorten|expand|translate|fix|correct|polish)\b|حر(?:ر|ّر)|عد(?:ل|ّل)|حس(?:ن|ّن)|أطوّر|اطوّر|طوّر|اقترح|انقل|أعد|اعد|أصلح|اصلح/iu;
+
+/**
+ * Plan-level aggregates. A request about the content or format mix is a
+ * strategic review even when it also mentions a selected item.
+ */
+const PLAN_LEVEL_MIX_PATTERN =
+  /\b(?:content|format|channel|platform)\s+mix\b|مزيج\s+(?:المحتوى|الصيغ|القنوات)/iu;
+
+/**
+ * Detect a request that explicitly asks to change one selected content item.
+ *
+ * "Improve the selected draft schedule" is an edit of a single item, not a
+ * strategic review of the plan, so it must keep the edit-preview flow and must
+ * not be turned into a "choose a planning objective" request.
+ */
+export function isExplicitItemEditRequest(message: string | null | undefined): boolean {
+  const text = (message ?? "").normalize("NFKC").trim();
+  if (!text) return false;
+  if (PLAN_LEVEL_MIX_PATTERN.test(text)) return false;
+  const itemScoped =
+    ITEM_SCOPE_PATTERN.test(text) ||
+    DEFINITE_ITEM_SCOPE_PATTERN.test(text) ||
+    ARABIC_ITEM_SCOPE_PATTERN.test(text);
+  if (!itemScoped) return false;
+  return EDIT_INTENT_PATTERN.test(text);
+}
+
+/**
  * Decide whether a request is asking for strategic plan improvements. Those
  * requests need one stated outcome before the assistant can rank actions.
  * Summary, schedule, and format-review requests remain descriptive.
@@ -89,10 +136,13 @@ export function inferPlanningObjective(message: string): AssistantPlanningObject
 export function isPlanImprovementRequest(input: {
   message: string;
   mode: "ask" | "plan" | "apply";
-  promptId?: string;
-  promptContext?: string;
+  promptId?: string | undefined;
+  promptContext?: string | undefined;
+  /** The user's own wording, used to detect an explicit per-item edit. */
+  userMessage?: string | undefined;
 }) {
   if (input.mode === "apply") return false;
+  if (isExplicitItemEditRequest(input.userMessage ?? input.message)) return false;
   if (input.promptId === "practical-plan-improvements") return true;
 
   const text = `${input.message} ${input.promptContext ?? ""}`

@@ -14,3 +14,10 @@ export {
   DEFAULT_ASSISTANT_RESPONSE_LOCALE,
 } from "./language-policy";
 export type { AssistantResponseLocale } from "./language-policy";
+export {
+  inferPlanningObjective,
+  isExplicitItemEditRequest,
+  isPlanImprovementRequest,
+  planningObjectiveSchema,
+} from "./planning-objective";
+export type { AssistantPlanningObjective } from "./planning-objective";

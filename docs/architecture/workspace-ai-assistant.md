@@ -67,6 +67,12 @@ Planning view. Supporting findings and source details are collapsed by
 default, while missing performance analytics remain visible as a caveat. These
 cards navigate to Planner records and do not write or publish content.
 
+An explicit request to change the selected content item stays on the
+edit-preview path: it does not ask for a planning objective, and it keeps the
+per-change preview that binds the proposed edit to the item's current
+revision. The user's own wording decides this, so a saved prompt template never
+overrides an explicit per-item edit.
+
 ## Current status
 
 The 2026-10-25 Arabic-first workspace redesign is merged in PR #48 and deployed

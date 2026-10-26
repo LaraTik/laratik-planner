@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import type {
@@ -47,6 +47,9 @@ export function AssistantResponsePanel({
 }: AssistantResponsePanelProps) {
   const [supportingDetailsOpen, setSupportingDetailsOpen] = useState(false);
   const [pendingEvidenceId, setPendingEvidenceId] = useState<string | null>(null);
+  // Tracks the evidence the panel already scrolled to, so the scroll happens
+  // once per target without clearing state inside the effect.
+  const scrolledEvidenceIdRef = useRef<string | null>(null);
   const planningHref = reply.reviewedPlanMonth
     ? `${itemHrefBase}?month=${encodeURIComponent(reply.reviewedPlanMonth)}`
     : itemHrefBase;
@@ -54,10 +57,11 @@ export function AssistantResponsePanel({
 
   useEffect(() => {
     if (!supportingDetailsOpen || !pendingEvidenceId) return;
+    if (scrolledEvidenceIdRef.current === pendingEvidenceId) return;
+    scrolledEvidenceIdRef.current = pendingEvidenceId;
     document
       .getElementById(`assistant-evidence-${encodeURIComponent(pendingEvidenceId)}`)
       ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    setPendingEvidenceId(null);
   }, [pendingEvidenceId, supportingDetailsOpen]);
 
   function openEvidence(id: string) {
