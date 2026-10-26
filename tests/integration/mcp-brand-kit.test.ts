@@ -743,6 +743,9 @@ describe("MCP brand-kit tools", () => {
         visualDirection: "Use a clean product map.",
         onImageText: "Text inside the artwork.",
         requiredImageLinks: ["https://example.com/required-image"],
+        requiredImageUploads: [
+          { id: "3f1b9d2e-7c48-4a51-9f0b-2d6c8e4a1b37", title: "hero-shot.png" },
+        ],
         designReadyLink: "https://example.com/finished-design",
         publicationStatus: "no",
         additionalNotes: "Keep the full workbook note.",
@@ -766,6 +769,9 @@ describe("MCP brand-kit tools", () => {
       platforms: "insta/Fb",
       onImageText: "Text inside the artwork.",
       requiredImageLinks: ["https://example.com/required-image"],
+      requiredImageUploads: [
+        { id: "3f1b9d2e-7c48-4a51-9f0b-2d6c8e4a1b37", title: "hero-shot.png" },
+      ],
       designReadyLink: "https://example.com/finished-design",
       publicationStatus: "no",
       additionalNotes: "Keep the full workbook note.",
@@ -791,6 +797,10 @@ describe("MCP brand-kit tools", () => {
           visualDirection: "Updated full visual direction.",
           onImageText: "Updated image text.",
           requiredImageLinks: ["https://example.com/required-image-2"],
+          requiredImageUploads: [
+            { id: "3f1b9d2e-7c48-4a51-9f0b-2d6c8e4a1b37", title: "hero-shot.png" },
+            { id: "8c2a5e71-04d9-4b6e-a3f8-71b5d0c9e462", title: "product-cut-down.png" },
+          ],
           designReadyLink: "https://example.com/finished-design-2",
           publicationStatus: "yes",
           additionalNotes: "Updated notes.",

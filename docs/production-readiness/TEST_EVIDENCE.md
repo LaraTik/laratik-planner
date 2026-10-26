@@ -2,6 +2,168 @@
 
 > **2026-10-25 merge-policy update — ADR 0025** — Independent review and completion of local release gates are no longer prerequisites for merge. Historical entries below retain their original results and context; statements that merging must wait are superseded as stop conditions. No failed, incomplete, or unrun result is changed to pass, and deployment safeguards plus the `Verified` reviewer requirement remain in force.
 
+## Reference-image upload and local Docker footprint — production SHA `11522350b248462ecc33ff9e6b68d140f22a069a`
+
+The user explicitly authorized committing, pushing, and deploying. The release
+adds an image-upload affordance to the **Required image / design reference**
+field and converges the planner's local Docker footprint to a single container.
+
+Two commits were made on `main` and rebased onto it through PR #63:
+
+| Commit     | Type                   | Subject                                              |
+| ---------- | ---------------------- | ---------------------------------------------------- |
+| `550977cc` | `feat(format-payload)` | accept an uploaded reference image, not only a URL   |
+| `11522350` | `fix(infra)`           | converge the local Docker footprint to one container |
+
+`main` requires a pull request: the first direct `git push origin main` was
+rejected with `GH006: Protected branch update failed for refs/heads/main —
+Changes must be made through a pull request.` The work was therefore pushed
+through the short-lived transport branch `rel/format-payload-upload-20261026`,
+opened as PR #63, rebased-merged (branch protection requires linear history),
+and the branch deleted. The merged tree is byte-identical to the locally tested
+tree: `git diff dfe4dc0b 11522350` is empty.
+
+### Gate results
+
+| Gate                                            | Command                                                                                                                      | Result                                                                                                                                                   |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Format, lint, typecheck, unit, production build | `pnpm verify`                                                                                                                | **green** — 630 files / 5,410 unit tests, 0 failures, plus the Next production build                                                                     |
+| Full disposable-Postgres integration suite      | `pnpm test:integration` (pre-push hook, range `627b87a3..dfe4dc0b`)                                                          | **green** — 50 files, 0 failures, against `planner_test` on the container Postgres 16                                                                    |
+| New reference-image integration file            | `pnpm test:integration -- tests/integration/format-payload-reference-images.test.ts`                                         | **green** — 3/3 (round trip keeps `requiredImageUploads`; a designer's save does not drop the planner's uploaded references; a malformed id is rejected) |
+| MCP content-tool integration                    | `pnpm test:integration -- tests/integration/mcp-brand-kit.test.ts`                                                           | **green** — 10/10, including the workbook payload round trip with `requiredImageUploads`                                                                 |
+| Browser / accessibility matrix                  | `pnpm test:affected -- --layer browser`                                                                                      | **FAILED** — 298 passed / 5 failed / 1 skipped                                                                                                           |
+| Visual matrix                                   | `pnpm test:visual`                                                                                                           | **NOT RUN** on this SHA                                                                                                                                  |
+| Independent reviewer sign-off                   | —                                                                                                                            | **NOT PERFORMED** (not a merge prerequisite)                                                                                                             |
+| Exact-main-SHA CI                               | `gh workflow run ci.yml --ref main` → [40375006668](https://github.com/LaraTik/laratik-planner/actions/runs/40375006668)     | **green** — quality/migration/audit, Docker build + health smoke + GHCR push, Trend sidecar, SMTP cert, workflow/Dockerfile/shell linters                |
+| Deploy                                          | `gh workflow run deploy.yml --ref main` → [40378950511](https://github.com/LaraTik/laratik-planner/actions/runs/40378950511) | **green** — preflight, verified pre-migration backup, migrations, app recreate, readiness                                                                |
+
+Both exact-SHA images were confirmed present in GHCR before the deploy was
+dispatched:
+
+```
+ghcr.io/laratik/laratik-planner:11522350b248462ecc33ff9e6b68d140f22a069a
+ghcr.io/laratik/laratik-planner-migrator:11522350b248462ecc33ff9e6b68d140f22a069a
+```
+
+### The browser matrix failed — investigated, not assumed away
+
+`pnpm test:affected -- --layer browser` classified the change as a broad shared
+surface and ran the **full** Chromium matrix. It reported 5 failures out of 304
+cases. Every failure was a 30-second `page.goto` timeout, and none of the
+failing routes renders the changed component (the format-payload editor on the
+planning detail page):
+
+| Spec                                    | Test                                                                        | Failure                        |
+| --------------------------------------- | --------------------------------------------------------------------------- | ------------------------------ |
+| `tests/e2e/a11y-routes.spec.ts:364`     | `@a11y /app/w/[slug]/analytics/advertising has no critical violations`      | `page.goto` timeout of 30000ms |
+| `tests/e2e/agency-switcher.spec.ts:88`  | `trigger is visible in the sidebar with the seeded agency name`             | `page.goto` timeout            |
+| `tests/e2e/agency-switcher.spec.ts:97`  | `trigger exposes a stable test id usable by other specs`                    | `page.goto` timeout            |
+| `tests/e2e/locale-rtl.spec.ts:33`       | `authenticated shell resolves Arabic RTL without horizontal overflow @a11y` | `page.goto` timeout            |
+| `tests/e2e/social-analytics.spec.ts:86` | `renders the shared comparison dashboard and channel ranking`               | `page.goto` timeout of 30000ms |
+
+Two further runs were made to establish whether this was a regression from this
+change or a pre-existing environment problem. The answer is the second, and it
+is recorded here as a **failed** gate, not as a pass.
+
+**Run 2 — the same four spec files in isolation, on the release tree.**
+
+```
+pnpm test:e2e:isolated tests/e2e/a11y-routes.spec.ts tests/e2e/agency-switcher.spec.ts \
+  tests/e2e/locale-rtl.spec.ts tests/e2e/social-analytics.spec.ts --project=chromium
+```
+
+Result: **2 failed / 75 passed** — and the two failures were _different_ tests
+(`a11y-routes /channels`, `locale-rtl workspace AI settings`). None of run 1's
+five failures reproduced. A defect caused by this change fails the same tests
+every time; a load-dependent failure does not.
+
+**Run 3 — the identical selection on the base SHA `627b87a3`, without this
+change.** The release work was stashed, the tree was reset to the base commit,
+and the same command was run:
+
+```
+pnpm test:e2e:isolated tests/e2e/a11y-routes.spec.ts tests/e2e/agency-switcher.spec.ts \
+  tests/e2e/locale-rtl.spec.ts tests/e2e/social-analytics.spec.ts --project=chromium
+```
+
+Result: **1 failed / 76 passed** — `a11y-routes.spec.ts:390 @a11y
+/app/w/[slug]/team has no critical violations`, the same 30-second `page.goto`
+timeout. The failure family therefore **predates this change**.
+
+This matches the record already in this file: the 2026-10-25 release candidate
+on SHA `13f5129d` recorded "agency switching timing out during page load" and
+"social analytics route timing out during page load" as pre-existing failures
+on an unrelated release.
+
+The conclusion is that the browser matrix gate **failed** in this release and
+is load-dependent and pre-existing, not caused by this change. It is not
+reported as green. The visual matrix was not run on this SHA, and the failures
+were not repaired here because they are not defects of this change — repairing
+the Next dev server's page-load timeouts is a separate piece of work.
+
+### What the release changed
+
+**The field takes a file as well as a link.** The upload affordance sits above
+the link list under one label and one hint, accepts images only (PNG / JPG /
+WEBP / GIF, up to 50 MB), and uploads on selection through the same media
+contract the Media library uses — sign, transfer, verify, register — so the
+image lands in the workspace media catalogue and is linked to the post. The
+transport was extracted into `src/components/media/client-upload.ts` and reused
+by both surfaces so they cannot drift. A failed upload is reported in place and
+never reaches the payload.
+
+**`requiredImageUploads` is a separate key from `requiredImageLinks`.**
+`requiredImageLinks` stays a list of absolute URLs because the planning
+workbook and the XLSX export depend on that shape. Uploaded references are
+`{ id, title }` — a media-asset id plus the file the planner picked — because
+an uploaded image is served through the session-gated media proxy and has no
+durable public URL. The title labels each thumbnail without a second metadata
+round trip on every render. The field applies to all four formats that carry
+it: `static_post`, `carousel`, `story`, and `short_form_video`.
+
+**The Planner MCP contract was synchronized.** The MCP content tools pass
+`format_payload` to the per-format content service, which validates it against
+the shared schema, so the new optional key is accepted without an MCP code
+change. The documented contract was updated in the same release: the tools
+reference in `docs/api/mcp.md` names `requiredImageUploads` and shows its shape
+in the carousel example, evaluation case 22 in `docs/api/mcp-evaluation.xml`
+now lists it among the workbook-shaped fields, and the MCP content-tool
+integration test asserts that `requiredImageUploads` survives a
+`create_content` → `get_content` → `update_content` → `get_content` round
+trip.
+
+**The local Docker footprint is one container.** The dev Postgres published on
+`5432`, where a native server bound to `127.0.0.1:5432` beats Docker's
+`0.0.0.0` bind — so every connection went to the native server while the
+container still reported itself healthy and `pg_isready` inside it passed. The
+dev compose now publishes Postgres on `127.0.0.1:5436`, bound to loopback
+only. The dev container's data directory could also point at a deleted
+worktree, so every connection failed with `FATAL` on
+`global/pg_filenode.map` while the health check — which only runs
+`pg_isready` — still said healthy. One container now serves both `planner` and
+`planner_test`.
+
+### Deployment and post-deploy verification
+
+No schema or migration changed relative to the previously deployed SHA
+`50934528`.
+
+- Pre-migration backup: `/var/backups/laratik-planner/planner-20261026-183535.sql.gz`, with its `.sha256`
+- `GET https://planner.laratik.com/api/health` → `{"ok":true,"version":"1152235","env":"production","db":"up","schema":"ready","storage":"up","r2Storage":"up","rateLimit":"up"}` — the version matches the first 7 characters of the release SHA
+- `GET /` → 200, home-page `<title>StudioFlow</title>`
+- `GET /signin` → 200
+- `GET /app` → 307 → `/signin?callbackUrl=%2Fapp`
+- `docker ps` on `laratik-vps` → `laratik-planner-app-1` Up (healthy) on `ghcr.io/laratik/laratik-planner:11522350b248462ecc33ff9e6b68d140f22a069a`
+- `docker logs laratik-planner-app-1 --tail 200` → no errors; the only entries are a Node.js upgrade advisory and two `platform_access.denied` authorization warnings, both expected
+
+### Readiness
+
+Independent reviewer sign-off was not performed, so `Verified` is not assigned.
+The browser matrix gate failed and the visual matrix was not run, and the UAT
+and production restore/rollback items recorded above remain open. Readiness
+remains **NOT READY** and M3.8 remains **In Progress**. This deployment is
+risk-accepted, not a production-readiness verification.
+
 ## Goal-led plan review release — production SHA `50934528e337bb1148d6348a56aad9959aae0db4`
 
 The user explicitly authorized merging, pushing, and deploying. The release adds
