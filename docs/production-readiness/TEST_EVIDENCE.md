@@ -2,6 +2,65 @@
 
 > **2026-10-25 merge-policy update — ADR 0025** — Independent review and completion of local release gates are no longer prerequisites for merge. Historical entries below retain their original results and context; statements that merging must wait are superseded as stop conditions. No failed, incomplete, or unrun result is changed to pass, and deployment safeguards plus the `Verified` reviewer requirement remain in force.
 
+## Goal-led plan review release — production SHA `50934528e337bb1148d6348a56aad9959aae0db4`
+
+The user explicitly authorized merging, pushing, and deploying. The release adds
+the goal-led plan review to the Workspace AI Assistant and repairs four gate
+failures that the feature commit carried into `main`.
+
+### The feature commit did not pass the repository gates
+
+The commit `45a14b37` had been made on `main` without passing the local gates.
+The first pre-push run on this release surfaced all four failures; none was
+weakened, skipped, or retried into green.
+
+| Gate                   | Failure on `45a14b37`                                                                                                                          | Repair                                                                                                                   |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm lint`            | `react-hooks/set-state-in-effect` — the response panel called `setPendingEvidenceId(null)` inside an effect body                               | A ref records the evidence already scrolled to; no state is reset in the effect                                          |
+| `pnpm typecheck`       | `exactOptionalPropertyTypes` — `promptId?: string` could not accept the `string \| undefined` the route passes                                 | The decision-module signature accepts `string \| undefined` explicitly                                                   |
+| `pnpm test:unit`       | `workspace-assistant-language-policy` asserted the removed "Maintain Arabic" sentence; `workspace-assistant-route` lost the item-edit proposal | The stale assertion now checks the clauses that carry the same contract; the route keeps the explicit per-item edit path |
+| Module-ownership guard | App routes imported `features/workspace-assistant/planning-objective` directly, breaking the "entry point only" rule                           | The module is re-exported from the feature `index.ts` and imported through the entry point                               |
+
+### Behaviour repairs inside the release
+
+- **Explicit per-item edits were swallowed by the strategic-review flow.**
+  "Improve the selected draft schedule" matched the plan-improvement heuristic, so
+  the route answered `requiresPlanningObjective` instead of binding the proposed
+  edit to the selected item's revision. `isExplicitItemEditRequest` now separates
+  an explicit per-item edit from a plan-level review, and the route judges the
+  request by the user's own wording rather than by a saved prompt template.
+- **The planning-objective decision module had no unit tests.** They are added
+  here, covering objective inference, the improvement-request decision, and the
+  explicit item-edit detection.
+- **A pre-existing browser-test defect.** The focused suite's "a truncated answer
+  is reported as a truncated answer, not as an AI outage" case failed on a
+  strict-mode violation: `page.getByRole("alert")` resolves to both the
+  application's alert and the Next.js route announcer
+  (`#__next-route-announcer__`, which also carries `role="alert"`). The product
+  rendered the correct alert text. The same failure reproduced identically on
+  the pre-release SHA `7e090132`, so it is not a regression from this release.
+  The locator is now scoped to the application alert.
+
+### Results on the release SHA
+
+| Check                       | Result                                                                                                                                                                                                                                                                                                                           |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`               | Passed on the release content: format, lint, typecheck, full unit suite (5,398 tests, 0 failures), production build.                                                                                                                                                                                                             |
+| Pre-push hook               | Passed on the pushed range: affected unit and integration checks, including `tests/integration/journey.test.ts`, against the disposable `planner_test` Postgres 16 database. The earlier failure recorded at `1db52b2` did not recur.                                                                                            |
+| Exact-main-SHA CI           | Run [40283207479](https://github.com/LaraTik/laratik-planner/actions/runs/40283207479) passed for `50934528`: quality/migration/audit, Docker build + smoke + GHCR push, Trend sidecar, SMTP cert, workflow/Dockerfile/shell linters.                                                                                            |
+| SHA-tagged images           | `ghcr.io/laratik/laratik-planner:50934528…` and `…-migrator:50934528…` both present in GHCR.                                                                                                                                                                                                                                     |
+| Deploy                      | Run [40285545435](https://github.com/LaraTik/laratik-planner/actions/runs/40285545435) passed: preflight, pre-migration backup `/var/backups/laratik-planner/planner-20261026-072454.sql.gz`, migrations, app recreate, readiness check. No rollback was triggered.                                                              |
+| Production health           | `/api/health` reports `version 5093452`, `db up`, `schema ready`, `storage up`, `r2Storage up`, `rateLimit up`.                                                                                                                                                                                                                  |
+| Post-deploy surface         | `/` 200 with `<title>StudioFlow</title>` (from the `auth.productName` catalogue entry, unchanged by this release), `/signin` 200, `/app` 307 → `/signin?callbackUrl=%2Fapp`, `laratik-planner-app-1` healthy on the `50934528` image, no new errors in the last 200 app log lines, VPS disk 44%.                                 |
+| Focused browser suite       | `tests/e2e/workspace-assistant.spec.ts` on chromium: 10/10 passed after the locator repair above, including the Arabic RTL and response-language cases.                                                                                                                                                                          |
+| Migration drill             | Not applicable — no migration changed. The release has no migration-file delta from the prior deployed SHA `4018c5b7`; CI ran the drill for the existing migration set.                                                                                                                                                          |
+| Full release browser matrix | `pnpm test:e2e:release` was **not run** on this SHA. The last full result remains 296/303 passed, 6 failed, 1 skipped (`pnpm test:e2e:release`), and the visual run remains incomplete at 7/272 with 5 mismatches (`pnpm test:visual`). Those earlier results are historical and are not changed by the focused run.             |
+| Review and readiness        | Independent reviewer sign-off was **not performed**; `Verified` is not assigned and readiness remains **NOT READY**. MiniMax model/tool/privacy UAT, separated-account UAT, and production restore/rollback proof remain open. The user authorized proceeding with this incomplete evidence, so the deployment is risk-accepted. |
+
+The user authorization waives merge stop conditions only. Exact-main-SHA CI,
+SHA-tagged images, provider preflight, production backup before migrations,
+readiness checks, and automatic rollback all applied and passed.
+
 ## Workspace AI Assistant dashboard refactor — source SHA `a6c3707ae1dbcef6c041d9d4c5c901e3bbaf9d8c`
 
 The user explicitly authorized merging, pushing, and deploying this update and

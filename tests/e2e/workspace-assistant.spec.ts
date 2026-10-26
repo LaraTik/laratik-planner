@@ -425,8 +425,11 @@ test.describe("Workspace AI Assistant", () => {
       .fill("Analyze the selected month's content plan.");
     await page.getByRole("button", { name: "Ask assistant" }).click();
 
-    await expect(page.getByRole("alert")).toContainText("cut off");
-    await expect(page.getByRole("alert")).not.toContainText("Check AI availability");
+    // Next.js renders its own role="alert" route announcer, so the app alert
+    // has to be scoped explicitly or the locator resolves to two elements.
+    const assistantAlert = page.locator('[role="alert"]:not([id="__next-route-announcer__"])');
+    await expect(assistantAlert).toContainText("cut off");
+    await expect(assistantAlert).not.toContainText("Check AI availability");
   });
 
   test("Arabic workspace assistant uses RTL and Arabic prompt controls", async ({ page }) => {
