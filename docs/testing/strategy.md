@@ -51,6 +51,31 @@ An explicit user waiver does not change a failed or incomplete gate into a
 pass, and does not waive successful `main` CI, image publication, production
 backup, provider preflight, health check, or rollback controls.
 
+### The local browser matrix is load-sensitive
+
+The full Chromium matrix run locally fails in a way that does not reproduce
+cleanly, and the failure is **not** evidence of a regression by itself. On
+2026-10-26, on release SHA `11522350`, the matrix reported 298 passed / 5
+failed / 1 skipped; every failure was a 30-second `page.goto` timeout on a
+route that does not render the changed component.
+
+Two checks establish whether such a failure belongs to the change:
+
+1. **Re-run the failing spec files in isolation.** If the failing set changes
+   between runs, the failure is load-dependent — a defect introduced by a
+   change fails the same tests every time.
+2. **Re-run the identical selection on the base SHA**, with the change stashed.
+   If it fails there too, the failure family predates the change. On
+   `11522350` the base SHA `627b87a3` failed the same way
+   (1 failed / 76 passed, `a11y-routes /team`), and the same failure family
+   (agency-switcher and social-analytics page-load timeouts) is already
+   recorded against earlier SHAs in `docs/production-readiness/TEST_EVIDENCE.md`.
+
+Both checks cost roughly eight minutes each. Run them before spending effort
+on a product fix, and record the result either way: a gate that failed is
+recorded as failed, with the investigation attached, never rewritten as a
+pass.
+
 ## Test layers
 
 ### Agency tasks and global calendar
