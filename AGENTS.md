@@ -86,6 +86,35 @@ export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5432/pl
 psql "$TEST_DATABASE_URL" -tAc 'select current_database()'
 ```
 
+**When the dev container cannot be used.** Two failures look like a working
+database but are not:
+
+- The container's `PGDATA` bind mount points at a host directory that no longer
+  exists (for example a deleted worktree). Every connection then answers
+  `FATAL: could not open file "global/pg_filenode.map": Operation not permitted`,
+  and the container still reports itself healthy because the health check only
+  runs `pg_isready`.
+- A native PostgreSQL owns `127.0.0.1:5432`, so the host URL resolves to the
+  wrong server. Confirm the target with `select current_database(),
+current_setting('data_directory')` — the data directory must be the
+  container's `/var/lib/postgresql/data`, not a Homebrew path.
+
+In both cases start a disposable server on a free host port with a Docker-managed
+volume instead of a host bind mount:
+
+```bash
+docker volume create laratik-planner-pgdata-test
+docker run -d --name laratik-planner-pg-test \
+  -e POSTGRES_USER=planner -e POSTGRES_PASSWORD=planner_dev_only \
+  -e POSTGRES_DB=planner_test -p 5435:5432 \
+  -v laratik-planner-pgdata-test:/var/lib/postgresql/data postgres:16-alpine
+export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5435/planner_test
+psql "$TEST_DATABASE_URL" -tAc 'select current_database(), current_setting($$data_directory$$)'
+```
+
+The pre-push hook honours `TEST_DATABASE_URL` when it is exported, so exporting
+it points the hook at the same disposable server.
+
 Run `NODE_ENV=test pnpm migration-drill` and `pnpm test:integration` before
 browser checks. The `test:e2e:isolated`, `test:e2e:critical`, and `test:visual`
 scripts all use `scripts/run-e2e-tests.ts`; it refuses non-test URLs, applies
